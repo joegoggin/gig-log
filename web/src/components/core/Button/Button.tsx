@@ -15,6 +15,17 @@ type ButtonProps = {
     children: ReactNode;
 };
 
+/**
+ * Renders a styled button element that applies a variant-specific CSS class and forwards click interactions.
+ *
+ * @param className - Additional CSS class names to append to the button's class list
+ * @param type - Button type attribute (e.g., "button", "submit", "reset")
+ * @param href - Optional URL associated with the button; this component does not perform navigation
+ * @param onClick - Optional callback invoked when the button is clicked; called without arguments
+ * @param variant - Visual variant of the button which determines which CSS modifier class is applied
+ * @param children - Content to render inside the button
+ * @returns The rendered button element with configured classes, type, click behavior, and children
+ */
 function Button({
     className,
     type = "button",

@@ -16,6 +16,13 @@ type Modal = {
     delete?: Omit<DeleteModalProps, "showModal" | "setShowModal">;
 };
 
+/**
+ * Renders the application's root layout, applies the user's preferred color scheme to the document, and provides slots for notifications, children content, and an optional delete confirmation modal.
+ *
+ * @param className - Additional CSS class names to apply to the root container
+ * @param children - Child nodes to render inside the layout
+ * @returns The rendered root layout element
+ */
 function RootLayout({ className = "", children }: RootLayoutProps) {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
 

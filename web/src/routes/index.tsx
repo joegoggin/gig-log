@@ -23,6 +23,16 @@ export const Route = createFileRoute("/")({
     },
 });
 
+/**
+ * Render the application's homepage with marketing copy and navigation actions.
+ *
+ * Displays the "GigLog" title, a descriptive paragraph about the product, and a button group:
+ * when the user is logged in it shows a "View Dashboard" button linking to `/dashboard`;
+ * otherwise it shows "Sign Up" (links to `/auth/sign-up`) and "Log In" (links to `/auth/log-in`, secondary variant).
+ * The component currently uses a hardcoded `isLoggedIn = false`, so the sign-up/log-in buttons are shown by default.
+ *
+ * @returns The homepage React element
+ */
 function App() {
     const isLoggedIn = false;
 
