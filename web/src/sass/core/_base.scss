@@ -1,0 +1,145 @@
+@use "@sass/variables/colors" as colors;
+@use "@sass/mixins/media" as media;
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+* {
+    margin: 0;
+}
+
+[data-theme="light"] {
+    --bg-color: #{colors.$white};
+    --text-color: #{colors.$black};
+}
+
+[data-theme="dark"] {
+    --bg-color: #{colors.$black};
+    --text-color: #{colors.$white};
+}
+
+body {
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bg-color);
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+    font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    overflow-wrap: break-word;
+}
+
+#root,
+#__next {
+    isolation: isolate;
+}
+
+h1 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 60px;
+    font-style: normal;
+    font-weight: 900;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 48px;
+    }
+}
+
+h2 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 48px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 125%;
+    letter-spacing: -1.92px;
+
+    @include media.tablet {
+        font-size: 40px;
+    }
+}
+
+h3 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 36px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 32px;
+    }
+}
+
+h4 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 30px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 18px;
+    }
+}
+
+h5 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 24px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 14px;
+    }
+}
+
+// Note that these defaults are the same as p1-r with addition of a color
+p {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Roboto;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 16px;
+    }
+}

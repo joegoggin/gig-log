@@ -1,0 +1,74 @@
+@use "@sass/mixins/media" as media;
+
+// Note the 'p' tags will default to p1-r styles
+.p1-r {
+    font-family: Roboto;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 16px;
+    }
+}
+
+.p1-b {
+    font-family: Roboto;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 16px;
+    }
+}
+
+.p2-r {
+    font-family: Roboto;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 14px;
+    }
+}
+
+.p2-b {
+    font-family: Roboto;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 14px;
+    }
+}
+
+.p3-r {
+    font-family: Roboto;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 12px;
+    }
+}
+
+.p3-b {
+    font-family: Roboto;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 12px;
+    }
+}
