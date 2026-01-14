@@ -1,0 +1,33 @@
+@use "@sass/variables/colors" as colors;
+
+.button {
+    padding: 10px 20px;
+    font-family: Roboto;
+    font-weight: 600;
+    font-size: 30px;
+    border-radius: 10px;
+    border: none;
+    color: var(--bg-color);
+    transition: all ease-in-out 0.3s;
+    cursor: pointer;
+
+    &:hover {
+        transform: scale(1.05);
+    }
+
+    &--primary {
+        background: colors.$green-100;
+
+        &:hover {
+            background: colors.$green-80;
+        }
+    }
+
+    &--secondary {
+        background: colors.$blue-100;
+
+        &:hover {
+            background: colors.$blue-80;
+        }
+    }
+}

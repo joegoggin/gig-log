@@ -1,0 +1,55 @@
+@use "@sass/variables/colors" as colors;
+
+.notification {
+    display: flex;
+    align-items: center;
+    width: 600px;
+    height: max-content;
+    padding: 10px;
+    border-radius: 5px;
+
+    svg {
+        path {
+            fill: var(--text-color);
+        }
+    }
+
+    &--info {
+        background: colors.$blue-100;
+    }
+
+    &--warning {
+        background: colors.$magenta-100;
+    }
+
+    &--success {
+        background: colors.$cyan-100;
+    }
+
+    &--error {
+        background: colors.$red-100;
+    }
+
+    &__icon {
+        svg {
+            width: 50px;
+            height: 50px;
+        }
+    }
+
+    &__message {
+        margin-right: auto;
+        padding-inline: 15px;
+
+        p {
+            font-size: 20px;
+        }
+    }
+
+    &__close {
+        svg {
+            width: 35px;
+            height: 35px;
+        }
+    }
+}
