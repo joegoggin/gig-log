@@ -1,3 +1,6 @@
+/**
+ * A plus icon inside a circle, commonly used for add/create actions.
+ */
 const AddIcon: React.FC = () => {
     return (
         <svg

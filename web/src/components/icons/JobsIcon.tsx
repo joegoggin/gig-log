@@ -1,3 +1,6 @@
+/**
+ * A briefcase icon, commonly used for jobs/work-related navigation.
+ */
 const JobsIcon: React.FC = () => {
     return (
         <svg

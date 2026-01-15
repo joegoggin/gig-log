@@ -7,15 +7,39 @@ import DeleteModal, {
 } from "@/components/modals/DeleteModal";
 import styles from "./RootLayout.module.scss";
 
+/**
+ * Props for the RootLayout component.
+ */
 type RootLayoutProps = {
+    /** Additional CSS class names to apply to the layout */
     className?: string;
+    /** Content to render inside the layout */
     children: ReactNode;
 };
 
+/**
+ * Configuration for modals that can be displayed in the layout.
+ */
 type Modal = {
+    /** Configuration for the delete confirmation modal */
     delete?: Omit<DeleteModalProps, "showModal" | "setShowModal">;
 };
 
+/**
+ * The root layout component that wraps all pages in the application.
+ * Handles theme detection, notifications display, and global modals.
+ *
+ * Props:
+ * - `className` - Additional CSS class names to apply to the layout (default: "")
+ * - `children` - Content to render inside the layout
+ *
+ * @example
+ * ```tsx
+ * <RootLayout className="home-page">
+ *   <HomePage />
+ * </RootLayout>
+ * ```
+ */
 function RootLayout({ className = "", children }: RootLayoutProps) {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
 

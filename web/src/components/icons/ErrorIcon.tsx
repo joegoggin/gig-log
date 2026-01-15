@@ -1,3 +1,6 @@
+/**
+ * A filled X icon inside a circle, commonly used for error states.
+ */
 const ErrorIcon: React.FC = () => {
     return (
         <svg

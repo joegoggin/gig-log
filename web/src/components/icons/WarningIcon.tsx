@@ -1,3 +1,6 @@
+/**
+ * A triangle with exclamation mark icon, commonly used for warning states.
+ */
 const WarningIcon: React.FC = () => {
     return (
         <svg

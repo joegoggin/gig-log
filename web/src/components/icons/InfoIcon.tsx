@@ -1,3 +1,6 @@
+/**
+ * An "i" icon inside a circle, commonly used for informational tooltips or help.
+ */
 const InfoIcon: React.FC = () => {
     return (
         <svg

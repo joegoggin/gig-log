@@ -1,3 +1,6 @@
+/**
+ * A logout icon with an arrow pointing right, commonly used for sign-out actions.
+ */
 const LogOutIcon: React.FC = () => {
     return (
         <svg

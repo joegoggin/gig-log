@@ -1,3 +1,6 @@
+/**
+ * A gear/cog icon, commonly used for settings or configuration navigation.
+ */
 const SettingsIcon: React.FC = () => {
     return (
         <svg

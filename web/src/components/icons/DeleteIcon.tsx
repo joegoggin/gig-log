@@ -1,3 +1,6 @@
+/**
+ * A trash can icon, commonly used for delete/remove actions.
+ */
 const DeleteIcon = () => {
     return (
         <svg

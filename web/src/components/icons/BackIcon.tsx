@@ -1,3 +1,6 @@
+/**
+ * A left-pointing arrow icon, commonly used for back/return navigation.
+ */
 const BackIcon: React.FC = () => {
     return (
         <svg

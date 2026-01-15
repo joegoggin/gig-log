@@ -1,3 +1,6 @@
+/**
+ * A house icon, commonly used for home/dashboard navigation.
+ */
 const HomeIcon: React.FC = () => {
     return (
         <svg

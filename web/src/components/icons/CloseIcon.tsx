@@ -1,3 +1,6 @@
+/**
+ * An X icon, commonly used for close/dismiss actions.
+ */
 const CloseIcon: React.FC = () => {
     return (
         <svg

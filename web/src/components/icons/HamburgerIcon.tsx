@@ -1,3 +1,6 @@
+/**
+ * A hamburger menu icon (three horizontal lines), commonly used for mobile navigation toggles.
+ */
 const HamburgerIcon: React.FC = () => {
     return (
         <svg

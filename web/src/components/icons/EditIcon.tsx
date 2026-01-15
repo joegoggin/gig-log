@@ -1,3 +1,6 @@
+/**
+ * A pencil icon, commonly used for edit/modify actions.
+ */
 const EditIcon: React.FC = () => {
     return (
         <svg

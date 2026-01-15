@@ -1,3 +1,6 @@
+/**
+ * A checkmark icon inside a circle, commonly used for success states or confirmations.
+ */
 const CheckIcon: React.FC = () => {
     return (
         <svg

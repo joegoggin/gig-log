@@ -1,3 +1,6 @@
+/**
+ * A building/office icon representing a company or organization.
+ */
 const CompanyIcon: React.FC = () => {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">

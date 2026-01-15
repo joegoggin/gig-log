@@ -4,12 +4,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import axios from "axios";
 import styles from "./HomePage.module.scss";
 
+/**
+ * API response type for the hello endpoint.
+ */
 type HelloResponse = {
+    /** The welcome message from the API */
     message: string;
 };
 
 export const Route = createFileRoute("/")({
-    component: App,
+    component: HomePage,
     loader: async () => {
         try {
             const { data } = await axios.get<HelloResponse>(
@@ -23,7 +27,17 @@ export const Route = createFileRoute("/")({
     },
 });
 
-function App() {
+/**
+ * The home page and landing page for the application.
+ * Displays an introduction to GigLog and provides navigation to
+ * sign up, log in, or access the dashboard for authenticated users.
+ *
+ * Route: `/`
+ *
+ * Loader Data:
+ * - `message` - The welcome message from the API
+ */
+function HomePage() {
     const isLoggedIn = false;
 
     return (

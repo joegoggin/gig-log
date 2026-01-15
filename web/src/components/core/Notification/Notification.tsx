@@ -7,19 +7,51 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import styles from "./Notification.module.scss";
 
+/**
+ * Enum representing the available notification types.
+ */
 export enum NotificationType {
+    /** Informational notification */
     INFO = "info",
+    /** Warning notification */
     WARNING = "warning",
+    /** Success notification */
     SUCCESS = "success",
+    /** Error notification */
     ERROR = "error",
 }
 
+/**
+ * Props for the Notification component.
+ */
 export type NotificationProps = {
+    /** The type of notification which determines styling and icon */
     type: NotificationType;
+    /** The title text displayed in the notification */
     title: string;
+    /** The message body displayed in the notification */
     message: string;
 };
 
+/**
+ * A dismissible notification component with animated entrance/exit.
+ * Displays contextual feedback messages with appropriate icons and styling
+ * based on the notification type.
+ *
+ * Props:
+ * - `type` - The type of notification which determines styling and icon
+ * - `title` - The title text displayed in the notification
+ * - `message` - The message body displayed in the notification
+ *
+ * @example
+ * ```tsx
+ * <Notification
+ *   type={NotificationType.SUCCESS}
+ *   title="Success"
+ *   message="Your changes have been saved."
+ * />
+ * ```
+ */
 const Notification: React.FC<NotificationProps> = ({
     title,
     type,

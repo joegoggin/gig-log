@@ -6,8 +6,13 @@ import "@sass/index.scss";
 
 const queryClient = new QueryClient();
 
-export const Route = createRootRoute({
-    component: () => (
+/**
+ * The root component that wraps all pages in the application.
+ * Sets up the QueryClientProvider for React Query and includes TanStack
+ * devtools for development debugging.
+ */
+function RootComponent() {
+    return (
         <QueryClientProvider client={queryClient}>
             <Outlet />
             <TanStackDevtools
@@ -22,5 +27,9 @@ export const Route = createRootRoute({
                 ]}
             />
         </QueryClientProvider>
-    ),
+    );
+}
+
+export const Route = createRootRoute({
+    component: RootComponent,
 });
