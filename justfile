@@ -44,3 +44,6 @@ web-format *args:
 
 web-check *args:
 	cd web && pnpm check {{args}}
+
+web-storybook *args:
+	cd web && pnpm storybook
