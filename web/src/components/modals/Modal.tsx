@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import styles from "./Modal.module.scss";
 
 /**
  * Props for the Modal component.
@@ -36,8 +37,10 @@ const Modal: React.FC<ModalProps> = ({
     return (
         <>
             {showModal && (
-                <div className="modal">
-                    <div className={`modal__content ${className}`}>
+                <div className={styles["modal"]}>
+                    <div
+                        className={`${styles["modal__content"]}${className ? ` ${className}` : ""}`}
+                    >
                         {children}
                     </div>
                 </div>

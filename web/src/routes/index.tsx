@@ -1,30 +1,10 @@
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import { createFileRoute } from "@tanstack/react-router";
-import axios from "axios";
 import styles from "./HomePage.module.scss";
-
-/**
- * API response type for the hello endpoint.
- */
-type HelloResponse = {
-    /** The welcome message from the API */
-    message: string;
-};
 
 export const Route = createFileRoute("/")({
     component: HomePage,
-    loader: async () => {
-        try {
-            const { data } = await axios.get<HelloResponse>(
-                "http://localhost:8000/",
-            );
-
-            return data;
-        } catch (error) {
-            return { message: "failed to fetch from api" };
-        }
-    },
 });
 
 /**
@@ -33,11 +13,9 @@ export const Route = createFileRoute("/")({
  * sign up, log in, or access the dashboard for authenticated users.
  *
  * Route: `/`
- *
- * Loader Data:
- * - `message` - The welcome message from the API
  */
 function HomePage() {
+    // TODO: Replace with actual auth state from auth context/store
     const isLoggedIn = false;
 
     return (

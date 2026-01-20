@@ -43,8 +43,10 @@ type Modal = {
 function RootLayout({ className = "", children }: RootLayoutProps) {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
 
+    // TODO: Replace with notifications from a notification context/store
     const notifications: NotificationProps[] = [];
 
+    // TODO: Replace with modal state from a modal context/store
     const modal: Modal = {};
 
     useEffect(() => {

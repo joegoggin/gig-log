@@ -1,4 +1,5 @@
 import { type ReactNode, type MouseEvent } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import styles from "./Button.module.scss";
 
 /**
@@ -22,7 +23,7 @@ type ButtonProps = {
     /** URL to navigate to when button is clicked */
     href?: string;
     /** Click event handler */
-    onClick?: (e?: any) => void;
+    onClick?: (e?: MouseEvent<HTMLButtonElement>) => void;
     /** Visual style variant of the button */
     variant?: ButtonVariant;
     /** Content to render inside the button */
@@ -55,6 +56,8 @@ function Button({
     variant = ButtonVariant.PRIMARY,
     children,
 }: ButtonProps) {
+    const navigate = useNavigate();
+
     const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
         if (type != "submit") {
             e.preventDefault();
@@ -65,7 +68,7 @@ function Button({
         }
 
         if (href) {
-            // router.get(href);
+            navigate({ to: href });
         }
     };
 

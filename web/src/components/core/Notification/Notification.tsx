@@ -31,6 +31,8 @@ export type NotificationProps = {
     title: string;
     /** The message body displayed in the notification */
     message: string;
+    /** Optional callback fired when the notification is dismissed */
+    onClose?: () => void;
 };
 
 /**
@@ -42,6 +44,7 @@ export type NotificationProps = {
  * - `type` - The type of notification which determines styling and icon
  * - `title` - The title text displayed in the notification
  * - `message` - The message body displayed in the notification
+ * - `onClose` - Optional callback fired when the notification is dismissed
  *
  * @example
  * ```tsx
@@ -49,6 +52,7 @@ export type NotificationProps = {
  *   type={NotificationType.SUCCESS}
  *   title="Success"
  *   message="Your changes have been saved."
+ *   onClose={() => console.log('Notification closed')}
  * />
  * ```
  */
@@ -56,6 +60,7 @@ const Notification: React.FC<NotificationProps> = ({
     title,
     type,
     message,
+    onClose,
 }) => {
     const [showNotification, setShowNotification] = useState<boolean>(true);
 
@@ -95,6 +100,7 @@ const Notification: React.FC<NotificationProps> = ({
 
     const handleClose = () => {
         setShowNotification(false);
+        onClose?.();
     };
 
     return (
@@ -114,13 +120,14 @@ const Notification: React.FC<NotificationProps> = ({
                         <h5>{title}</h5>
                         <p>{message}</p>
                     </div>
-                    <div
+                    <button
+                        type="button"
                         className={styles["notification__close"]}
                         onClick={handleClose}
-                        role="button"
+                        aria-label="Close notification"
                     >
                         <CloseIcon />
-                    </div>
+                    </button>
                 </motion.div>
             )}
         </AnimatePresence>

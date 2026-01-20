@@ -53,7 +53,8 @@ const DeleteModal: React.FC<DeleteModalProps> = ({
     setShowModal,
 }) => {
     const handleDelete = () => {
-        // router.delete(`/companies/${id}?prompt_user=false`);
+        // TODO: Implement actual delete API call using the id prop
+        // Example: await api.delete(`/companies/${id}`);
         setShowModal(false);
     };
 
@@ -66,8 +67,8 @@ const DeleteModal: React.FC<DeleteModalProps> = ({
             <div className="delete-modal__content">
                 <h3>Are you sure you want to delete {name}?</h3>
                 <h5>
-                    Deleting {name} will permanently all data associated with
-                    this {table} including the following:
+                    Deleting {name} will permanently delete all data associated
+                    with this {table} including the following:
                 </h5>
                 <ul>
                     {relatedTables.map((relatedTable) => (

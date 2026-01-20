@@ -2,9 +2,8 @@ import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import "@sass/index.scss";
-
-const queryClient = new QueryClient();
 
 /**
  * The root component that wraps all pages in the application.
@@ -12,6 +11,8 @@ const queryClient = new QueryClient();
  * devtools for development debugging.
  */
 function RootComponent() {
+    const [queryClient] = useState(() => new QueryClient());
+
     return (
         <QueryClientProvider client={queryClient}>
             <Outlet />

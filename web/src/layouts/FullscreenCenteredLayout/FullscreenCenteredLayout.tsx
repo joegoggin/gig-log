@@ -33,7 +33,7 @@ function FullscreenCenteredLayout({
 }: FullscreenCenteredLayoutProps) {
     return (
         <RootLayout
-            className={`${styles["fullscreen-centered-layout"]} ${className}`}
+            className={`${styles["fullscreen-centered-layout"]}${className ? ` ${className}` : ""}`}
         >
             {children}
         </RootLayout>
