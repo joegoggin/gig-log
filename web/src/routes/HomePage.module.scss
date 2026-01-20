@@ -1,0 +1,17 @@
+.home-page {
+    h1 {
+        margin-bottom: 40px;
+    }
+
+    &__text {
+        width: 60%;
+        text-align: center;
+    }
+
+    &__buttons {
+        display: flex;
+        justify-content: space-evenly;
+        width: 50%;
+        margin-top: 100px;
+    }
+}

@@ -1,0 +1,13 @@
+.root-layout {
+    position: relative;
+
+    &__notifications {
+        position: absolute;
+        top: 40px;
+        right: 20px;
+
+        & > div {
+            margin-bottom: 20px;
+        }
+    }
+}

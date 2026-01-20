@@ -1,23 +1,18 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
-import { createFileRoute } from "@tanstack/react-router";
-import styles from "./HomePage.module.scss";
-
-export const Route = createFileRoute("/")({
-    component: HomePage,
-});
+import styles from "../HomePage.module.scss";
 
 /**
- * The home page and landing page for the application.
- * Displays an introduction to GigLog and provides navigation to
- * sign up, log in, or access the dashboard for authenticated users.
- *
- * Route: `/`
+ * The HomePage component extracted for Storybook documentation.
+ * This mirrors the actual HomePage route component.
  */
-function HomePage() {
-    // TODO: Replace with actual auth state from auth context/store
-    const isLoggedIn = false;
+type HomePageProps = {
+    /** Whether the user is logged in */
+    isLoggedIn?: boolean;
+};
 
+const HomePage = ({ isLoggedIn = false }: HomePageProps) => {
     return (
         <FullscreenCenteredLayout className={styles["home-page"]}>
             <h1>GigLog</h1>
@@ -50,4 +45,44 @@ function HomePage() {
             </div>
         </FullscreenCenteredLayout>
     );
-}
+};
+
+/**
+ * The home page and landing page for the application.
+ * Displays an introduction to GigLog and provides navigation to
+ * sign up, log in, or access the dashboard for authenticated users.
+ *
+ * Route: `/`
+ *
+ * Loader Data:
+ * - `message` - The welcome message from the API
+ */
+const meta: Meta<typeof HomePage> = {
+    title: "Routes/HomePage",
+    component: HomePage,
+    tags: ["autodocs"],
+    parameters: {
+        layout: "fullscreen",
+    },
+    argTypes: {
+        isLoggedIn: {
+            control: { type: "boolean" },
+            description: "Whether the user is logged in",
+        },
+    },
+};
+
+export default meta;
+type Story = StoryObj<typeof HomePage>;
+
+export const LoggedOut: Story = {
+    args: {
+        isLoggedIn: false,
+    },
+};
+
+export const LoggedIn: Story = {
+    args: {
+        isLoggedIn: true,
+    },
+};

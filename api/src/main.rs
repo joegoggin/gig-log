@@ -1,6 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, get, web::Json};
 use serde::Serialize;
+use std::env;
 
 #[derive(Serialize)]
 struct Message {
@@ -16,11 +17,15 @@ async fn hello() -> Json<Message> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Server running on port 8000");
+    let allowed_origin =
+        env::var("CORS_ALLOWED_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
-    HttpServer::new(|| {
+    println!("Server running on port 8000");
+    println!("CORS allowed origin: {}", allowed_origin);
+
+    HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin("http://localhost:3000")
+            .allowed_origin(&allowed_origin)
             .allowed_methods(vec!["GET", "PUT", "POST", "DELETE"]);
 
         App::new().wrap(cors).service(hello)
