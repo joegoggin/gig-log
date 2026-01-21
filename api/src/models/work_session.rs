@@ -14,4 +14,6 @@ pub struct WorkSession {
     pub accumulated_paused_duration: i64, // Stored as Seconds (BigInt)
     pub paused_at: Option<DateTime<Utc>>,
     pub time_reported: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

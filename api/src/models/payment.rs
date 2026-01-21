@@ -1,11 +1,11 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
-#[sqlx(type_name = "payout_type_enum", rename_all = "lowercase")] // check lowercase vs snake_case if values have underscores
+#[sqlx(type_name = "payout_type_enum", rename_all = "lowercase")]
 pub enum PayoutType {
     Paypal,
     Cash,
@@ -30,4 +30,6 @@ pub struct Payment {
     pub payment_received: bool,
     pub transfer_received: bool,
     pub tax_withholdings_covered: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

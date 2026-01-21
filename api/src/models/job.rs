@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
@@ -20,4 +21,6 @@ pub struct Job {
     pub number_of_payouts: Option<i32>,
     pub payout_amount: Option<Decimal>,
     pub hourly_rate: Option<Decimal>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

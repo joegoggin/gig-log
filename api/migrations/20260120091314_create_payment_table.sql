@@ -11,7 +11,9 @@ CREATE TABLE payments (
     transfer_initiated BOOLEAN NOT NULL DEFAULT FALSE,
     payment_received BOOLEAN NOT NULL DEFAULT FALSE,
     transfer_received BOOLEAN NOT NULL DEFAULT FALSE,
-    tax_withholdings_covered BOOLEAN NOT NULL DEFAULT FALSE
+    tax_withholdings_covered BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_payments_user_id ON payments(user_id);

@@ -9,6 +9,8 @@ CREATE TABLE jobs (
     number_of_payouts INTEGER,
     payout_amount DECIMAL(10, 2),
     hourly_rate DECIMAL(10, 2),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Enforce consistency for 'hourly' jobs
     CONSTRAINT check_hourly_consistency CHECK (
