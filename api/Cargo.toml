@@ -8,3 +8,8 @@ actix-cors = "0.7.1"
 actix-web = "4.12.1"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.49.0", features = ["full"] }
+dotenvy = "0.15"
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "macros", "postgres", "uuid", "chrono", "rust_decimal"] }
+rust_decimal = { version = "1.36", features = ["db-postgres", "serde"] }
+uuid = { version = "1.10", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
