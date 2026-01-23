@@ -36,17 +36,20 @@ export type NotificationProps = {
 };
 
 /**
+ *
  * A dismissible notification component with animated entrance/exit.
  * Displays contextual feedback messages with appropriate icons and styling
  * based on the notification type.
  *
- * Props:
+ * ## Props
+ *
  * - `type` - The type of notification which determines styling and icon
  * - `title` - The title text displayed in the notification
  * - `message` - The message body displayed in the notification
  * - `onClose` - Optional callback fired when the notification is dismissed
  *
- * @example
+ * ## Example
+ *
  * ```tsx
  * <Notification
  *   type={NotificationType.SUCCESS}

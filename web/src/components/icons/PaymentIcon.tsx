@@ -3,7 +3,12 @@
  */
 const PaymentIcon: React.FC = () => {
     return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 512 512"
+            width="24"
+            height="24"
+        >
             <rect
                 x="32"
                 y="80"

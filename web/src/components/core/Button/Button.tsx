@@ -31,9 +31,11 @@ type ButtonProps = {
 };
 
 /**
+ *
  * A reusable button component with support for multiple variants and navigation.
  *
- * Props:
+ * ## Props
+ *
  * - `className` - Additional CSS class names to apply to the button
  * - `type` - HTML button type attribute (default: "button")
  * - `href` - URL to navigate to when button is clicked
@@ -41,7 +43,8 @@ type ButtonProps = {
  * - `variant` - Visual style variant of the button (default: PRIMARY)
  * - `children` - Content to render inside the button
  *
- * @example
+ * ## Example
+ *
  * ```tsx
  * <Button variant={ButtonVariant.PRIMARY} onClick={handleClick}>
  *   Click Me
