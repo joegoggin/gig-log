@@ -1,23 +1,35 @@
 import type { Preview } from "@storybook/react-vite";
+import { withThemeByDataAttribute } from "@storybook/addon-themes";
 import "../src/sass/index.scss";
 import theme from "./theme";
 
 const preview: Preview = {
     initialGlobals: {
-        backgrounds: { value: "dark" },
+        theme: "dark",
     },
+
+    decorators: [
+        withThemeByDataAttribute({
+            themes: {
+                light: "light",
+                dark: "dark",
+            },
+            defaultTheme: "dark",
+            attributeName: "data-theme",
+        }),
+        (Story) => (
+            <div style={{ background: "var(--bg-color)", padding: "2rem" }}>
+                <Story />
+            </div>
+        ),
+    ],
 
     parameters: {
         docs: {
             theme,
         },
 
-        backgrounds: {
-            options: {
-                dark: { name: "dark", value: "#1a1a1a" },
-                light: { name: "light", value: "#ffffff" },
-            },
-        },
+        backgrounds: { disable: true },
 
         controls: {
             matchers: {
