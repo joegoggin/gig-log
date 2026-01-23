@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Notification, {
-    NotificationType,
     type NotificationProps,
 } from "@/components/core/Notification/Notification";
 import DeleteModal, {
