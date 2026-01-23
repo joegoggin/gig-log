@@ -262,3 +262,43 @@ For each issue, present it like this:
 
 Do you want to accept this change?
 ```
+
+## Component Creation
+
+### SVG Icon Components
+
+When converting an SVG into a React component, follow this format:
+
+1. Place the file in `web/src/components/icons/`
+2. Name the file `{IconName}Icon.tsx` (e.g., `HomeIcon.tsx`)
+3. Use the following structure:
+
+```tsx
+/**
+ * A brief description of what the icon represents and its common use case.
+ */
+const IconNameIcon: React.FC = () => {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="#E0E0E0"
+        >
+            <path d="..." />
+        </svg>
+    );
+};
+
+export default IconNameIcon;
+```
+
+### Key Requirements
+
+- **viewBox**: Use `"0 0 24 24"` for consistency (scale paths if needed)
+- **width/height**: Always set to `"24"`
+- **fill**: Use `"#E0E0E0"` as the default color
+- **stroke-based icons**: If the SVG uses strokes instead of fills, set `stroke="#E0E0E0"` on the path elements and keep `fill="none"`
+- **JSDoc**: Include a brief description of the icon's appearance and typical usage
+- **Naming**: Component name should be `{IconName}Icon` and match the filename
