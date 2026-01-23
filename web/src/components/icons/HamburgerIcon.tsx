@@ -8,7 +8,7 @@ const HamburgerIcon: React.FC = () => {
             viewBox="0 0 24 24"
             width="24"
             height="24"
-            fill="#E0E0E0"
+            fill="currentColor"
         >
             <path d="M3.75 5.25a.75.75 0 0 0 0 1.5h16.5a.75.75 0 0 0 0-1.5H3.75Zm0 6a.75.75 0 0 0 0 1.5h16.5a.75.75 0 0 0 0-1.5H3.75Zm0 6a.75.75 0 0 0 0 1.5h16.5a.75.75 0 0 0 0-1.5H3.75Z"></path>
         </svg>

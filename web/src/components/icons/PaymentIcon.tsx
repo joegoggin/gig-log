@@ -18,13 +18,13 @@ const PaymentIcon: React.FC = () => {
                 ry="16"
                 transform="rotate(180 256 208)"
                 fill="none"
-                stroke="#E0E0E0"
+                stroke="currentColor"
                 strokeLinejoin="round"
                 strokeWidth="32"
             />
             <path
                 fill="none"
-                stroke="#E0E0E0"
+                stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="32"
@@ -35,7 +35,7 @@ const PaymentIcon: React.FC = () => {
                 cy="208"
                 r="80"
                 fill="none"
-                stroke="#E0E0E0"
+                stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="32"
@@ -43,7 +43,7 @@ const PaymentIcon: React.FC = () => {
             <path
                 d="M480 160a80 80 0 01-80-80M32 160a80 80 0 0080-80M480 256a80 80 0 00-80 80M32 256a80 80 0 0180 80"
                 fill="none"
-                stroke="#E0E0E0"
+                stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="32"

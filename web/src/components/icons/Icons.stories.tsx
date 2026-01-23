@@ -54,12 +54,13 @@ const IconGallery = () => {
                         alignItems: "center",
                         gap: "8px",
                         padding: "16px",
-                        border: "1px solid #e0e0e0",
+                        border: "1px solid var(--text-color)",
                         borderRadius: "8px",
+                        color: "var(--text-color)",
                     }}
                 >
                     <Icon />
-                    <span style={{ fontSize: "12px", color: "#666" }}>
+                    <span style={{ fontSize: "12px" }}>
                         {name}
                     </span>
                 </div>
@@ -79,67 +80,136 @@ type Story = StoryObj<typeof IconGallery>;
 
 export const Gallery: Story = {};
 
+// Wrapper for individual icon stories to inherit theme color
+const IconWrapper = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ color: "var(--text-color)" }}>{children}</div>
+);
+
 // Individual icon stories
 export const Add: StoryObj<typeof AddIcon> = {
-    render: () => <AddIcon />,
+    render: () => (
+        <IconWrapper>
+            <AddIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Back: StoryObj<typeof BackIcon> = {
-    render: () => <BackIcon />,
+    render: () => (
+        <IconWrapper>
+            <BackIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Check: StoryObj<typeof CheckIcon> = {
-    render: () => <CheckIcon />,
+    render: () => (
+        <IconWrapper>
+            <CheckIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Close: StoryObj<typeof CloseIcon> = {
-    render: () => <CloseIcon />,
+    render: () => (
+        <IconWrapper>
+            <CloseIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Company: StoryObj<typeof CompanyIcon> = {
-    render: () => <CompanyIcon />,
+    render: () => (
+        <IconWrapper>
+            <CompanyIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Delete: StoryObj<typeof DeleteIcon> = {
-    render: () => <DeleteIcon />,
+    render: () => (
+        <IconWrapper>
+            <DeleteIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Edit: StoryObj<typeof EditIcon> = {
-    render: () => <EditIcon />,
+    render: () => (
+        <IconWrapper>
+            <EditIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Error: StoryObj<typeof ErrorIcon> = {
-    render: () => <ErrorIcon />,
+    render: () => (
+        <IconWrapper>
+            <ErrorIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Hamburger: StoryObj<typeof HamburgerIcon> = {
-    render: () => <HamburgerIcon />,
+    render: () => (
+        <IconWrapper>
+            <HamburgerIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Home: StoryObj<typeof HomeIcon> = {
-    render: () => <HomeIcon />,
+    render: () => (
+        <IconWrapper>
+            <HomeIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Info: StoryObj<typeof InfoIcon> = {
-    render: () => <InfoIcon />,
+    render: () => (
+        <IconWrapper>
+            <InfoIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Jobs: StoryObj<typeof JobsIcon> = {
-    render: () => <JobsIcon />,
+    render: () => (
+        <IconWrapper>
+            <JobsIcon />
+        </IconWrapper>
+    ),
 };
 
 export const LogOut: StoryObj<typeof LogOutIcon> = {
-    render: () => <LogOutIcon />,
+    render: () => (
+        <IconWrapper>
+            <LogOutIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Payment: StoryObj<typeof PaymentIcon> = {
-    render: () => <PaymentIcon />,
+    render: () => (
+        <IconWrapper>
+            <PaymentIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Settings: StoryObj<typeof SettingsIcon> = {
-    render: () => <SettingsIcon />,
+    render: () => (
+        <IconWrapper>
+            <SettingsIcon />
+        </IconWrapper>
+    ),
 };
 
 export const Warning: StoryObj<typeof WarningIcon> = {
-    render: () => <WarningIcon />,
+    render: () => (
+        <IconWrapper>
+            <WarningIcon />
+        </IconWrapper>
+    ),
 };

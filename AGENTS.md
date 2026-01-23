@@ -288,7 +288,7 @@ const IconNameIcon: React.FC = () => {
             viewBox="0 0 24 24"
             width="24"
             height="24"
-            fill="#E0E0E0"
+            fill="currentColor"
         >
             <path d="..." />
         </svg>
@@ -302,7 +302,7 @@ export default IconNameIcon;
 
 - **viewBox**: Use `"0 0 24 24"` for consistency (scale paths if needed)
 - **width/height**: Always set to `"24"`
-- **fill**: Use `"#E0E0E0"` as the default color
-- **stroke-based icons**: If the SVG uses strokes instead of fills, set `stroke="#E0E0E0"` on the path elements and keep `fill="none"`
+- **fill**: Use `"currentColor"` to inherit from parent's CSS color property
+- **stroke-based icons**: If the SVG uses strokes instead of fills, set `stroke="currentColor"` on the path elements and keep `fill="none"`
 - **JSDoc**: Include a brief description of the icon's appearance and typical usage
 - **Naming**: Component name should be `{IconName}Icon` and match the filename
