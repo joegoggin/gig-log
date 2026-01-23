@@ -243,6 +243,10 @@ When asked to perform a code review, follow this interactive process:
    - If accepted: Apply the change and move to the next issue
    - If rejected: Skip the change and move to the next issue
 5. **Continue until all issues have been addressed**
+6. **After all issues are resolved:** Ask the user if they want to:
+   - Commit the changes
+   - Push to the remote branch
+   - Create a PR with a summary of all the changes made during the review
 
 ### Example Format
 
