@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Notification, {
+    NotificationType,
     type NotificationProps,
 } from "@/components/core/Notification/Notification";
 import DeleteModal, {
@@ -26,14 +27,17 @@ type Modal = {
 };
 
 /**
+ *
  * The root layout component that wraps all pages in the application.
  * Handles theme detection, notifications display, and global modals.
  *
- * Props:
+ * ## Props
+ *
  * - `className` - Additional CSS class names to apply to the layout (default: "")
  * - `children` - Content to render inside the layout
  *
- * @example
+ * ## Example
+ *
  * ```tsx
  * <RootLayout className="home-page">
  *   <HomePage />

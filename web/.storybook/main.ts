@@ -18,6 +18,12 @@ const config: StorybookConfig = {
   ],
   "framework": "@storybook/react-vite",
   viteFinal: async (config) => {
+    // Filter out TanStack devtools plugins to avoid port conflict with dev server
+    config.plugins = (config.plugins || []).flat().filter((plugin) => {
+      const name = plugin?.name || '';
+      return !name.startsWith('@tanstack/devtools');
+    });
+
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,

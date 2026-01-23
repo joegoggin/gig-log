@@ -1,5 +1,13 @@
 # Claude Code Guidelines
 
+## Documentation Policy
+
+When asked to add documentation to React components or layouts, **always include Storybook stories** as part of the documentation effort. This means:
+1. JSDoc comments on the component (as described below)
+2. A corresponding `.stories.tsx` file with visual examples
+
+For route components, use MDX files instead of `.stories.tsx` files (see Route Documentation section).
+
 ## Component Documentation
 
 All React components in `/web/src/components` and `/web/src/layouts` should follow these JSDoc documentation conventions.
@@ -8,14 +16,16 @@ All React components in `/web/src/components` and `/web/src/layouts` should foll
 
 Components that accept props should include:
 1. A description of the component
-2. A "Props:" section listing each prop with a description
-3. An `@example` section showing usage
+2. A `## Props` section listing each prop with a description
+3. A `## Example` section showing usage
 
 ```tsx
 /**
+ *
  * A reusable button component with support for multiple variants and navigation.
  *
- * Props:
+ * ## Props
+ *
  * - `className` - Additional CSS class names to apply to the button
  * - `type` - HTML button type attribute (default: "button")
  * - `href` - URL to navigate to when button is clicked
@@ -23,7 +33,8 @@ Components that accept props should include:
  * - `variant` - Visual style variant of the button (default: PRIMARY)
  * - `children` - Content to render inside the button
  *
- * @example
+ * ## Example
+ *
  * ```tsx
  * <Button variant={ButtonVariant.PRIMARY} onClick={handleClick}>
  *   Click Me
@@ -73,9 +84,9 @@ export enum ButtonVariant {
 
 ## Route Documentation
 
-All route files in `/web/src/routes` should follow these conventions.
+Routes should have both JSDoc comments on the component and an MDX file in Storybook. **Routes should NOT have `.stories.tsx` files** - only MDX documentation.
 
-### Route Components
+### JSDoc Comments
 
 Documentation should be placed on the component function (not at the file level). The component should be named descriptively (e.g., `HomePage` instead of `App`).
 
@@ -110,4 +121,102 @@ Routes without a loader should include:
  * Route: `/settings`
  */
 function SettingsPage() {
+```
+
+### MDX Files
+
+Each route should also have an MDX file in `web/src/stories/docs/Routes/`:
+
+```mdx
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Routes/PageName" />
+
+# Page Name
+
+Description of what the page does and its purpose.
+
+**Route:** `/path`
+
+## States
+
+- **State 1:** Description of this state
+- **State 2:** Description of this state
+
+## Related Components
+
+- `ComponentName` - How it's used on this page
+```
+
+See `web/src/stories/docs/Routes/HomePage.mdx` for a complete example
+
+## Storybook Documentation
+
+When adding documentation to components and layouts, **always include Storybook stories** as part of the documentation. Stories serve as living documentation and visual testing.
+
+### Configuration
+
+Storybook is configured in `web/.storybook/` with:
+- `@storybook/react-vite` framework
+- Dark theme by default
+- Addons: `@storybook/addon-docs`, `@storybook/addon-a11y`, `@storybook/addon-vitest`, `@chromatic-com/storybook`
+- Path aliases: `@` → `src/`, `@sass` → `src/sass/`
+
+### Story File Location
+
+Stories are co-located with their components:
+- Components: `web/src/components/core/ComponentName/ComponentName.stories.tsx`
+- Layouts: `web/src/layouts/LayoutName/LayoutName.stories.tsx`
+- Icons: `web/src/components/icons/Icons.stories.tsx` (single gallery file for all icons)
+
+### Story File Structure
+
+All stories use CSF3 format with types from `@storybook/react-vite`:
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import Button, { ButtonVariant } from "./Button";
+
+const meta: Meta<typeof Button> = {
+    title: "Core/Button",
+    component: Button,
+    tags: ["autodocs"],
+    argTypes: {
+        variant: {
+            control: { type: "select" },
+            options: [ButtonVariant.PRIMARY, ButtonVariant.SECONDARY],
+        },
+    },
+};
+
+export default meta;
+type Story = StoryObj<typeof Button>;
+
+export const Primary: Story = {
+    args: {
+        variant: ButtonVariant.PRIMARY,
+        children: "Primary Button",
+    },
+};
+```
+
+### Title Hierarchy
+
+Use these title prefixes for organization:
+- `"Core/ComponentName"` - Core UI components (Button, Notification, etc.)
+- `"Layouts/LayoutName"` - Layout components
+- `"Icons/All Icons"` - Icon gallery
+
+### Key Conventions
+
+1. Always include `tags: ["autodocs"]` for automatic documentation generation
+2. Use `argTypes` with `control: { type: "select" }` for enum props
+3. Export multiple named stories to showcase different states/variants
+4. For fullscreen layouts, add `parameters: { layout: "fullscreen" }` to meta
+5. Story names should be descriptive: `Primary`, `Secondary`, `Default`, `WithClickHandler`, etc.
+
+### Running Storybook
+
+```bash
+cd web && pnpm storybook
 ```

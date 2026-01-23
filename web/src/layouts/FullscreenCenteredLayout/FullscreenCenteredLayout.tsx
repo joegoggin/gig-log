@@ -13,14 +13,17 @@ type FullscreenCenteredLayoutProps = {
 };
 
 /**
+ *
  * A layout component that wraps content in a fullscreen container with centered content.
  * Extends the RootLayout with additional centering styles.
  *
- * Props:
+ * ## Props
+ *
  * - `className` - Additional CSS class names to apply to the layout
  * - `children` - Content to render inside the layout
  *
- * @example
+ * ## Example
+ *
  * ```tsx
  * <FullscreenCenteredLayout className="login-page">
  *   <LoginForm />

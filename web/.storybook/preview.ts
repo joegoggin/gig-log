@@ -1,8 +1,24 @@
 import type { Preview } from "@storybook/react-vite";
 import "../src/sass/index.scss";
+import theme from "./theme";
 
 const preview: Preview = {
+    initialGlobals: {
+        backgrounds: { value: "dark" },
+    },
+
     parameters: {
+        docs: {
+            theme,
+        },
+
+        backgrounds: {
+            options: {
+                dark: { name: "dark", value: "#1a1a1a" },
+                light: { name: "light", value: "#ffffff" },
+            },
+        },
+
         controls: {
             matchers: {
                 color: /(background|color)$/i,
