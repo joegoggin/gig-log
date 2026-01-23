@@ -302,7 +302,11 @@ export default IconNameIcon;
 
 - **viewBox**: Use `"0 0 24 24"` for consistency (scale paths if needed)
 - **width/height**: Always set to `"24"`
-- **fill**: Use `"currentColor"` to inherit from parent's CSS color property
+- **fill**: Use `"currentColor"` to inherit from parent's CSS `color` property (enables theme support)
 - **stroke-based icons**: If the SVG uses strokes instead of fills, set `stroke="currentColor"` on the path elements and keep `fill="none"`
 - **JSDoc**: Include a brief description of the icon's appearance and typical usage
 - **Naming**: Component name should be `{IconName}Icon` and match the filename
+
+### Theme Support
+
+Icons use `currentColor` to automatically adapt to light/dark themes. To ensure icons inherit the correct color, wrap them in an element with `color: var(--text-color)` or ensure a parent element sets this property.
