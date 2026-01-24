@@ -88,10 +88,11 @@ Page components in `/web/src/pages` should follow the same documentation convent
 
 Documentation should be placed on the component function (not at the file level). The component should be named descriptively (e.g., `HomePage` instead of `App`).
 
-Pages with a loader should include:
+Pages should include:
 1. A description of the page
-2. A "Route:" section with the path
-3. A "Loader Data:" section listing each field returned by the loader
+2. A `Route:` section with the path
+3. A `## Props` section listing each prop with a description
+4. A `## Related Components` section listing components used on the page
 
 ```tsx
 /**
@@ -101,24 +102,16 @@ Pages with a loader should include:
  *
  * Route: `/`
  *
- * Loader Data:
- * - `message` - The welcome message from the API
- */
-function HomePage() {
-```
-
-Pages without a loader should include:
-1. A description of the page
-2. A "Route:" section with the path
-
-```tsx
-/**
- * The user settings page where users can update their profile
- * and application preferences.
+ * ## Props
  *
- * Route: `/settings`
+ * - `isLoggedIn` - Whether the user is currently authenticated
+ *
+ * ## Related Components
+ *
+ * - `Button` - Used for navigation actions
+ * - `FullscreenCenteredLayout` - Page layout wrapper
  */
-function SettingsPage() {
+function HomePage({ isLoggedIn }: HomePageProps) {
 ```
 
 ## Storybook Documentation
