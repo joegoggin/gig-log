@@ -2,11 +2,9 @@
 
 ## Documentation Policy
 
-When asked to add documentation to React components or layouts, **always include Storybook stories** as part of the documentation effort. This means:
+When asked to add documentation to React components, layouts, or pages, **always include Storybook stories** as part of the documentation effort. This means:
 1. JSDoc comments on the component (as described below)
 2. A corresponding `.stories.tsx` file with visual examples
-
-For route components, use MDX files instead of `.stories.tsx` files (see Route Documentation section).
 
 ## Component Documentation
 
@@ -82,15 +80,15 @@ export enum ButtonVariant {
 }
 ```
 
-## Route Documentation
+## Page Documentation
 
-Routes should have both JSDoc comments on the component and an MDX file in Storybook. **Routes should NOT have `.stories.tsx` files** - only MDX documentation.
+Page components in `/web/src/pages` should follow the same documentation conventions as other components.
 
 ### JSDoc Comments
 
 Documentation should be placed on the component function (not at the file level). The component should be named descriptively (e.g., `HomePage` instead of `App`).
 
-Routes with a loader should include:
+Pages with a loader should include:
 1. A description of the page
 2. A "Route:" section with the path
 3. A "Loader Data:" section listing each field returned by the loader
@@ -109,7 +107,7 @@ Routes with a loader should include:
 function HomePage() {
 ```
 
-Routes without a loader should include:
+Pages without a loader should include:
 1. A description of the page
 2. A "Route:" section with the path
 
@@ -122,33 +120,6 @@ Routes without a loader should include:
  */
 function SettingsPage() {
 ```
-
-### MDX Files
-
-Each route should also have an MDX file in `web/src/stories/docs/Routes/`:
-
-```mdx
-import { Meta } from "@storybook/addon-docs/blocks";
-
-<Meta title="Routes/PageName" />
-
-# Page Name
-
-Description of what the page does and its purpose.
-
-**Route:** `/path`
-
-## States
-
-- **State 1:** Description of this state
-- **State 2:** Description of this state
-
-## Related Components
-
-- `ComponentName` - How it's used on this page
-```
-
-See `web/src/stories/docs/Routes/HomePage.mdx` for a complete example
 
 ## Storybook Documentation
 
@@ -168,7 +139,7 @@ Stories are centralized in the `web/src/stories/` directory, mirroring the compo
 - Components: `web/src/stories/components/core/ComponentName.stories.tsx`
 - Layouts: `web/src/stories/layouts/LayoutName.stories.tsx`
 - Icons: `web/src/stories/components/icons/Icons.stories.tsx` (single gallery file for all icons)
-- Route docs: `web/src/stories/docs/Routes/PageName.mdx`
+- Pages: `web/src/stories/pages/PageName.stories.tsx`
 
 Stories should use absolute imports with the `@/` alias to reference components:
 ```tsx
@@ -212,6 +183,7 @@ Use these title prefixes for organization:
 - `"Core/ComponentName"` - Core UI components (Button, Notification, etc.)
 - `"Layouts/LayoutName"` - Layout components
 - `"Icons/All Icons"` - Icon gallery
+- `"Pages/PageName"` - Page components
 
 ### Key Conventions
 

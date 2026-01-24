@@ -20,6 +20,11 @@ type HomePageProps = {
  * ## Props
  *
  * - `isLoggedIn` - Whether the user is currently authenticated
+ *
+ * ## Related Components
+ *
+ * - `Button` - Used for navigation actions
+ * - `FullscreenCenteredLayout` - Page layout wrapper
  */
 function HomePage({ isLoggedIn }: HomePageProps) {
     return (
