@@ -5,14 +5,11 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 #[allow(dead_code)]
-pub struct User {
+pub struct RefreshToken {
     pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-    #[serde(skip_serializing)]
-    pub hashed_password: String,
-    pub email_confirmed: bool,
+    pub user_id: Uuid,
+    pub token_hash: String,
+    pub expires_at: DateTime<Utc>,
+    pub revoked: bool,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }

@@ -1,7 +1,3 @@
-# database commands
-db-migrate *args:
-	cd api && sqlx migrate run    
-
 # api commands
 api *args:
 	cd api && cargo-watch -c -x "run -- {{args}}"
@@ -51,3 +47,11 @@ web-check *args:
 
 web-storybook *args:
 	cd web && pnpm storybook
+
+# database commands
+db-migrate *args:
+	cd api && sqlx migrate run
+
+# posting 
+posting *args:
+	posting --collection ./api/.posting
