@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import FullscreenCenteredLayout from "./FullscreenCenteredLayout";
+import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 
 const meta: Meta<typeof FullscreenCenteredLayout> = {
     title: "Layouts/FullscreenCenteredLayout",

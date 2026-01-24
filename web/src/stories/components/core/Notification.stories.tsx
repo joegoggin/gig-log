@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import Notification, { NotificationType } from "./Notification";
+import Notification, { NotificationType } from "@/components/core/Notification/Notification";
 
 const meta: Meta<typeof Notification> = {
     title: "Core/Notification",

@@ -164,10 +164,16 @@ Storybook is configured in `web/.storybook/` with:
 
 ### Story File Location
 
-Stories are co-located with their components:
-- Components: `web/src/components/core/ComponentName/ComponentName.stories.tsx`
-- Layouts: `web/src/layouts/LayoutName/LayoutName.stories.tsx`
-- Icons: `web/src/components/icons/Icons.stories.tsx` (single gallery file for all icons)
+Stories are centralized in the `web/src/stories/` directory, mirroring the component structure:
+- Components: `web/src/stories/components/core/ComponentName.stories.tsx`
+- Layouts: `web/src/stories/layouts/LayoutName.stories.tsx`
+- Icons: `web/src/stories/components/icons/Icons.stories.tsx` (single gallery file for all icons)
+- Route docs: `web/src/stories/docs/Routes/PageName.mdx`
+
+Stories should use absolute imports with the `@/` alias to reference components:
+```tsx
+import Button from "@/components/core/Button/Button";
+```
 
 ### Story File Structure
 
