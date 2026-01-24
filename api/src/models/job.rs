@@ -6,12 +6,14 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[sqlx(type_name = "payment_type_enum", rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum PaymentType {
     Hourly,
     Payouts,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct Job {
     pub id: Uuid,
     pub company_id: Uuid,

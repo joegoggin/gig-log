@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[sqlx(type_name = "payout_type_enum", rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum PayoutType {
     Paypal,
     Cash,
@@ -18,6 +19,7 @@ pub enum PayoutType {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct Payment {
     pub id: Uuid,
     pub user_id: Uuid,

@@ -1,3 +1,7 @@
+# database commands
+db-migrate *args:
+	cd api && sqlx migrate run    
+
 # api commands
 api *args:
 	cd api && cargo-watch -c -x "run -- {{args}}"
