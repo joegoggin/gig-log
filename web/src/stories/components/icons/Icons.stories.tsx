@@ -1,20 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import AddIcon from "./AddIcon";
-import BackIcon from "./BackIcon";
-import CheckIcon from "./CheckIcon";
-import CloseIcon from "./CloseIcon";
-import CompanyIcon from "./CompanyIcon";
-import DeleteIcon from "./DeleteIcon";
-import EditIcon from "./EditIcon";
-import ErrorIcon from "./ErrorIcon";
-import HamburgerIcon from "./HamburgerIcon";
-import HomeIcon from "./HomeIcon";
-import InfoIcon from "./InfoIcon";
-import JobsIcon from "./JobsIcon";
-import LogOutIcon from "./LogOutIcon";
-import PaymentIcon from "./PaymentIcon";
-import SettingsIcon from "./SettingsIcon";
-import WarningIcon from "./WarningIcon";
+import AddIcon from "@/components/icons/AddIcon";
+import BackIcon from "@/components/icons/BackIcon";
+import CheckIcon from "@/components/icons/CheckIcon";
+import CloseIcon from "@/components/icons/CloseIcon";
+import CompanyIcon from "@/components/icons/CompanyIcon";
+import DeleteIcon from "@/components/icons/DeleteIcon";
+import EditIcon from "@/components/icons/EditIcon";
+import ErrorIcon from "@/components/icons/ErrorIcon";
+import HamburgerIcon from "@/components/icons/HamburgerIcon";
+import HomeIcon from "@/components/icons/HomeIcon";
+import InfoIcon from "@/components/icons/InfoIcon";
+import JobsIcon from "@/components/icons/JobsIcon";
+import LogOutIcon from "@/components/icons/LogOutIcon";
+import PaymentIcon from "@/components/icons/PaymentIcon";
+import SettingsIcon from "@/components/icons/SettingsIcon";
+import WarningIcon from "@/components/icons/WarningIcon";
 
 const IconGallery = () => {
     const icons = [

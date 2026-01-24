@@ -29,7 +29,7 @@ const preview: Preview = {
             theme,
         },
 
-        backgrounds: { disable: true },
+        backgrounds: { disabled: true },
 
         controls: {
             matchers: {

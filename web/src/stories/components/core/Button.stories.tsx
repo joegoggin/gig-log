@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import Button, { ButtonVariant } from "./Button";
+import Button, { ButtonVariant } from "@/components/core/Button/Button";
 
 const meta: Meta<typeof Button> = {
     title: "Core/Button",

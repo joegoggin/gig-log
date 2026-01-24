@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import RootLayout from "./RootLayout";
+import RootLayout from "@/layouts/RootLayout/RootLayout";
 
 const meta: Meta<typeof RootLayout> = {
     title: "Layouts/RootLayout",

@@ -7,9 +7,9 @@ import styles from "./Button.module.scss";
  */
 export enum ButtonVariant {
     /** Primary button style with prominent styling */
-    PRIMARY,
+    PRIMARY = "PRIMARY",
     /** Secondary button style with subtle styling */
-    SECONDARY,
+    SECONDARY = "SECONDARY",
 }
 
 /**
