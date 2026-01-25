@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
@@ -24,6 +25,17 @@ pub struct UserForPasswordReset {
 pub struct UserForVerification {
     pub id: Uuid,
     pub email: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CurrentUser {
+    pub id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub email_confirmed: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 pub struct ValidAuthCode {
@@ -98,6 +110,25 @@ impl AuthRepo {
             UserForVerification,
             r#"SELECT id, email FROM users WHERE email = $1"#,
             email
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn find_user_by_id(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+    ) -> Result<Option<CurrentUser>, sqlx::Error> {
+        let result = sqlx::query_as!(
+            CurrentUser,
+            r#"
+        SELECT id, first_name, last_name, email, email_confirmed, created_at, updated_at
+        FROM users
+        WHERE id = $1
+        "#,
+            user_id
         )
         .fetch_optional(pool)
         .await?;

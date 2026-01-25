@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import "@sass/index.scss";
 
@@ -16,20 +17,22 @@ function RootComponent() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <NotificationProvider>
-                <Outlet />
-                <TanStackDevtools
-                config={{
-                    position: "bottom-right",
-                }}
-                plugins={[
-                    {
-                        name: "Tanstack Router",
-                        render: <TanStackRouterDevtoolsPanel />,
-                    },
-                ]}
-            />
-            </NotificationProvider>
+            <AuthProvider>
+                <NotificationProvider>
+                    <Outlet />
+                    <TanStackDevtools
+                        config={{
+                            position: "bottom-right",
+                        }}
+                        plugins={[
+                            {
+                                name: "Tanstack Router",
+                                render: <TanStackRouterDevtoolsPanel />,
+                            },
+                        ]}
+                    />
+                </NotificationProvider>
+            </AuthProvider>
         </QueryClientProvider>
     );
 }

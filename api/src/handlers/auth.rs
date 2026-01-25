@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, post, web};
+use actix_web::{HttpResponse, get, post, web};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -16,7 +16,7 @@ use crate::auth::password::{hash_password, verify_password};
 use crate::core::env::Env;
 use crate::core::error::{ApiError, ApiResult};
 use crate::models::auth_code::AuthCodeType;
-use crate::repository::auth::AuthRepo;
+use crate::repository::auth::{AuthRepo, CurrentUser};
 use crate::services::email::EmailService;
 
 #[derive(Debug, Deserialize)]
@@ -251,10 +251,28 @@ pub async fn log_out(
         }))
 }
 
+#[derive(Debug, Serialize)]
+pub struct CurrentUserResponse {
+    pub user: CurrentUser,
+}
+
+#[get("/auth/me")]
+pub async fn current_user(
+    pool: web::Data<Pool<Postgres>>,
+    auth_user: AuthenticatedUser,
+) -> ApiResult<HttpResponse> {
+    let user = AuthRepo::find_user_by_id(pool.get_ref(), auth_user.user_id)
+        .await?
+        .ok_or(ApiError::Unauthorized)?;
+
+    Ok(HttpResponse::Ok().json(CurrentUserResponse { user }))
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ForgotPasswordRequest {
     pub email: String,
 }
+
 
 #[derive(Debug, Serialize)]
 pub struct ForgotPasswordResponse {

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useAuth } from "@/contexts/AuthContext";
 import HomePage from "@/pages/HomePage/HomePage";
 
 export const Route = createFileRoute("/")({
@@ -6,8 +7,7 @@ export const Route = createFileRoute("/")({
 });
 
 function RouteComponent() {
-    // TODO: Replace with actual auth state from auth context/store
-    const isLoggedIn = false;
+    const { isLoggedIn } = useAuth();
 
     return <HomePage isLoggedIn={isLoggedIn} />;
 }
