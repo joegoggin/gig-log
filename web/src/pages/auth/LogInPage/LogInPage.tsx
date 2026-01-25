@@ -9,7 +9,7 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
 import type { SetData } from "@/types/SetData";
-import "./LogInPage.module.scss";
+import styles from "./LogInPage.module.scss";
 
 type LogInFormData = {
     email: string;
@@ -62,7 +62,7 @@ const LogInPage = () => {
     };
 
     return (
-        <FullscreenCenteredLayout className="log-in-page">
+        <FullscreenCenteredLayout className={styles["log-in-page"]}>
             <h1>Log In</h1>
             <Form onSubmit={handleSubmit}>
                 <TextInput

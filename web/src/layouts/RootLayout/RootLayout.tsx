@@ -1,10 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import Notification, {
-    type NotificationProps,
-} from "@/components/core/Notification/Notification";
+import Notification from "@/components/core/Notification/Notification";
 import DeleteModal, {
     type DeleteModalProps,
 } from "@/components/modals/DeleteModal";
+import { useNotification } from "@/contexts/NotificationContext";
 import styles from "./RootLayout.module.scss";
 
 /**
@@ -45,9 +44,7 @@ type Modal = {
  */
 function RootLayout({ className = "", children }: RootLayoutProps) {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
-
-    // TODO: Replace with notifications from a notification context/store
-    const notifications: NotificationProps[] = [];
+    const { notifications, removeNotification } = useNotification();
 
     // TODO: Replace with modal state from a modal context/store
     const modal: Modal = {};
@@ -65,8 +62,12 @@ function RootLayout({ className = "", children }: RootLayoutProps) {
         <>
             <div className={`${styles["root-layout"]} ${className}`}>
                 <div className={styles["root-layout__notifications"]}>
-                    {notifications?.map((props, index) => (
-                        <Notification key={index} {...props} />
+                    {notifications.map((notification) => (
+                        <Notification
+                            key={notification.id}
+                            {...notification}
+                            onClose={() => removeNotification(notification.id)}
+                        />
                     ))}
                 </div>
                 {children}
