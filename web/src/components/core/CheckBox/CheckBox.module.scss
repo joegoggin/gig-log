@@ -1,0 +1,35 @@
+@use "@sass/variables/colors" as colors;
+
+.checkbox {
+    display: flex;
+    align-items: center;
+
+    label {
+        font-family: Roboto;
+        color: var(--text-color);
+    }
+
+    input {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        background: var(--background-color);
+        border: 2px solid colors.$cyan-100;
+        border-radius: 5px;
+        cursor: pointer;
+
+        &:checked::after {
+            background: colors.$cyan-100;
+            content: "";
+            width: 50%;
+            height: 50%;
+            color: white;
+            font-weight: 900;
+            border-radius: 1px;
+        }
+    }
+}

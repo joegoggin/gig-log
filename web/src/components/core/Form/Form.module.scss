@@ -1,0 +1,16 @@
+.form {
+    display: flex;
+    flex-direction: column;
+    width: 30%;
+
+    input[type="text"] {
+        width: 100%;
+        align-self: flex-start;
+    }
+
+    button {
+        margin: 0 auto;
+        margin-top: 40px;
+        width: max-content;
+    }
+}
