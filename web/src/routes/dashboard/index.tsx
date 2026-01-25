@@ -1,3 +1,4 @@
+import PrivateRoute from "@/components/auth/PrivateRoute/PrivateRoute";
 import DashboardPage from "@/pages/DashboardPage/DashboardPage";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -6,5 +7,9 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function RouteComponent() {
-    return <DashboardPage />;
+    return (
+        <PrivateRoute>
+            <DashboardPage />
+        </PrivateRoute>
+    );
 }

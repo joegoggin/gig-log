@@ -1,3 +1,4 @@
+import PrivateRoute from "@/components/auth/PrivateRoute/PrivateRoute";
 import SetPasswordPage from "@/pages/auth/SetPassword/SetPasswordPage";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -6,5 +7,9 @@ export const Route = createFileRoute("/auth/set-password/")({
 });
 
 function RouteComponent() {
-    return <SetPasswordPage />;
+    return (
+        <PrivateRoute>
+            <SetPasswordPage />
+        </PrivateRoute>
+    );
 }

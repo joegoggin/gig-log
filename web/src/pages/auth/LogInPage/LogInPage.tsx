@@ -8,6 +8,7 @@ import Form from "@/components/core/Form/Form";
 import Link from "@/components/core/Link";
 import TextInput from "@/components/core/TextInput/TextInput";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/axios";
 import styles from "./LogInPage.module.scss";
 
@@ -28,6 +29,7 @@ type ApiErrorResponse = {
 
 const LogInPage = () => {
     const navigate = useNavigate();
+    const { refreshUser } = useAuth();
     const { data, errors, setData, setErrors } = useForm<LogInFormData>({
         email: "",
         password: "",
@@ -42,7 +44,8 @@ const LogInPage = () => {
             });
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: async () => {
+            await refreshUser();
             navigate({ to: "/dashboard" });
         },
         onError: (error: AxiosError<ApiErrorResponse>) => {

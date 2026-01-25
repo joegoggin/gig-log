@@ -23,7 +23,7 @@ type CurrentUserResponse = {
     user: AuthUser;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
     children: ReactNode;
