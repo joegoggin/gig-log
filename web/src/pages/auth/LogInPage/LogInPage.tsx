@@ -1,4 +1,4 @@
-import { useState } from "react";
+import useForm from "@/hooks/useForm";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { AxiosError } from "axios";
@@ -9,7 +9,6 @@ import Link from "@/components/core/Link";
 import TextInput from "@/components/core/TextInput/TextInput";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import type { SetData } from "@/types/SetData";
 import styles from "./LogInPage.module.scss";
 
 type LogInFormData = {
@@ -29,17 +28,11 @@ type ApiErrorResponse = {
 
 const LogInPage = () => {
     const navigate = useNavigate();
-    const [data, setDataState] = useState<LogInFormData>({
+    const { data, errors, setData, setErrors } = useForm<LogInFormData>({
         email: "",
         password: "",
         remember_me: false,
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const setData: SetData<LogInFormData> = (key, value) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-        setErrors({});
-    };
 
     const loginMutation = useMutation({
         mutationFn: async () => {

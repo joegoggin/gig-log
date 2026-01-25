@@ -1,4 +1,4 @@
-import { useState } from "react";
+import useForm from "@/hooks/useForm";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { AxiosError } from "axios";
@@ -7,7 +7,6 @@ import Form from "@/components/core/Form/Form";
 import TextInput from "@/components/core/TextInput/TextInput";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import type { SetData } from "@/types/SetData";
 import styles from "./VerifyResetCodePage.module.scss";
 
 type VerifyResetCodePageProps = {
@@ -28,15 +27,9 @@ type ApiErrorResponse = {
 
 function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
     const navigate = useNavigate();
-    const [data, setDataState] = useState<VerifyResetCodeFormData>({
+    const { data, errors, setData, setErrors } = useForm<VerifyResetCodeFormData>({
         authCode: "",
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const setData: SetData<VerifyResetCodeFormData> = (key, value) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-        setErrors({});
-    };
 
     const verifyResetCodeMutation = useMutation({
         mutationFn: async () => {

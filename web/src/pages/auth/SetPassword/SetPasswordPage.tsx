@@ -1,4 +1,4 @@
-import { useState } from "react";
+import useForm from "@/hooks/useForm";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { AxiosError } from "axios";
@@ -9,7 +9,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import { useNotification } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import type { SetData } from "@/types/SetData";
 import styles from "./SetPasswordPage.module.scss";
 
 type SetPasswordFormData = {
@@ -28,16 +27,10 @@ type ApiErrorResponse = {
 function SetPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
-    const [data, setDataState] = useState<SetPasswordFormData>({
+    const { data, errors, setData, setErrors } = useForm<SetPasswordFormData>({
         password: "",
         confirm: "",
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const setData: SetData<SetPasswordFormData> = (key, value) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-        setErrors({});
-    };
 
     const setPasswordMutation = useMutation({
         mutationFn: async () => {

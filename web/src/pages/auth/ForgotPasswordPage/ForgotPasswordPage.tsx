@@ -1,4 +1,4 @@
-import { useState } from "react";
+import useForm from "@/hooks/useForm";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { AxiosError } from "axios";
@@ -9,7 +9,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import { useNotification } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import type { SetData } from "@/types/SetData";
 import styles from "./ForgotPasswordPage.module.scss";
 
 type ForgotPasswordFormData = {
@@ -27,15 +26,9 @@ type ApiErrorResponse = {
 function ForgotPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
-    const [data, setDataState] = useState<ForgotPasswordFormData>({
+    const { data, errors, setData, setErrors } = useForm<ForgotPasswordFormData>({
         email: "",
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const setData: SetData<ForgotPasswordFormData> = (key, value) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-        setErrors({});
-    };
 
     const forgotPasswordMutation = useMutation({
         mutationFn: async () => {

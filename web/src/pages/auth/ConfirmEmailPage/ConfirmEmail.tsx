@@ -1,4 +1,4 @@
-import { useState } from "react";
+import useForm from "@/hooks/useForm";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { AxiosError } from "axios";
@@ -9,7 +9,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import { useNotification } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import type { SetData } from "@/types/SetData";
 import styles from "./ConfirmEmail.module.scss";
 
 type ConfirmEmailProps = {
@@ -31,15 +30,9 @@ type ApiErrorResponse = {
 function ConfirmEmail({ email }: ConfirmEmailProps) {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
-    const [data, setDataState] = useState<ConfirmEmailFormData>({
+    const { data, errors, setData, setErrors } = useForm<ConfirmEmailFormData>({
         authCode: "",
     });
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    const setData: SetData<ConfirmEmailFormData> = (key, value) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-        setErrors({});
-    };
 
     const confirmEmailMutation = useMutation({
         mutationFn: async () => {
