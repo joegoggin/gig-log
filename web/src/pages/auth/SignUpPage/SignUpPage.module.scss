@@ -1,0 +1,12 @@
+@use "@sass/variables/colors" as colors;
+
+.sign-up {
+    h1 {
+        margin-bottom: 40px;
+    }
+
+    .success {
+        color: colors.$green-100;
+        margin-bottom: 20px;
+    }
+}

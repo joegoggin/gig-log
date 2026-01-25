@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AuthSignUpIndexRouteImport } from './routes/auth/sign-up/index'
 import { Route as AuthLogInIndexRouteImport } from './routes/auth/log-in/index'
+import { Route as AuthConfirmEmailIndexRouteImport } from './routes/auth/confirm-email/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +25,74 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthSignUpIndexRoute = AuthSignUpIndexRouteImport.update({
+  id: '/auth/sign-up/',
+  path: '/auth/sign-up/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLogInIndexRoute = AuthLogInIndexRouteImport.update({
   id: '/auth/log-in/',
   path: '/auth/log-in/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConfirmEmailIndexRoute = AuthConfirmEmailIndexRouteImport.update({
+  id: '/auth/confirm-email/',
+  path: '/auth/confirm-email/',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/auth/confirm-email': typeof AuthConfirmEmailIndexRoute
   '/auth/log-in': typeof AuthLogInIndexRoute
+  '/auth/sign-up': typeof AuthSignUpIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/auth/confirm-email': typeof AuthConfirmEmailIndexRoute
   '/auth/log-in': typeof AuthLogInIndexRoute
+  '/auth/sign-up': typeof AuthSignUpIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/auth/confirm-email/': typeof AuthConfirmEmailIndexRoute
   '/auth/log-in/': typeof AuthLogInIndexRoute
+  '/auth/sign-up/': typeof AuthSignUpIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/auth/log-in'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/auth/confirm-email'
+    | '/auth/log-in'
+    | '/auth/sign-up'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/auth/log-in'
-  id: '__root__' | '/' | '/dashboard/' | '/auth/log-in/'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/auth/confirm-email'
+    | '/auth/log-in'
+    | '/auth/sign-up'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard/'
+    | '/auth/confirm-email/'
+    | '/auth/log-in/'
+    | '/auth/sign-up/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  AuthConfirmEmailIndexRoute: typeof AuthConfirmEmailIndexRoute
   AuthLogInIndexRoute: typeof AuthLogInIndexRoute
+  AuthSignUpIndexRoute: typeof AuthSignUpIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +111,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/sign-up/': {
+      id: '/auth/sign-up/'
+      path: '/auth/sign-up'
+      fullPath: '/auth/sign-up'
+      preLoaderRoute: typeof AuthSignUpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/log-in/': {
       id: '/auth/log-in/'
       path: '/auth/log-in'
       fullPath: '/auth/log-in'
       preLoaderRoute: typeof AuthLogInIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm-email/': {
+      id: '/auth/confirm-email/'
+      path: '/auth/confirm-email'
+      fullPath: '/auth/confirm-email'
+      preLoaderRoute: typeof AuthConfirmEmailIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +138,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  AuthConfirmEmailIndexRoute: AuthConfirmEmailIndexRoute,
   AuthLogInIndexRoute: AuthLogInIndexRoute,
+  AuthSignUpIndexRoute: AuthSignUpIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
