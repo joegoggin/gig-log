@@ -8,9 +8,14 @@
     padding: 10px;
     border-radius: 5px;
 
+    h5,
+    p {
+        color: colors.$black;
+    }
+
     svg {
         path {
-            fill: var(--text-color);
+            fill: colors.$black;
         }
     }
 
@@ -19,11 +24,11 @@
     }
 
     &--warning {
-        background: colors.$magenta-100;
+        background: colors.$yellow-100;
     }
 
     &--success {
-        background: colors.$cyan-100;
+        background: colors.$green-100;
     }
 
     &--error {
