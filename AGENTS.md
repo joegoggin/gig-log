@@ -114,6 +114,71 @@ Pages should include:
 function HomePage({ isLoggedIn }: HomePageProps) {
 ```
 
+## Rust Model Documentation
+
+All Rust model files in `/api/src/models/` should follow these documentation conventions using Rust doc comments.
+
+### Module-Level Documentation
+
+Each file should start with a module-level doc comment (`//!`) describing the file's purpose:
+
+```rust
+//! User model representing authenticated users of the application.
+```
+
+### Struct Documentation
+
+Structs should have a doc comment describing what they represent and any important behavior:
+
+```rust
+/// Represents a registered user of the application.
+///
+/// Users can create companies, jobs, work sessions, and track payments.
+/// The password is hashed and excluded from serialization for security.
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct User {
+```
+
+### Field Documentation
+
+Every field should have an inline doc comment:
+
+```rust
+pub struct User {
+    /// Unique identifier for the user.
+    pub id: Uuid,
+    /// User's email address (used for login).
+    pub email: String,
+    /// Hashed password (excluded from JSON serialization).
+    #[serde(skip_serializing)]
+    pub hashed_password: String,
+}
+```
+
+### Enum Documentation
+
+Enums should have a description and inline comments for each variant:
+
+```rust
+/// Defines how a job compensates the worker.
+#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
+pub enum PaymentType {
+    /// Paid based on hours worked at an hourly rate.
+    Hourly,
+    /// Paid in fixed amounts (payouts) regardless of time spent.
+    Payouts,
+}
+```
+
+### Conditional Fields
+
+When a field is only applicable under certain conditions, document that relationship:
+
+```rust
+/// Hourly rate for the job. Only applicable when `payment_type` is `Hourly`.
+pub hourly_rate: Option<Decimal>,
+```
+
 ## Storybook Documentation
 
 When adding documentation to components and layouts, **always include Storybook stories** as part of the documentation. Stories serve as living documentation and visual testing.
