@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -20,10 +19,6 @@ type SetPasswordResponse = {
     message: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 function SetPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
@@ -32,7 +27,7 @@ function SetPasswordPage() {
         confirm: "",
     });
 
-    const setPasswordMutation = useMutation({
+    const setPasswordMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<SetPasswordResponse>(
                 "/auth/set-password",
@@ -51,18 +46,11 @@ function SetPasswordPage() {
             });
             navigate({ to: "/auth/log-in" });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message =
-                error.response?.data?.error || "Failed to reset password";
-            setErrors({ password: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "password", message: "Failed to reset password" },
     });
 
     const onSubmit = () => {
-        if (data.password !== data.confirm) {
-            setErrors({ confirm: "Passwords do not match" });
-            return;
-        }
         setPasswordMutation.mutate();
     };
 

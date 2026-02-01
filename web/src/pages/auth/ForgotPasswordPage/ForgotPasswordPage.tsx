@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -19,10 +18,6 @@ type ForgotPasswordResponse = {
     message: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 function ForgotPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
@@ -30,7 +25,7 @@ function ForgotPasswordPage() {
         email: "",
     });
 
-    const forgotPasswordMutation = useMutation({
+    const forgotPasswordMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<ForgotPasswordResponse>(
                 "/auth/forgot-password",
@@ -49,11 +44,8 @@ function ForgotPasswordPage() {
                 search: { email: data.email },
             });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message =
-                error.response?.data?.error || "Failed to send reset code";
-            setErrors({ email: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "email", message: "Failed to send reset code" },
     });
 
     const onSubmit = () => {

@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -23,10 +22,6 @@ type ConfirmEmailResponse = {
     message: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 function ConfirmEmail({ email }: ConfirmEmailProps) {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
@@ -34,7 +29,7 @@ function ConfirmEmail({ email }: ConfirmEmailProps) {
         authCode: "",
     });
 
-    const confirmEmailMutation = useMutation({
+    const confirmEmailMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<ConfirmEmailResponse>(
                 "/auth/confirm-email",
@@ -53,11 +48,8 @@ function ConfirmEmail({ email }: ConfirmEmailProps) {
             });
             navigate({ to: "/auth/log-in" });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message =
-                error.response?.data?.error || "Failed to confirm email";
-            setErrors({ authCode: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "authCode", message: "Failed to confirm email" },
     });
 
     const onSubmit = () => {

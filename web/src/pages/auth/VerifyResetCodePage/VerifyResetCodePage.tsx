@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import TextInput from "@/components/core/TextInput/TextInput";
@@ -21,17 +20,13 @@ type VerifyResetCodeResponse = {
     message: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
     const navigate = useNavigate();
     const { data, errors, setData, setErrors } = useForm<VerifyResetCodeFormData>({
         authCode: "",
     });
 
-    const verifyResetCodeMutation = useMutation({
+    const verifyResetCodeMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<VerifyResetCodeResponse>(
                 "/auth/verify-forgot-password",
@@ -45,11 +40,8 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
         onSuccess: () => {
             navigate({ to: "/auth/set-password" });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message =
-                error.response?.data?.error || "Failed to verify reset code";
-            setErrors({ authCode: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "authCode", message: "Failed to verify reset code" },
     });
 
     const onSubmit = () => {

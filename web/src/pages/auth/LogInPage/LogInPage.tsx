@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Checkbox from "@/components/core/CheckBox/CheckBox";
 import Form from "@/components/core/Form/Form";
@@ -23,10 +22,6 @@ type LogInResponse = {
     user_id: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 const LogInPage = () => {
     const navigate = useNavigate();
     const { refreshUser } = useAuth();
@@ -36,7 +31,7 @@ const LogInPage = () => {
         remember_me: false,
     });
 
-    const loginMutation = useMutation({
+    const loginMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<LogInResponse>("/auth/log-in", {
                 email: data.email,
@@ -48,10 +43,8 @@ const LogInPage = () => {
             await refreshUser();
             navigate({ to: "/dashboard" });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message = error.response?.data?.error || "Login failed";
-            setErrors({ email: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "email", message: "Login failed" },
     });
 
     const handleSubmit = () => {
@@ -74,6 +67,7 @@ const LogInPage = () => {
                     placeholder="Password"
                     data={data}
                     setData={setData}
+                    errors={errors}
                     password
                 />
                 <Link href="/auth/forgot-password">Forgot Password?</Link>

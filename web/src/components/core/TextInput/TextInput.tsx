@@ -1,7 +1,6 @@
 import type { SetData } from "@/types/SetData";
 import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
-import { capitalize } from "@/utils/capitalize";
 import styles from "./TextInput.module.scss";
 
 type TextInputProps<T> = {
@@ -57,17 +56,6 @@ const TextInput = <T,>({
         setClasses(newClasses);
     }, [error, userEditing, className]);
 
-    const getErrorString = () => {
-        let formated_name = "";
-        const split = (name as string).split("_");
-
-        split.forEach((str) => {
-            formated_name += `${capitalize(str)} `;
-        });
-
-        return `${formated_name}${error}`;
-    };
-
     return (
         <div className={classes}>
             {label && <label>{label}</label>}
@@ -77,7 +65,7 @@ const TextInput = <T,>({
                 onChange={handleChange}
                 value={data[name] as string}
             />
-            {error && !userEditing && <p>{getErrorString()}</p>}
+            {error && !userEditing && <p>{error}</p>}
         </div>
     );
 };

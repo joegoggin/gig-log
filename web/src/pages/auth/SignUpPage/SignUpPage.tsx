@@ -1,7 +1,6 @@
 import useForm from "@/hooks/useForm";
-import { useMutation } from "@tanstack/react-query";
+import useFormMutation from "@/hooks/useFormMutation";
 import { useNavigate } from "@tanstack/react-router";
-import type { AxiosError } from "axios";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -23,10 +22,6 @@ type SignUpResponse = {
     message: string;
 };
 
-type ApiErrorResponse = {
-    error: string;
-};
-
 const SignUpPage: React.FC = () => {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
@@ -38,7 +33,7 @@ const SignUpPage: React.FC = () => {
         confirm: "",
     });
 
-    const signUpMutation = useMutation({
+    const signUpMutation = useFormMutation({
         mutationFn: async () => {
             const response = await api.post<SignUpResponse>("/auth/sign-up", {
                 first_name: data.first_name,
@@ -60,17 +55,11 @@ const SignUpPage: React.FC = () => {
                 search: { email: data.email },
             });
         },
-        onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message = error.response?.data?.error || "Sign up failed";
-            setErrors({ email: message });
-        },
+        onError: setErrors,
+        fallbackError: { field: "email", message: "Sign up failed" },
     });
 
     const handleSubmit = () => {
-        if (data.password !== data.confirm) {
-            setErrors({ confirm: "Passwords do not match" });
-            return;
-        }
         signUpMutation.mutate();
     };
 
@@ -104,6 +93,7 @@ const SignUpPage: React.FC = () => {
                     placeholder="Password"
                     data={data}
                     setData={setData}
+                    errors={errors}
                     password
                 />
                 <TextInput
