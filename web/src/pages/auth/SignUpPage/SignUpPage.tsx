@@ -56,7 +56,7 @@ const SignUpPage: React.FC = () => {
             });
         },
         onError: setErrors,
-        fallbackError: { field: "email", message: "Sign up failed" },
+        fallbackError: "Sign up failed",
     });
 
     const handleSubmit = () => {

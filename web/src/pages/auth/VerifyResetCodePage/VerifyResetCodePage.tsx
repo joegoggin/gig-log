@@ -41,7 +41,7 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
             navigate({ to: "/auth/set-password" });
         },
         onError: setErrors,
-        fallbackError: { field: "authCode", message: "Failed to verify reset code" },
+        fallbackError: "Failed to verify reset code",
     });
 
     const onSubmit = () => {

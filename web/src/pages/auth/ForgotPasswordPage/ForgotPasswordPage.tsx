@@ -45,7 +45,7 @@ function ForgotPasswordPage() {
             });
         },
         onError: setErrors,
-        fallbackError: { field: "email", message: "Failed to send reset code" },
+        fallbackError: "Failed to send reset code",
     });
 
     const onSubmit = () => {

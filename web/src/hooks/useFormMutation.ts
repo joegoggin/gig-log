@@ -1,5 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
+import { NotificationType } from "@/components/core/Notification/Notification";
+import { useNotification } from "@/contexts/NotificationContext";
 import {
     parseValidationErrors,
     type ValidationErrorResponse,
@@ -9,7 +11,7 @@ type UseFormMutationOptions<TData, TVariables> = {
     mutationFn: (variables: TVariables) => Promise<TData>;
     onSuccess?: (data: TData) => void;
     onError?: (errors: Record<string, string>) => void;
-    fallbackError: { field: string; message: string };
+    fallbackError: string;
 };
 
 const useFormMutation = <TData, TVariables = void>({
@@ -18,6 +20,8 @@ const useFormMutation = <TData, TVariables = void>({
     onError,
     fallbackError,
 }: UseFormMutationOptions<TData, TVariables>) => {
+    const { addNotification } = useNotification();
+
     return useMutation({
         mutationFn,
         onSuccess,
@@ -26,7 +30,11 @@ const useFormMutation = <TData, TVariables = void>({
                 const errors = parseValidationErrors(error.response.data);
                 onError?.(errors);
             } else {
-                onError?.({ [fallbackError.field]: fallbackError.message });
+                addNotification({
+                    type: NotificationType.ERROR,
+                    title: "Error",
+                    message: fallbackError,
+                });
             }
         },
     });

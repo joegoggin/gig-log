@@ -44,7 +44,7 @@ const LogInPage = () => {
             navigate({ to: "/dashboard" });
         },
         onError: setErrors,
-        fallbackError: { field: "email", message: "Login failed" },
+        fallbackError: "Login failed",
     });
 
     const handleSubmit = () => {

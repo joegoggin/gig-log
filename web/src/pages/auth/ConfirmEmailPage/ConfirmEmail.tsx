@@ -49,7 +49,7 @@ function ConfirmEmail({ email }: ConfirmEmailProps) {
             navigate({ to: "/auth/log-in" });
         },
         onError: setErrors,
-        fallbackError: { field: "authCode", message: "Failed to confirm email" },
+        fallbackError: "Failed to confirm email",
     });
 
     const onSubmit = () => {

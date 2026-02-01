@@ -47,7 +47,7 @@ function SetPasswordPage() {
             navigate({ to: "/auth/log-in" });
         },
         onError: setErrors,
-        fallbackError: { field: "password", message: "Failed to reset password" },
+        fallbackError: "Failed to reset password",
     });
 
     const onSubmit = () => {
