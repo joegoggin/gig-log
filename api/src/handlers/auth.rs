@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::auth::codes::{generate_auth_code, hash_code, verify_code};
 use crate::auth::cookies::{
@@ -15,16 +16,28 @@ use crate::auth::middleware::AuthenticatedUser;
 use crate::auth::password::{hash_password, verify_password};
 use crate::core::env::Env;
 use crate::core::error::{ApiError, ApiResult};
+use crate::extractors::ValidatedJson;
 use crate::models::auth_code::AuthCodeType;
+use crate::utils::validators::{validate_set_password_match, validate_signup_passwords_match};
 use crate::repository::auth::{AuthRepo, CurrentUser};
 use crate::services::email::EmailService;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_signup_passwords_match"))]
 pub struct SignUpRequest {
+    #[validate(length(min = 1, message = "First name is required"))]
     pub first_name: String,
+
+    #[validate(length(min = 1, message = "Last name is required"))]
     pub last_name: String,
+
+    #[validate(email(message = "Email is invalid"))]
     pub email: String,
+
+    #[validate(length(min = 8, message = "Password must have at least 8 characters"))]
     pub password: String,
+
+    #[validate(length(min = 1, message = "Confirm password is required"))]
     pub confirm: String,
 }
 
@@ -38,12 +51,9 @@ pub struct SignUpResponse {
 pub async fn sign_up(
     pool: web::Data<Pool<Postgres>>,
     env: web::Data<Env>,
-    body: web::Json<SignUpRequest>,
+    body: ValidatedJson<SignUpRequest>,
 ) -> ApiResult<HttpResponse> {
-    // Validate passwords match
-    if body.password != body.confirm {
-        return Err(ApiError::PasswordMismatch);
-    }
+    let body = body.into_inner();
 
     // Check if email already exists
     if AuthRepo::check_email_exists(pool.get_ref(), &body.email).await? {
@@ -89,9 +99,12 @@ pub async fn sign_up(
     }))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ConfirmEmailRequest {
+    #[validate(email(message = "Email is invalid"))]
     pub email: String,
+
+    #[validate(length(min = 1, message = "Auth code is required"))]
     pub auth_code: String,
 }
 
@@ -103,8 +116,10 @@ pub struct ConfirmEmailResponse {
 #[post("/auth/confirm-email")]
 pub async fn confirm_email(
     pool: web::Data<Pool<Postgres>>,
-    body: web::Json<ConfirmEmailRequest>,
+    body: ValidatedJson<ConfirmEmailRequest>,
 ) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+
     // Find user by email
     let user = AuthRepo::find_user_for_confirmation(pool.get_ref(), &body.email)
         .await?
@@ -140,9 +155,12 @@ pub async fn confirm_email(
     }))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct LogInRequest {
+    #[validate(email(message = "Email is invalid"))]
     pub email: String,
+
+    #[validate(length(min = 1, message = "Password is required"))]
     pub password: String,
 }
 
@@ -156,8 +174,10 @@ pub struct LogInResponse {
 pub async fn log_in(
     pool: web::Data<Pool<Postgres>>,
     env: web::Data<Env>,
-    body: web::Json<LogInRequest>,
+    body: ValidatedJson<LogInRequest>,
 ) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+
     // Find user by email
     let user = AuthRepo::find_user_for_login(pool.get_ref(), &body.email)
         .await?
@@ -268,11 +288,11 @@ pub async fn current_user(
     Ok(HttpResponse::Ok().json(CurrentUserResponse { user }))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ForgotPasswordRequest {
+    #[validate(email(message = "Email is invalid"))]
     pub email: String,
 }
-
 
 #[derive(Debug, Serialize)]
 pub struct ForgotPasswordResponse {
@@ -283,8 +303,10 @@ pub struct ForgotPasswordResponse {
 pub async fn forgot_password(
     pool: web::Data<Pool<Postgres>>,
     env: web::Data<Env>,
-    body: web::Json<ForgotPasswordRequest>,
+    body: ValidatedJson<ForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+
     // Always return success to prevent email enumeration
     let response = ForgotPasswordResponse {
         message: "If an account with this email exists, a password reset code has been sent."
@@ -323,9 +345,12 @@ pub async fn forgot_password(
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct VerifyForgotPasswordRequest {
+    #[validate(email(message = "Email is invalid"))]
     pub email: String,
+
+    #[validate(length(min = 1, message = "Auth code is required"))]
     pub auth_code: String,
 }
 
@@ -338,8 +363,10 @@ pub struct VerifyForgotPasswordResponse {
 pub async fn verify_forgot_password(
     pool: web::Data<Pool<Postgres>>,
     env: web::Data<Env>,
-    body: web::Json<VerifyForgotPasswordRequest>,
+    body: ValidatedJson<VerifyForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+
     // Find user by email
     let user = AuthRepo::find_user_for_verification(pool.get_ref(), &body.email)
         .await?
@@ -397,9 +424,13 @@ pub async fn verify_forgot_password(
         }))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_set_password_match"))]
 pub struct SetPasswordRequest {
+    #[validate(length(min = 8, message = "Password must have at least 8 characters"))]
     pub password: String,
+
+    #[validate(length(min = 1, message = "Confirm password is required"))]
     pub confirm: String,
 }
 
@@ -413,12 +444,9 @@ pub async fn set_password(
     user: AuthenticatedUser,
     pool: web::Data<Pool<Postgres>>,
     env: web::Data<Env>,
-    body: web::Json<SetPasswordRequest>,
+    body: ValidatedJson<SetPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
-    // Validate passwords match
-    if body.password != body.confirm {
-        return Err(ApiError::PasswordMismatch);
-    }
+    let body = body.into_inner();
 
     // Hash new password
     let hashed_password = hash_password(&body.password)?;
