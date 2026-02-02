@@ -8,7 +8,9 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::repository::auth::CurrentUser;
-use crate::utils::validators::{validate_set_password_match, validate_signup_passwords_match};
+use crate::validators::password_match::{
+    validate_set_password_match, validate_signup_passwords_match,
+};
 
 /// Request body for user registration.
 ///

@@ -369,6 +369,102 @@ pub struct SignUpResponse {
 }
 ```
 
+## Rust Validator Documentation
+
+All Rust validator modules in `/api/src/validators/` should follow the structure established in the `password_match` module. Validators provide cross-field validation that cannot be expressed with simple field-level attributes.
+
+### Directory Structure
+
+```
+api/src/validators/
+├── mod.rs              # Module-level docs and re-exports
+└── password_match.rs   # Password confirmation validation
+```
+
+### Module Documentation (`validators/mod.rs`)
+
+The top-level module should describe the purpose and list all submodules:
+
+```rust
+//! Custom validation functions for request payloads.
+//!
+//! This module provides validation helpers used with the `validator` crate
+//! to perform cross-field validation that cannot be expressed with simple
+//! field-level attributes.
+//!
+//! # Modules
+//!
+//! - [`password_match`] - Password confirmation validation for sign-up and password reset flows
+
+pub mod password_match;
+```
+
+### Validator File Documentation
+
+Each validator file should include:
+
+1. Module-level docs (`//!`) describing the file's purpose
+2. Private helper functions with `# Arguments` and `# Errors` sections
+3. Public validation functions that reference the handlers/payloads that use them
+
+```rust
+//! Custom validation functions for request payloads.
+//!
+//! This module provides validation helpers used with the `validator` crate
+//! to perform cross-field validation that cannot be expressed with simple
+//! field-level attributes.
+
+use crate::routes::auth::{SetPasswordRequest, SignUpRequest};
+
+/// Validates that two password fields match.
+///
+/// This is a private helper function used by the public validation functions
+/// for specific request types.
+///
+/// # Arguments
+///
+/// * `password` - The password field value
+/// * `confirm` - The confirmation password field value
+///
+/// # Errors
+///
+/// Returns a `ValidationError` with code `password_mismatch` if the passwords
+/// do not match.
+fn validate_passwords_match(
+    password: &str,
+    confirm: &str,
+) -> Result<(), validator::ValidationError> {
+    if password != confirm {
+        let mut error = validator::ValidationError::new("password_mismatch");
+        error.message = Some("Passwords do not match".into());
+        return Err(error);
+    }
+    Ok(())
+}
+
+/// Validates that the password and confirm fields match in a sign-up request.
+///
+/// Used with the `#[validate(custom(...))]` attribute on [`SignUpRequest`].
+///
+/// See [`sign_up`](crate::routes::auth::handlers::sign_up) for the handler
+/// that uses this validation.
+pub fn validate_signup_passwords_match(
+    req: &SignUpRequest,
+) -> Result<(), validator::ValidationError> {
+    validate_passwords_match(&req.password, &req.confirm)
+}
+```
+
+### Key Conventions
+
+1. **Module-level docs** - Always include `//!` comments describing the file's purpose
+2. **Private helpers** - Document with `# Arguments` and `# Errors` sections
+3. **Public functions** - Include:
+   - Description of what validation is performed
+   - Which attribute/struct uses this validator (e.g., `#[validate(custom(...))]`)
+   - Link to the handler that triggers this validation using rustdoc syntax
+4. **Cross-references** - Link to related payload types and handlers for navigation
+
 ## Storybook Documentation
 
 When adding documentation to components and layouts, **always include Storybook stories** as part of the documentation. Stories serve as living documentation and visual testing.
