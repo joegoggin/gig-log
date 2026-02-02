@@ -179,6 +179,196 @@ When a field is only applicable under certain conditions, document that relation
 pub hourly_rate: Option<Decimal>,
 ```
 
+## Rust Route Documentation
+
+All Rust route modules in `/api/src/routes/` should follow the structure established in the `auth/` module. Each route domain is a directory with handlers and payloads that cross-reference each other in documentation.
+
+### Directory Structure
+
+Each route domain should be a directory containing:
+
+- `mod.rs` - Module-level docs and re-exports
+- `handlers.rs` - HTTP handler functions
+- `payloads.rs` - Request/response structs
+
+```
+api/src/routes/
+├── mod.rs           # Top-level routes module
+├── auth/            # Primary example - follow this structure
+│   ├── mod.rs
+│   ├── handlers.rs
+│   └── payloads.rs
+└── health/          # Special case - no payloads needed for simple JSON responses
+    ├── mod.rs
+    └── handlers.rs
+```
+
+**Note:** The `health/` module is a special case that doesn't require `payloads.rs` since it returns a simple inline JSON response. Most route modules should follow the `auth/` pattern with a dedicated `payloads.rs` file.
+
+### Top-Level Module (`routes/mod.rs`)
+
+Document the module purpose and list all route domains:
+
+```rust
+//! HTTP route handlers for the API.
+//!
+//! This module organizes all route handlers by domain:
+//!
+//! - [`auth`] - Authentication routes (sign-up, login, logout, password reset)
+//! - [`health`] - Health check endpoint for monitoring
+
+pub mod auth;
+pub mod health;
+```
+
+### Route Module (`routes/{domain}/mod.rs`)
+
+Include module-level docs describing the domain, list submodules, and re-export handlers and commonly-used payloads:
+
+```rust
+//! Authentication handlers for user registration, login, and password management.
+//!
+//! This module provides HTTP handlers for all authentication-related endpoints:
+//! - User registration and email confirmation
+//! - Login and logout with JWT tokens stored in HTTP-only cookies
+//! - Password reset flow (forgot password, verify code, set new password)
+//! - Current user retrieval for authenticated sessions
+//!
+//! # Module Structure
+//!
+//! - [`handlers`] - HTTP handler functions for authentication endpoints
+//! - [`payloads`] - Request and response data structures
+
+pub mod handlers;
+pub mod payloads;
+
+// Re-export handlers at module level for easy route registration
+pub use handlers::{
+    confirm_email, current_user, forgot_password, log_in, log_out, set_password, sign_up,
+    verify_forgot_password,
+};
+
+// Re-export payload types that are used by other modules
+pub use payloads::{SetPasswordRequest, SignUpRequest};
+```
+
+### Handler Documentation (`routes/{domain}/handlers.rs`)
+
+Each handler function should include:
+
+1. A description of what the handler does
+2. `# Route` section with the HTTP method and path
+3. `# Request Body` section linking to the payload type (if applicable)
+4. `# Response Body` section linking to the payload type
+5. `# Errors` section listing possible error cases
+
+**Important:** Link to payload types using rustdoc syntax (e.g., `[`SignUpRequest`]`) to enable navigation between handlers and payloads.
+
+```rust
+//! HTTP handler functions for authentication endpoints.
+//!
+//! This module contains all the handler functions that process authentication
+//! requests including user registration, login, logout, email confirmation,
+//! and password management.
+
+use super::payloads::{SignUpRequest, SignUpResponse};
+
+/// Registers a new user account.
+///
+/// Creates a new user with the provided credentials, generates an email
+/// confirmation code, and sends it to the user's email address.
+///
+/// # Route
+///
+/// `POST /auth/sign-up`
+///
+/// # Request Body ([`SignUpRequest`])
+///
+/// - `first_name` - User's first name
+/// - `last_name` - User's last name
+/// - `email` - User's email address (must be unique)
+/// - `password` - User's chosen password (minimum 8 characters)
+/// - `confirm` - Password confirmation (must match `password`)
+///
+/// # Response Body ([`SignUpResponse`])
+///
+/// - `message` - Success message instructing user to check email
+/// - `user_id` - The newly created user's unique identifier
+///
+/// # Errors
+///
+/// - `EmailAlreadyExists` - If the email is already registered
+/// - `InternalError` - If password hashing or database operations fail
+#[post("/auth/sign-up")]
+pub async fn sign_up(
+    pool: web::Data<Pool<Postgres>>,
+    env: web::Data<Env>,
+    body: ValidatedJson<SignUpRequest>,
+) -> ApiResult<HttpResponse> {
+    // ...
+}
+```
+
+### Payloads Documentation (`routes/{domain}/payloads.rs`)
+
+Each payload struct should include:
+
+1. A description of what the payload represents
+2. A `See [handler_name](super::handlers::handler_name)` link back to the handler
+3. Field-level documentation for each field
+
+**Important:** Always link back to the handler that uses the payload using `super::handlers::handler_name` syntax.
+
+```rust
+//! Request and response payloads for authentication endpoints.
+//!
+//! This module contains all the data structures used for serializing and
+//! deserializing HTTP request bodies and response payloads in the auth handlers.
+
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use validator::Validate;
+
+/// Request body for user registration.
+///
+/// Validates that passwords match and meet minimum length requirements.
+///
+/// See [`sign_up`](super::handlers::sign_up) for the handler that processes this request.
+#[derive(Debug, Deserialize, Validate)]
+pub struct SignUpRequest {
+    /// User's first name.
+    #[validate(length(min = 1, message = "First name is required"))]
+    pub first_name: String,
+
+    /// User's last name.
+    #[validate(length(min = 1, message = "Last name is required"))]
+    pub last_name: String,
+
+    /// User's email address (must be unique).
+    #[validate(email(message = "Email is invalid"))]
+    pub email: String,
+
+    /// User's chosen password (minimum 8 characters).
+    #[validate(length(min = 8, message = "Password must have at least 8 characters"))]
+    pub password: String,
+
+    /// Password confirmation (must match `password`).
+    #[validate(length(min = 1, message = "Confirm password is required"))]
+    pub confirm: String,
+}
+
+/// Response body for successful user registration.
+///
+/// See [`sign_up`](super::handlers::sign_up) for the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct SignUpResponse {
+    /// Success message instructing user to check email.
+    pub message: String,
+    /// The newly created user's unique identifier.
+    pub user_id: Uuid,
+}
+```
+
 ## Storybook Documentation
 
 When adding documentation to components and layouts, **always include Storybook stories** as part of the documentation. Stories serve as living documentation and visual testing.

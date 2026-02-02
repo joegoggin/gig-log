@@ -1,4 +1,4 @@
-use crate::handlers::auth::{SetPasswordRequest, SignUpRequest};
+use crate::routes::auth::{SetPasswordRequest, SignUpRequest};
 
 fn validate_passwords_match(
     password: &str,

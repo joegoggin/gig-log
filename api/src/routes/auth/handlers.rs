@@ -1,10 +1,13 @@
-use actix_web::{HttpResponse, get, post, web};
+//! HTTP handler functions for authentication endpoints.
+//!
+//! This module contains all the handler functions that process authentication
+//! requests including user registration, login, logout, email confirmation,
+//! and password management.
+
+use actix_web::{get, post, web, HttpResponse};
 use chrono::{Duration, Utc};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{Pool, Postgres};
-use uuid::Uuid;
-use validator::Validate;
 
 use crate::auth::codes::{generate_auth_code, hash_code, verify_code};
 use crate::auth::cookies::{
@@ -18,35 +21,42 @@ use crate::core::env::Env;
 use crate::core::error::{ApiError, ApiResult};
 use crate::extractors::ValidatedJson;
 use crate::models::auth_code::AuthCodeType;
-use crate::utils::validators::{validate_set_password_match, validate_signup_passwords_match};
-use crate::repository::auth::{AuthRepo, CurrentUser};
+use crate::repository::auth::AuthRepo;
 use crate::services::email::EmailService;
 
-#[derive(Debug, Deserialize, Validate)]
-#[validate(schema(function = "validate_signup_passwords_match"))]
-pub struct SignUpRequest {
-    #[validate(length(min = 1, message = "First name is required"))]
-    pub first_name: String,
+use super::payloads::{
+    ConfirmEmailRequest, ConfirmEmailResponse, CurrentUserResponse, ForgotPasswordRequest,
+    ForgotPasswordResponse, LogInRequest, LogInResponse, LogOutResponse, SetPasswordRequest,
+    SetPasswordResponse, SignUpRequest, SignUpResponse, VerifyForgotPasswordRequest,
+    VerifyForgotPasswordResponse,
+};
 
-    #[validate(length(min = 1, message = "Last name is required"))]
-    pub last_name: String,
-
-    #[validate(email(message = "Email is invalid"))]
-    pub email: String,
-
-    #[validate(length(min = 8, message = "Password must have at least 8 characters"))]
-    pub password: String,
-
-    #[validate(length(min = 1, message = "Confirm password is required"))]
-    pub confirm: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SignUpResponse {
-    pub message: String,
-    pub user_id: Uuid,
-}
-
+/// Registers a new user account.
+///
+/// Creates a new user with the provided credentials, generates an email
+/// confirmation code, and sends it to the user's email address.
+///
+/// # Route
+///
+/// `POST /auth/sign-up`
+///
+/// # Request Body ([`SignUpRequest`])
+///
+/// - `first_name` - User's first name
+/// - `last_name` - User's last name
+/// - `email` - User's email address (must be unique)
+/// - `password` - User's chosen password (minimum 8 characters)
+/// - `confirm` - Password confirmation (must match `password`)
+///
+/// # Response Body ([`SignUpResponse`])
+///
+/// - `message` - Success message instructing user to check email
+/// - `user_id` - The newly created user's unique identifier
+///
+/// # Errors
+///
+/// - `EmailAlreadyExists` - If the email is already registered
+/// - `InternalError` - If password hashing or database operations fail
 #[post("/auth/sign-up")]
 pub async fn sign_up(
     pool: web::Data<Pool<Postgres>>,
@@ -99,20 +109,29 @@ pub async fn sign_up(
     }))
 }
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct ConfirmEmailRequest {
-    #[validate(email(message = "Email is invalid"))]
-    pub email: String,
-
-    #[validate(length(min = 1, message = "Auth code is required"))]
-    pub auth_code: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ConfirmEmailResponse {
-    pub message: String,
-}
-
+/// Confirms a user's email address using the provided auth code.
+///
+/// Validates the auth code against the stored hash and marks the user's
+/// email as confirmed if valid.
+///
+/// # Route
+///
+/// `POST /auth/confirm-email`
+///
+/// # Request Body ([`ConfirmEmailRequest`])
+///
+/// - `email` - The email address to confirm
+/// - `auth_code` - The confirmation code sent to the user's email
+///
+/// # Response Body ([`ConfirmEmailResponse`])
+///
+/// - `message` - Confirmation status message
+///
+/// # Errors
+///
+/// - `InvalidCredentials` - If no user exists with the given email
+/// - `AuthCodeExpired` - If no valid auth code exists
+/// - `InvalidAuthCode` - If the provided code doesn't match
 #[post("/auth/confirm-email")]
 pub async fn confirm_email(
     pool: web::Data<Pool<Postgres>>,
@@ -155,21 +174,29 @@ pub async fn confirm_email(
     }))
 }
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct LogInRequest {
-    #[validate(email(message = "Email is invalid"))]
-    pub email: String,
-
-    #[validate(length(min = 1, message = "Password is required"))]
-    pub password: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LogInResponse {
-    pub message: String,
-    pub user_id: Uuid,
-}
-
+/// Authenticates a user and issues JWT tokens.
+///
+/// Verifies the user's credentials, creates access and refresh tokens,
+/// stores the refresh token hash in the database, and sets HTTP-only cookies.
+///
+/// # Route
+///
+/// `POST /auth/log-in`
+///
+/// # Request Body ([`LogInRequest`])
+///
+/// - `email` - User's email address
+/// - `password` - User's password
+///
+/// # Response Body ([`LogInResponse`])
+///
+/// - `message` - Success message
+/// - `user_id` - The authenticated user's unique identifier
+///
+/// # Errors
+///
+/// - `InvalidCredentials` - If email doesn't exist or password is incorrect
+/// - `EmailNotConfirmed` - If the user hasn't confirmed their email
 #[post("/auth/log-in")]
 pub async fn log_in(
     pool: web::Data<Pool<Postgres>>,
@@ -233,11 +260,19 @@ pub async fn log_in(
         }))
 }
 
-#[derive(Debug, Serialize)]
-pub struct LogOutResponse {
-    pub message: String,
-}
-
+/// Logs out the current user by revoking tokens and clearing cookies.
+///
+/// Attempts to revoke the refresh token if present and valid, then clears
+/// both access and refresh token cookies. Always succeeds even if no valid
+/// tokens are present.
+///
+/// # Route
+///
+/// `POST /auth/log-out`
+///
+/// # Response Body ([`LogOutResponse`])
+///
+/// - `message` - Success message
 #[post("/auth/log-out")]
 pub async fn log_out(
     pool: web::Data<Pool<Postgres>>,
@@ -271,11 +306,28 @@ pub async fn log_out(
         }))
 }
 
-#[derive(Debug, Serialize)]
-pub struct CurrentUserResponse {
-    pub user: CurrentUser,
-}
-
+/// Retrieves the currently authenticated user's profile.
+///
+/// Requires a valid access token. Returns the user's basic profile information.
+///
+/// # Route
+///
+/// `GET /auth/me`
+///
+/// # Response Body ([`CurrentUserResponse`])
+///
+/// - `user` - The current user's profile data
+///   - `id` - User's unique identifier
+///   - `first_name` - User's first name
+///   - `last_name` - User's last name
+///   - `email` - User's email address
+///   - `email_confirmed` - Whether the email has been confirmed
+///   - `created_at` - Account creation timestamp
+///   - `updated_at` - Last update timestamp
+///
+/// # Errors
+///
+/// - `Unauthorized` - If the access token is invalid or the user doesn't exist
 #[get("/auth/me")]
 pub async fn current_user(
     pool: web::Data<Pool<Postgres>>,
@@ -288,17 +340,23 @@ pub async fn current_user(
     Ok(HttpResponse::Ok().json(CurrentUserResponse { user }))
 }
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct ForgotPasswordRequest {
-    #[validate(email(message = "Email is invalid"))]
-    pub email: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ForgotPasswordResponse {
-    pub message: String,
-}
-
+/// Initiates the password reset flow.
+///
+/// Generates a password reset code and sends it to the user's email.
+/// Always returns success to prevent email enumeration attacks, even if
+/// the email doesn't exist in the system.
+///
+/// # Route
+///
+/// `POST /auth/forgot-password`
+///
+/// # Request Body ([`ForgotPasswordRequest`])
+///
+/// - `email` - Email address of the account to reset
+///
+/// # Response Body ([`ForgotPasswordResponse`])
+///
+/// - `message` - Generic message (same whether email exists or not for security)
 #[post("/auth/forgot-password")]
 pub async fn forgot_password(
     pool: web::Data<Pool<Postgres>>,
@@ -345,20 +403,29 @@ pub async fn forgot_password(
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[derive(Debug, Deserialize, Validate)]
-pub struct VerifyForgotPasswordRequest {
-    #[validate(email(message = "Email is invalid"))]
-    pub email: String,
-
-    #[validate(length(min = 1, message = "Auth code is required"))]
-    pub auth_code: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct VerifyForgotPasswordResponse {
-    pub message: String,
-}
-
+/// Verifies a password reset code and issues tokens.
+///
+/// Validates the reset code, marks it as used, and issues access/refresh
+/// tokens so the user can set a new password.
+///
+/// # Route
+///
+/// `POST /auth/verify-forgot-password`
+///
+/// # Request Body ([`VerifyForgotPasswordRequest`])
+///
+/// - `email` - Email address of the account
+/// - `auth_code` - The password reset code sent to the user's email
+///
+/// # Response Body ([`VerifyForgotPasswordResponse`])
+///
+/// - `message` - Success message
+///
+/// # Errors
+///
+/// - `InvalidCredentials` - If the email doesn't exist
+/// - `AuthCodeExpired` - If no valid reset code exists
+/// - `InvalidAuthCode` - If the provided code doesn't match
 #[post("/auth/verify-forgot-password")]
 pub async fn verify_forgot_password(
     pool: web::Data<Pool<Postgres>>,
@@ -424,21 +491,28 @@ pub async fn verify_forgot_password(
         }))
 }
 
-#[derive(Debug, Deserialize, Validate)]
-#[validate(schema(function = "validate_set_password_match"))]
-pub struct SetPasswordRequest {
-    #[validate(length(min = 8, message = "Password must have at least 8 characters"))]
-    pub password: String,
-
-    #[validate(length(min = 1, message = "Confirm password is required"))]
-    pub confirm: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SetPasswordResponse {
-    pub message: String,
-}
-
+/// Sets a new password for the authenticated user.
+///
+/// Updates the user's password, revokes all existing refresh tokens for
+/// security, and issues new access/refresh tokens.
+///
+/// # Route
+///
+/// `POST /auth/set-password`
+///
+/// # Request Body ([`SetPasswordRequest`])
+///
+/// - `password` - The new password (minimum 8 characters)
+/// - `confirm` - Password confirmation (must match `password`)
+///
+/// # Response Body ([`SetPasswordResponse`])
+///
+/// - `message` - Success message
+///
+/// # Errors
+///
+/// - `Unauthorized` - If not authenticated
+/// - `InternalError` - If password hashing or database operations fail
 #[post("/auth/set-password")]
 pub async fn set_password(
     user: AuthenticatedUser,

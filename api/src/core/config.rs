@@ -1,13 +1,14 @@
 use actix_web::web::ServiceConfig;
 
-use crate::handlers::auth::{
+use crate::routes::auth::{
     confirm_email, current_user, forgot_password, log_in, log_out, set_password, sign_up,
     verify_forgot_password,
 };
-use crate::handlers::health::health_check;
+use crate::routes::health::health_check;
 
 pub fn configure_routes(config: &mut ServiceConfig) {
     config
+        // Health routes
         .service(health_check)
         // Auth routes
         .service(sign_up)
