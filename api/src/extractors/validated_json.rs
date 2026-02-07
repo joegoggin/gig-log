@@ -103,7 +103,7 @@ fn convert_validation_errors(errors: ValidationErrors) -> ValidationErrorRespons
                 field_errors.extend(nested_response.errors);
             }
             validator::ValidationErrorsKind::List(list) => {
-                for (_, err) in list {
+                for err in list.values() {
                     let nested = convert_validation_errors(*err.clone());
                     field_errors.extend(nested.errors);
                 }

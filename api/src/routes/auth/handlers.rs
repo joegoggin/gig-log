@@ -284,18 +284,17 @@ pub async fn log_out(
     req: actix_web::HttpRequest,
 ) -> ApiResult<HttpResponse> {
     // Try to revoke refresh token if present
-    if let Some(refresh_cookie) = req.cookie("refresh_token") {
-        if let Ok(claims) =
+    if let Some(refresh_cookie) = req.cookie("refresh_token")
+        && let Ok(claims) =
             crate::auth::jwt::decode_refresh_token(refresh_cookie.value(), &state.env.jwt_secret)
-        {
-            let token_hash = {
-                let mut hasher = Sha256::new();
-                hasher.update(claims.jti.as_bytes());
-                hex::encode(hasher.finalize())
-            };
+    {
+        let token_hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(claims.jti.as_bytes());
+            hex::encode(hasher.finalize())
+        };
 
-            let _ = AuthRepo::revoke_refresh_token(&state.pool, &token_hash).await;
-        }
+        let _ = AuthRepo::revoke_refresh_token(&state.pool, &token_hash).await;
     }
 
     // Clear cookies
