@@ -1,11 +1,11 @@
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+import styles from "./Notification.module.scss";
 import CheckIcon from "@/components/icons/CheckIcon";
 import CloseIcon from "@/components/icons/CloseIcon";
 import ErrorIcon from "@/components/icons/ErrorIcon";
 import InfoIcon from "@/components/icons/InfoIcon";
 import WarningIcon from "@/components/icons/WarningIcon";
-import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
-import styles from "./Notification.module.scss";
 
 /**
  * Enum representing the available notification types.
@@ -91,13 +91,29 @@ const Notification: React.FC<NotificationProps> = ({
     const getIcon = () => {
         switch (type) {
             case NotificationType.INFO:
-                return <InfoIcon />;
+                return (
+                    <span data-testid="notification-icon-info">
+                        <InfoIcon />
+                    </span>
+                );
             case NotificationType.WARNING:
-                return <WarningIcon />;
+                return (
+                    <span data-testid="notification-icon-warning">
+                        <WarningIcon />
+                    </span>
+                );
             case NotificationType.SUCCESS:
-                return <CheckIcon />;
+                return (
+                    <span data-testid="notification-icon-success">
+                        <CheckIcon />
+                    </span>
+                );
             case NotificationType.ERROR:
-                return <ErrorIcon />;
+                return (
+                    <span data-testid="notification-icon-error">
+                        <ErrorIcon />
+                    </span>
+                );
         }
     };
 
@@ -110,11 +126,12 @@ const Notification: React.FC<NotificationProps> = ({
         <AnimatePresence>
             {showNotification && (
                 <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0 }}
+                    initial={{ scale: 0.95, y: -8 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.95, y: -8 }}
                     transition={{ duration: 0.3 }}
                     className={getClassName()}
+                    data-testid="notification-root"
                 >
                     <div className={styles["notification__icon"]}>
                         {getIcon()}

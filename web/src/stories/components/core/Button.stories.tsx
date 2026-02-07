@@ -1,10 +1,18 @@
+import { expect, fn, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
 const meta: Meta<typeof Button> = {
     title: "Core/Button",
     component: Button,
     tags: ["autodocs"],
+    decorators: [withMemoryRouter],
+    parameters: {
+        a11y: {
+            test: "error",
+        },
+    },
     argTypes: {
         variant: {
             control: { type: "select" },
@@ -25,6 +33,12 @@ export const Primary: Story = {
         variant: ButtonVariant.PRIMARY,
         children: "Primary Button",
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(
+            canvas.getByRole("button", { name: "Primary Button" }),
+        ).toBeVisible();
+    },
 };
 
 export const Secondary: Story = {
@@ -32,13 +46,24 @@ export const Secondary: Story = {
         variant: ButtonVariant.SECONDARY,
         children: "Secondary Button",
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(
+            canvas.getByRole("button", { name: "Secondary Button" }),
+        ).toBeVisible();
+    },
 };
 
 export const WithClickHandler: Story = {
     args: {
         variant: ButtonVariant.PRIMARY,
         children: "Click Me",
-        onClick: () => alert("Button clicked!"),
+        onClick: fn(),
+    },
+    play: async ({ canvasElement, args }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "Click Me" }));
+        await expect(args.onClick).toHaveBeenCalledTimes(1);
     },
 };
 
@@ -47,5 +72,26 @@ export const SubmitButton: Story = {
         variant: ButtonVariant.PRIMARY,
         type: "submit",
         children: "Submit",
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByRole("button", { name: "Submit" })).toHaveAttribute(
+            "type",
+            "submit",
+        );
+    },
+};
+
+export const NavigatesToHref: Story = {
+    args: {
+        children: "Go to Dashboard",
+        href: "/dashboard",
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Go to Dashboard" }),
+        );
+        await expect(canvas.getByText("Dashboard Route")).toBeVisible();
     },
 };

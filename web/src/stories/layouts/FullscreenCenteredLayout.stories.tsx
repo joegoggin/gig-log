@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 
 const meta: Meta<typeof FullscreenCenteredLayout> = {
@@ -8,6 +9,13 @@ const meta: Meta<typeof FullscreenCenteredLayout> = {
     parameters: {
         layout: "fullscreen",
     },
+    decorators: [
+        (Story) => (
+            <NotificationProvider>
+                <Story />
+            </NotificationProvider>
+        ),
+    ],
 };
 
 export default meta;
