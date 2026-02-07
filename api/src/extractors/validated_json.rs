@@ -1,28 +1,50 @@
+//! JSON extractor with request payload validation.
+//!
+//! This module extends `actix-web` JSON extraction by validating deserialized
+//! payloads with the `validator` crate before control reaches route handlers.
+//! Validation failures are converted into a consistent `400 Bad Request`
+//! response body that lists field-level errors.
+
 use actix_web::{FromRequest, HttpRequest, HttpResponse, dev::Payload, web};
 use futures::future::LocalBoxFuture;
 use serde::{Serialize, de::DeserializeOwned};
 use validator::{Validate, ValidationErrors};
 
+/// A single validation error associated with a request field.
 #[derive(Debug, Serialize)]
 pub struct FieldError {
+    /// Name of the invalid field.
+    ///
+    /// For schema-level validation errors (`__all__`), this is set to the
+    /// validator error code.
     pub field: String,
+    /// Human-readable validation message for the field.
     pub message: String,
 }
 
+/// JSON response body returned when payload validation fails.
 #[derive(Debug, Serialize)]
 pub struct ValidationErrorResponse {
+    /// Collection of field-level validation failures.
     pub errors: Vec<FieldError>,
 }
 
+/// Extracts JSON into `T` and validates it with [`Validate`].
+///
+/// This extractor can be used in handler signatures in place of
+/// `web::Json<T>` when the payload type implements `validator::Validate`.
+/// If validation fails, the request is rejected with `400 Bad Request`.
 #[derive(Debug)]
 pub struct ValidatedJson<T>(pub T);
 
 impl<T> ValidatedJson<T> {
+    /// Consumes the extractor and returns the validated payload.
     pub fn into_inner(self) -> T {
         self.0
     }
 }
 
+/// Internal rejection type used to return validation errors from extraction.
 #[derive(Debug)]
 pub struct ValidationRejection(pub ValidationErrorResponse);
 
@@ -42,6 +64,14 @@ impl actix_web::ResponseError for ValidationRejection {
     }
 }
 
+/// Converts validator errors into the API's standard validation response shape.
+///
+/// Nested struct/list validation errors are flattened into a single `errors`
+/// vector so clients can display all violations from one response.
+///
+/// # Arguments
+///
+/// - `errors` - Validation errors produced by `validator::Validate::validate`.
 fn convert_validation_errors(errors: ValidationErrors) -> ValidationErrorResponse {
     let mut field_errors = Vec::new();
 
