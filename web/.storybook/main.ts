@@ -1,9 +1,22 @@
 // This file has been automatically migrated to valid ESM format by Storybook.
-import type { StorybookConfig } from '@storybook/react-vite';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import type { StorybookConfig } from '@storybook/react-vite';
+import type { PluginOption } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const hasPluginName = (plugin: PluginOption): plugin is { name: string } => {
+  if (!plugin || Array.isArray(plugin) || plugin instanceof Promise) {
+    return false;
+  }
+
+  return (
+    typeof plugin === 'object' &&
+    'name' in plugin &&
+    typeof plugin.name === 'string'
+  );
+};
 
 const config: StorybookConfig = {
   "stories": [
@@ -22,8 +35,11 @@ const config: StorybookConfig = {
   viteFinal: async (config) => {
     // Filter out TanStack devtools plugins to avoid port conflict with dev server
     config.plugins = (config.plugins || []).flat().filter((plugin) => {
-      const name = plugin?.name || '';
-      return !name.startsWith('@tanstack/devtools');
+      if (!hasPluginName(plugin)) {
+        return true;
+      }
+
+      return !plugin.name.startsWith('@tanstack/devtools');
     });
 
     config.resolve = config.resolve || {};
@@ -32,6 +48,12 @@ const config: StorybookConfig = {
       '@': resolve(__dirname, '../src'),
       '@sass': resolve(__dirname, '../src/sass'),
     };
+
+    config.optimizeDeps = config.optimizeDeps || {};
+    config.optimizeDeps.include = [
+      ...(config.optimizeDeps.include || []),
+      "@tanstack/react-query",
+    ];
     return config;
   },
 };

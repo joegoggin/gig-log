@@ -1,0 +1,130 @@
+import { useNavigate } from "@tanstack/react-router";
+import styles from "./SignUpPage.module.scss";
+import useForm from "@/hooks/useForm";
+import useFormMutation from "@/hooks/useFormMutation";
+import Button from "@/components/core/Button/Button";
+import Form from "@/components/core/Form/Form";
+import { NotificationType } from "@/components/core/Notification/Notification";
+import TextInput from "@/components/core/TextInput/TextInput";
+import { useNotification } from "@/contexts/NotificationContext";
+import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
+import api from "@/lib/axios";
+
+type SignUpFormData = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    confirm: string;
+};
+
+type SignUpResponse = {
+    message: string;
+};
+
+/**
+ * The account registration page for new users.
+ * Collects user profile details and credentials to create an account.
+ *
+ * Route: `/auth/sign-up`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Form` - Wraps sign-up inputs and submit handling.
+ * - `TextInput` - Captures user profile and credential fields.
+ * - `Button` - Submits the registration form.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
+const SignUpPage: React.FC = () => {
+    const navigate = useNavigate();
+    const { addNotification } = useNotification();
+    const { data, errors, setData, setErrors } = useForm<SignUpFormData>({
+        first_name: "",
+        last_name: "",
+        email: "",
+        password: "",
+        confirm: "",
+    });
+
+    const signUpMutation = useFormMutation({
+        mutationFn: async () => {
+            const response = await api.post<SignUpResponse>("/auth/sign-up", {
+                first_name: data.first_name,
+                last_name: data.last_name,
+                email: data.email,
+                password: data.password,
+                confirm: data.confirm,
+            });
+            return response.data;
+        },
+        onSuccess: () => {
+            addNotification({
+                type: NotificationType.SUCCESS,
+                title: "Account Created",
+                message: "Please check your email to confirm your account.",
+            });
+            navigate({
+                to: "/auth/confirm-email",
+                search: { email: data.email },
+            });
+        },
+        onError: setErrors,
+        fallbackError: "Sign up failed",
+    });
+
+    const handleSubmit = () => {
+        signUpMutation.mutate();
+    };
+
+    return (
+        <FullscreenCenteredLayout className={styles["sign-up"]}>
+            <h1>Sign Up</h1>
+            <Form onSubmit={handleSubmit}>
+                <TextInput
+                    name="first_name"
+                    placeholder="First Name"
+                    data={data}
+                    setData={setData}
+                    errors={errors}
+                />
+                <TextInput
+                    name="last_name"
+                    placeholder="Last Name"
+                    data={data}
+                    setData={setData}
+                    errors={errors}
+                />
+                <TextInput
+                    name="email"
+                    placeholder="Email"
+                    data={data}
+                    setData={setData}
+                    errors={errors}
+                />
+                <TextInput
+                    name="password"
+                    placeholder="Password"
+                    data={data}
+                    setData={setData}
+                    errors={errors}
+                    password
+                />
+                <TextInput
+                    name="confirm"
+                    placeholder="Confirm Password"
+                    data={data}
+                    setData={setData}
+                    errors={errors}
+                    password
+                />
+                <Button type="submit">Sign Up</Button>
+            </Form>
+        </FullscreenCenteredLayout>
+    );
+};
+
+export default SignUpPage;

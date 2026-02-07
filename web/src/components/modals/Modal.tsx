@@ -1,5 +1,5 @@
-import { type ReactNode } from "react";
 import styles from "./Modal.module.scss";
+import type {ReactNode} from "react";
 
 /**
  * Props for the Modal component.

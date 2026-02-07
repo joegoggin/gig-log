@@ -1,0 +1,29 @@
+@use "@sass/variables/colors" as colors;
+
+.spinner {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-family: Roboto, sans-serif;
+    font-size: 16px;
+    color: colors.$blue-100;
+}
+
+.spinner__circle {
+    border: 3px solid colors.$blue-60;
+    border-top-color: colors.$blue-100;
+    border-radius: 50%;
+    box-sizing: border-box;
+    animation: spinner-rotate 0.9s linear infinite;
+}
+
+.spinner__label {
+    color: colors.$white;
+}
+
+@keyframes spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}

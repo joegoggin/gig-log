@@ -1,6 +1,6 @@
-import RootLayout from "@/layouts/RootLayout/RootLayout";
-import type { ReactNode } from "react";
 import styles from "./FullscreenCenteredLayout.module.scss";
+import type { ReactNode } from "react";
+import RootLayout from "@/layouts/RootLayout/RootLayout";
 
 /**
  * Props for the FullscreenCenteredLayout component.

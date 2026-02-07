@@ -1,0 +1,7 @@
+name: Log Out
+description: De-Authenticate User
+method: POST
+url: http://localhost:8000/auth/log-out
+headers:
+- name: content-type
+  value: application/json

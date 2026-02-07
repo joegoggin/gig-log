@@ -1,0 +1,61 @@
+@use "@sass/variables/colors" as colors;
+
+.text-input {
+    display: flex;
+    flex-direction: column;
+
+    &:not(:last-child) {
+        margin-bottom: 20px;
+    }
+
+    input {
+        font-family: Roboto;
+        font-size: 20px;
+        padding: 10px 5px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--text-color);
+        outline: none;
+        color: var(--text-color);
+        transition: all ease-in-out 0.3s;
+
+        &::placeholder {
+            font-family: inherit;
+            color: var(--text-color);
+            opacity: 0.6;
+        }
+
+        &:focus {
+            transform: scaleX(1.01);
+            border-bottom: 1px solid colors.$cyan-100;
+            color: colors.$cyan-100;
+
+            &::placeholder {
+                color: colors.$cyan-100;
+            }
+        }
+    }
+
+    &--error {
+        input {
+            border-bottom: 1px solid colors.$red-100;
+            color: colors.$red-100;
+
+            &::placeholder {
+                color: colors.$red-100;
+                opacity: 1;
+            }
+        }
+    }
+
+    label {
+        margin-bottom: 10px;
+        color: var(--text-color);
+        font-family: Roboto;
+    }
+
+    p {
+        margin-top: 5px;
+        color: colors.$red-100;
+    }
+}

@@ -19,11 +19,29 @@ pnpm build
 
 ## Testing
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+This project uses [Vitest](https://vitest.dev/) with two projects:
+
+- `storybook` - Runs component stories as executable interaction/a11y tests via `@storybook/addon-vitest`
+- `unit` - Runs standard `*.test.ts(x)` / `*.spec.ts(x)` tests for hooks, utilities, and non-story logic
+
+### Test Commands
 
 ```bash
+pnpm test:setup
 pnpm test
+pnpm test:stories
+pnpm test:unit
+pnpm test:coverage
+pnpm test:watch
 ```
+
+Run `pnpm test:setup` once per machine to install the Playwright browser binary used by Storybook browser tests.
+
+### Testing Strategy
+
+- Put UI behavior and user interactions in Storybook stories using `play` functions.
+- Keep plain unit tests for pure logic and hook behavior that does not require Storybook canvas rendering.
+- Story-level accessibility checks are enabled through Storybook a11y configuration.
 
 ## Styling
 

@@ -1,5 +1,5 @@
-import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import styles from "./HomePage.module.scss";
+import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 
 /**

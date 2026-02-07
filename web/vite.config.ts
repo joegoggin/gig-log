@@ -1,14 +1,13 @@
 /// <reference types="vitest/config" />
+import path from "node:path";
 import { URL, fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { devtools } from "@tanstack/devtools-vite";
-import viteReact from "@vitejs/plugin-react";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
-import path from "node:path";
-import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
-import { playwright } from "@vitest/browser-playwright";
 const dirname =
     typeof __dirname !== "undefined"
         ? __dirname
@@ -44,10 +43,12 @@ export default defineConfig({
                 ],
                 test: {
                     name: "storybook",
+                    retry: process.env.CI ? 2 : 0,
+                    testTimeout: 15000,
                     browser: {
                         enabled: true,
                         headless: true,
-                        provider: playwright({}),
+                        provider: "playwright",
                         instances: [
                             {
                                 browser: "chromium",
@@ -55,6 +56,17 @@ export default defineConfig({
                         ],
                     },
                     setupFiles: [".storybook/vitest.setup.ts"],
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    name: "unit",
+                    environment: "jsdom",
+                    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+                    exclude: ["src/**/*.stories.{ts,tsx}"],
+                    setupFiles: ["./vitest.setup.ts"],
+                    testTimeout: 10000,
                 },
             },
         ],

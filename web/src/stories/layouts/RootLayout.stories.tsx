@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { NotificationType } from "@/components/core/Notification/Notification";
+import { NotificationProvider, useNotification } from "@/contexts/NotificationContext";
 import RootLayout from "@/layouts/RootLayout/RootLayout";
 
 const meta: Meta<typeof RootLayout> = {
@@ -8,6 +11,13 @@ const meta: Meta<typeof RootLayout> = {
     parameters: {
         layout: "fullscreen",
     },
+    decorators: [
+        (Story) => (
+            <NotificationProvider>
+                <Story />
+            </NotificationProvider>
+        ),
+    ],
 };
 
 export default meta;
@@ -34,4 +44,31 @@ export const WithClassName: Story = {
             </div>
         ),
     },
+};
+
+function NotificationTrigger() {
+    const { addNotification } = useNotification();
+
+    useEffect(() => {
+        addNotification({
+            type: NotificationType.SUCCESS,
+            title: "Email Confirmed",
+            message: "Your email has been confirmed. You can now log in.",
+        });
+    }, [addNotification]);
+
+    return (
+        <div style={{ padding: "2rem" }}>
+            <h1>Page with Notification</h1>
+            <p>A notification should appear at the top of this layout.</p>
+        </div>
+    );
+}
+
+export const WithNotification: Story = {
+    render: () => (
+        <RootLayout>
+            <NotificationTrigger />
+        </RootLayout>
+    ),
 };

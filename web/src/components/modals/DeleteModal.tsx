@@ -1,6 +1,6 @@
+import type { SetValue } from "types/SetValue";
 import Button from "@/components/core/Button/Button";
 import Modal from "@/components/modals/Modal";
-import type { SetValue } from "types/SetValue";
 
 /**
  * Props for the DeleteModal component.
@@ -13,7 +13,7 @@ export type DeleteModalProps = {
     /** The table/entity type being deleted */
     table: string;
     /** List of related tables/entities that will also be affected */
-    relatedTables: string[];
+    relatedTables: Array<string>;
     /** Controls the visibility of the modal */
     showModal: boolean;
     /** Function to update the modal visibility state */
@@ -45,7 +45,7 @@ export type DeleteModalProps = {
  * ```
  */
 const DeleteModal: React.FC<DeleteModalProps> = ({
-    id,
+    id: _id,
     name,
     table,
     relatedTables,
@@ -54,7 +54,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({
 }) => {
     const handleDelete = () => {
         // TODO: Implement actual delete API call using the id prop
-        // Example: await api.delete(`/companies/${id}`);
+        // Example: await api.delete(`/companies/${_id}`);
         setShowModal(false);
     };
 
