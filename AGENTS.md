@@ -465,6 +465,16 @@ pub fn validate_signup_passwords_match(
    - Link to the handler that triggers this validation using rustdoc syntax
 4. **Cross-references** - Link to related payload types and handlers for navigation
 
+### Reference Example: `api/src/auth`
+
+For Rust utility modules (outside models/routes/validators), use the documentation style now applied in `/api/src/auth/` as a reference baseline:
+
+1. Add module-level `//!` docs explaining file purpose and scope
+2. Document all public structs/functions with `///` comments
+3. Add field-level docs for public struct fields
+4. Include `# Arguments` and `# Errors` sections where behavior or failure modes are non-obvious
+5. Prefer concise, implementation-aware wording (what the helper guarantees and how it is intended to be used)
+
 ## Storybook Documentation
 
 When adding documentation to components and layouts, **always include Storybook stories** as part of the documentation. Stories serve as living documentation and visual testing.
