@@ -7,8 +7,8 @@
  * - Standardizes validation-error payloads used by field error assertions.
  */
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import api from "@/lib/axios";
 import type { ValidationErrorResponse } from "@/lib/errors";
+import api from "@/lib/axios";
 
 const createRequestConfig = (): InternalAxiosRequestConfig =>
     ({

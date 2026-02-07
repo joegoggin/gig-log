@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
-import Notification from "@/components/core/Notification/Notification";
-import DeleteModal, {
-    type DeleteModalProps,
-} from "@/components/modals/DeleteModal";
-import { useNotification } from "@/contexts/NotificationContext";
+import {  useEffect, useState } from "react";
 import styles from "./RootLayout.module.scss";
+import type {ReactNode} from "react";
+import type {DeleteModalProps} from "@/components/modals/DeleteModal";
+import Notification from "@/components/core/Notification/Notification";
+import DeleteModal from "@/components/modals/DeleteModal";
+import { useNotification } from "@/contexts/NotificationContext";
 
 /**
  * Props for the RootLayout component.
@@ -72,7 +72,7 @@ function RootLayout({ className = "", children }: RootLayoutProps) {
                 </div>
                 {children}
             </div>
-            {showDeleteModal && modal?.delete && (
+            {showDeleteModal && modal.delete && (
                 <DeleteModal
                     showModal={showDeleteModal}
                     setShowModal={setShowDeleteModal}

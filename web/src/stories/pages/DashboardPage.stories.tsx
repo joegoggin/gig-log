@@ -8,11 +8,11 @@
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import DashboardPage from "@/pages/DashboardPage/DashboardPage";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
-import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import {
     createAxiosErrorResponse,
     createMockApiResponse,
@@ -60,7 +60,7 @@ export const LogsOutAndRedirects: Story = {
         },
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
-        const postCalls: PostCall[] = [];
+        const postCalls: Array<PostCall> = [];
         const restorePost = mockApiPostHandler(async (url, data) => {
             postCalls.push({ url, data });
             return createMockApiResponse({ message: "Logged out" });

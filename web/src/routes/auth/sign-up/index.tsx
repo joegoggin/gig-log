@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import SignUpPage from "@/pages/auth/SignUpPage/SignUpPage";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import SignUpPage from "@/pages/auth/SignUpPage/SignUpPage";
 import Spinner from "@/components/core/Spinner/Spinner";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import { useAuth } from "@/contexts/AuthContext";

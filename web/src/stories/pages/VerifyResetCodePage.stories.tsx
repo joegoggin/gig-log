@@ -41,7 +41,7 @@ export const VerifiesCodeAndNavigates: Story = {
         email: "user@example.com",
     },
     play: async ({ canvasElement }) => {
-        const postCalls: PostCall[] = [];
+        const postCalls: Array<PostCall> = [];
         const restorePost = mockApiPostHandler(async (url, data) => {
             postCalls.push({ url, data });
             return createMockApiResponse({ message: "Code verified" });
@@ -84,7 +84,7 @@ export const ShowsValidationErrorsFromApi: Story = {
     play: async ({ canvasElement }) => {
         const restorePost = mockApiPostHandler(async () => {
             throw createValidationAxiosError([
-                { field: "authCode", message: "Reset code is invalid" },
+                { field: "auth_code", message: "Reset code is invalid" },
             ]);
         });
 

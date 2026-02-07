@@ -9,11 +9,11 @@
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import ConfirmEmailPage from "@/pages/auth/ConfirmEmailPage/ConfirmEmail";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
-import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import {
     createMockApiResponse,
     createValidationAxiosError,
@@ -52,7 +52,7 @@ export const ConfirmsEmailAndNavigates: Story = {
         },
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
-        const postCalls: PostCall[] = [];
+        const postCalls: Array<PostCall> = [];
         const restorePost = mockApiPostHandler(async (url, data) => {
             postCalls.push({ url, data });
             return createMockApiResponse({ message: "Email confirmed" });
@@ -105,7 +105,7 @@ export const ShowsValidationErrorsFromApi: Story = {
     play: async ({ canvasElement }) => {
         const restorePost = mockApiPostHandler(async () => {
             throw createValidationAxiosError([
-                { field: "authCode", message: "Code is invalid" },
+                { field: "auth_code", message: "Code is invalid" },
             ]);
         });
 

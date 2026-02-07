@@ -1,6 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
+import styles from "./ConfirmEmail.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import { useNavigate } from "@tanstack/react-router";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -8,7 +9,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import { useNotification } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import styles from "./ConfirmEmail.module.scss";
 
 type ConfirmEmailPageProps = {
     /** Email address that should be confirmed */
@@ -16,7 +16,7 @@ type ConfirmEmailPageProps = {
 };
 
 type ConfirmEmailFormData = {
-    authCode: string;
+    auth_code: string;
 };
 
 type ConfirmEmailResponse = {
@@ -44,7 +44,7 @@ function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
     const { data, errors, setData, setErrors } = useForm<ConfirmEmailFormData>({
-        authCode: "",
+        auth_code: "",
     });
 
     const confirmEmailMutation = useFormMutation({
@@ -53,7 +53,7 @@ function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
                 "/auth/confirm-email",
                 {
                     email,
-                    auth_code: data.authCode,
+                    auth_code: data.auth_code,
                 },
             );
             return response.data;
@@ -72,7 +72,7 @@ function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
 
     const onSubmit = () => {
         if (!email) {
-            setErrors({ authCode: "Email is required" });
+            setErrors({ auth_code: "Email is required" });
             return;
         }
         confirmEmailMutation.mutate();
@@ -83,7 +83,7 @@ function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
             <h1>Confirm Email</h1>
             <Form onSubmit={onSubmit}>
                 <TextInput
-                    name="authCode"
+                    name="auth_code"
                     placeholder="Enter confirmation code"
                     data={data}
                     setData={setData}

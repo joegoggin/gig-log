@@ -1,5 +1,5 @@
-import VerifyResetCodePage from "@/pages/auth/VerifyResetCodePage/VerifyResetCodePage";
 import { createFileRoute } from "@tanstack/react-router";
+import VerifyResetCodePage from "@/pages/auth/VerifyResetCodePage/VerifyResetCodePage";
 
 type SearchParams = {
     email?: string;

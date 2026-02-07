@@ -1,6 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
+import styles from "./SignUpPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import { useNavigate } from "@tanstack/react-router";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -8,7 +9,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import { useNotification } from "@/contexts/NotificationContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import styles from "./SignUpPage.module.scss";
 
 type SignUpFormData = {
     first_name: string;

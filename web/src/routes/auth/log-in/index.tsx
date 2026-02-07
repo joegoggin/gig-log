@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import LogInPage from "@/pages/auth/LogInPage/LogInPage";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import LogInPage from "@/pages/auth/LogInPage/LogInPage";
 import Spinner from "@/components/core/Spinner/Spinner";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import { useAuth } from "@/contexts/AuthContext";

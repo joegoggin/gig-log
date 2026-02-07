@@ -1,6 +1,6 @@
+import styles from "./CheckBox.module.scss";
 import type { SetData } from "@/types/SetData";
 import type { ChangeEvent } from "react";
-import styles from "./CheckBox.module.scss";
 
 type CheckboxProps<T> = {
     className?: string;

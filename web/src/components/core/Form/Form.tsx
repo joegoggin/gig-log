@@ -1,5 +1,5 @@
-import { type FormEvent, type ReactNode } from "react";
 import styles from "./Form.module.scss";
+import type {FormEvent, ReactNode} from "react";
 
 type FormProps = {
     className?: string;
@@ -8,12 +8,12 @@ type FormProps = {
 };
 
 const Form: React.FC<FormProps> = ({ className = "", onSubmit, children }) => {
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const allInputs = document.querySelectorAll("input");
+        const formInputs = e.currentTarget.querySelectorAll("input");
 
-        allInputs.forEach((input) => {
+        formInputs.forEach((input) => {
             input.blur();
         });
 

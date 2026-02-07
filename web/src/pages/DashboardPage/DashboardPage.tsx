@@ -46,7 +46,7 @@ function DashboardPage() {
             navigate({ to: "/auth/log-in" });
         },
         onError: (error: AxiosError<ApiErrorResponse>) => {
-            const message = error.response?.data?.error || "Failed to log out";
+            const message = error.response?.data.error || "Failed to log out";
             addNotification({
                 type: NotificationType.ERROR,
                 title: "Log Out Failed",

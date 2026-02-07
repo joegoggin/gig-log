@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from "react";
+import {  useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import styles from "./PrivateRoute.module.scss";
+import type {ReactNode} from "react";
 import Spinner from "@/components/core/Spinner/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
-import styles from "./PrivateRoute.module.scss";
 
 /**
  * Props for the PrivateRoute component.

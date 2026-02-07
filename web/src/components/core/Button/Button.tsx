@@ -1,6 +1,6 @@
-import { type ReactNode, type MouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import styles from "./Button.module.scss";
+import type {MouseEvent, ReactNode} from "react";
 
 /**
  * Enum representing the available button style variants.

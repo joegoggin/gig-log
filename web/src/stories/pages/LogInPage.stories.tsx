@@ -9,10 +9,10 @@
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import LogInPage from "@/pages/auth/LogInPage/LogInPage";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
-import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import {
     createMockApiResponse,
     createValidationAxiosError,
@@ -48,7 +48,7 @@ export const SubmitsCredentialsAndNavigates: Story = {
         },
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
-        const postCalls: PostCall[] = [];
+        const postCalls: Array<PostCall> = [];
         const restorePost = mockApiPostHandler(async (url, data) => {
             postCalls.push({ url, data });
             return createMockApiResponse({

@@ -247,11 +247,13 @@ pub async fn log_in(
         &access_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_refresh_token_expiry_seconds,
     );
 
     Ok(HttpResponse::Ok()
@@ -483,11 +485,13 @@ pub async fn verify_forgot_password(
         &access_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_refresh_token_expiry_seconds,
     );
 
     Ok(HttpResponse::Ok()
@@ -572,11 +576,13 @@ pub async fn set_password(
         &access_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
         &state.env.cookie_domain,
         state.env.cookie_secure,
+        state.env.jwt_refresh_token_expiry_seconds,
     );
 
     Ok(HttpResponse::Ok()

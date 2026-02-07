@@ -1,6 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
+import styles from "./LogInPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import { useNavigate } from "@tanstack/react-router";
 import Button from "@/components/core/Button/Button";
 import Checkbox from "@/components/core/CheckBox/CheckBox";
 import Form from "@/components/core/Form/Form";
@@ -9,7 +10,6 @@ import TextInput from "@/components/core/TextInput/TextInput";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/axios";
-import styles from "./LogInPage.module.scss";
 
 type LogInFormData = {
     email: string;

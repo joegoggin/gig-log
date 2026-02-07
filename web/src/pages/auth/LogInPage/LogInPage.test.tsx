@@ -9,6 +9,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import LogInPage from "./LogInPage";
+import type * as TanStackRouter from "@tanstack/react-router";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import {
@@ -16,12 +18,11 @@ import {
     createValidationAxiosError,
     mockApiPostHandler,
 } from "@/test-utils/mockApiClient";
-import LogInPage from "./LogInPage";
 
 const navigateMock = vi.fn();
 
 vi.mock("@tanstack/react-router", async () => {
-    const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+    const actual = await vi.importActual<typeof TanStackRouter>(
         "@tanstack/react-router",
     );
 

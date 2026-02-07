@@ -1,12 +1,13 @@
+import { useNavigate } from "@tanstack/react-router";
+import styles from "./VerifyResetCodePage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import { useNavigate } from "@tanstack/react-router";
 import Button from "@/components/core/Button/Button";
 import Form from "@/components/core/Form/Form";
 import TextInput from "@/components/core/TextInput/TextInput";
+import { useAuth } from "@/contexts/AuthContext";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import api from "@/lib/axios";
-import styles from "./VerifyResetCodePage.module.scss";
 
 type VerifyResetCodePageProps = {
     /** Email tied to the reset-code request */
@@ -14,7 +15,7 @@ type VerifyResetCodePageProps = {
 };
 
 type VerifyResetCodeFormData = {
-    authCode: string;
+    auth_code: string;
 };
 
 type VerifyResetCodeResponse = {
@@ -41,8 +42,9 @@ type VerifyResetCodeResponse = {
  */
 function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
     const navigate = useNavigate();
+    const { refreshUser } = useAuth();
     const { data, errors, setData, setErrors } = useForm<VerifyResetCodeFormData>({
-        authCode: "",
+        auth_code: "",
     });
 
     const verifyResetCodeMutation = useFormMutation({
@@ -51,12 +53,13 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
                 "/auth/verify-forgot-password",
                 {
                     email,
-                    auth_code: data.authCode,
+                    auth_code: data.auth_code,
                 },
             );
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: async () => {
+            await refreshUser();
             navigate({ to: "/auth/set-password" });
         },
         onError: setErrors,
@@ -65,7 +68,7 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
 
     const onSubmit = () => {
         if (!email) {
-            setErrors({ authCode: "Email is required" });
+            setErrors({ auth_code: "Email is required" });
             return;
         }
         verifyResetCodeMutation.mutate();
@@ -76,7 +79,7 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
             <h1>Verify Reset Code</h1>
             <Form onSubmit={onSubmit}>
                 <TextInput
-                    name="authCode"
+                    name="auth_code"
                     placeholder="Enter reset code"
                     data={data}
                     setData={setData}

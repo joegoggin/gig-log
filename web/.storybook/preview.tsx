@@ -1,7 +1,7 @@
-import type { Preview } from "@storybook/react-vite";
 import { withThemeByDataAttribute } from "@storybook/addon-themes";
 import "../src/sass/index.scss";
 import theme from "./theme";
+import type { Preview } from "@storybook/react-vite";
 
 const preview: Preview = {
     initialGlobals: {

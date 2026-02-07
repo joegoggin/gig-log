@@ -8,22 +8,23 @@
  * - Keeps real notification rendering so stories can assert visible messages.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Decorator } from "@storybook/react-vite";
 import {
+    
+    
     useCallback,
     useMemo,
     useRef,
-    useState,
-    type ContextType,
-    type ReactNode,
+    useState
 } from "react";
+import type {ContextType, ReactNode} from "react";
+import type { Decorator } from "@storybook/react-vite";
 import type { NotificationProps } from "@/components/core/Notification/Notification";
-import { AuthContext } from "@/contexts/AuthContext";
-import { NotificationContext } from "@/contexts/NotificationContext";
 import type {
     StoryTestConfig,
     StoryTestParameters,
 } from "@/stories/testing/storyTestContext";
+import { AuthContext } from "@/contexts/AuthContext";
+import { NotificationContext } from "@/contexts/NotificationContext";
 
 type StoryProvidersProps = {
     children: ReactNode;
@@ -56,7 +57,7 @@ function StoryProviders({ children, config }: StoryProvidersProps) {
                 },
             }),
     );
-    const [notifications, setNotifications] = useState<NotificationWithId[]>([]);
+    const [notifications, setNotifications] = useState<Array<NotificationWithId>>([]);
     const notificationIdRef = useRef(0);
     const authOverrides = config?.auth;
     const authValue = useMemo(() => {

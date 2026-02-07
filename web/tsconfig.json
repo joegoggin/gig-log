@@ -1,5 +1,7 @@
 {
     "include": [
+        ".storybook/**/*.ts",
+        ".storybook/**/*.tsx",
         "**/*.ts",
         "**/*.tsx",
         "eslint.config.js",
@@ -17,6 +19,7 @@
 
         /* Bundler mode */
         "moduleResolution": "bundler",
+        "allowJs": true,
         "allowImportingTsExtensions": true,
         "verbatimModuleSyntax": true,
         "noEmit": true,

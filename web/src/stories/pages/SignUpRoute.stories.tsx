@@ -8,10 +8,10 @@
  */
 import { expect, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import { RouteComponent as SignUpRouteComponent } from "@/routes/auth/sign-up/index";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
-import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 
 const meta: Meta<typeof SignUpRouteComponent> = {
     title: "Pages/SignUpRoute",

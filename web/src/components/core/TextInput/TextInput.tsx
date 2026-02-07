@@ -1,7 +1,7 @@
-import type { SetData } from "@/types/SetData";
-import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 import styles from "./TextInput.module.scss";
+import type { SetData } from "@/types/SetData";
+import type { ChangeEvent } from "react";
 
 type TextInputProps<T> = {
     className?: string;

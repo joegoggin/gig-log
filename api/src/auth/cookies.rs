@@ -12,14 +12,20 @@ use actix_web::cookie::{Cookie, SameSite, time::Duration};
 /// - `token` - Signed JWT access token
 /// - `domain` - Cookie domain (for example `localhost` or production domain)
 /// - `secure` - Whether to mark the cookie as `Secure`
-pub fn create_access_token_cookie<'a>(token: &'a str, domain: &'a str, secure: bool) -> Cookie<'a> {
+/// - `max_age_seconds` - Cookie lifetime in seconds
+pub fn create_access_token_cookie<'a>(
+    token: &'a str,
+    domain: &'a str,
+    secure: bool,
+    max_age_seconds: u64,
+) -> Cookie<'a> {
     Cookie::build("access_token", token)
         .path("/")
         .domain(domain.to_string())
         .http_only(true)
         .secure(secure)
         .same_site(SameSite::Strict)
-        .max_age(Duration::minutes(15))
+        .max_age(Duration::seconds(max_age_seconds as i64))
         .finish()
 }
 
@@ -30,10 +36,12 @@ pub fn create_access_token_cookie<'a>(token: &'a str, domain: &'a str, secure: b
 /// - `token` - Signed JWT refresh token
 /// - `domain` - Cookie domain (for example `localhost` or production domain)
 /// - `secure` - Whether to mark the cookie as `Secure`
+/// - `max_age_seconds` - Cookie lifetime in seconds
 pub fn create_refresh_token_cookie<'a>(
     token: &'a str,
     domain: &'a str,
     secure: bool,
+    max_age_seconds: u64,
 ) -> Cookie<'a> {
     Cookie::build("refresh_token", token)
         .path("/auth")
@@ -41,7 +49,7 @@ pub fn create_refresh_token_cookie<'a>(
         .http_only(true)
         .secure(secure)
         .same_site(SameSite::Strict)
-        .max_age(Duration::days(7))
+        .max_age(Duration::seconds(max_age_seconds as i64))
         .finish()
 }
 
@@ -86,7 +94,7 @@ mod tests {
     #[test]
     // Verifies access-token cookies include expected security and scope attributes.
     fn create_access_token_cookie_sets_expected_attributes() {
-        let cookie = create_access_token_cookie("token", "localhost", true);
+        let cookie = create_access_token_cookie("token", "localhost", true, 900);
 
         assert_eq!(cookie.name(), "access_token");
         assert_eq!(cookie.value(), "token");
@@ -95,13 +103,13 @@ mod tests {
         assert_eq!(cookie.http_only(), Some(true));
         assert_eq!(cookie.secure(), Some(true));
         assert_eq!(cookie.same_site(), Some(SameSite::Strict));
-        assert_eq!(cookie.max_age(), Some(Duration::minutes(15)));
+        assert_eq!(cookie.max_age(), Some(Duration::seconds(900)));
     }
 
     #[test]
     // Verifies refresh-token cookies include expected security and path attributes.
     fn create_refresh_token_cookie_sets_expected_attributes() {
-        let cookie = create_refresh_token_cookie("refresh", "example.com", false);
+        let cookie = create_refresh_token_cookie("refresh", "example.com", false, 604_800);
 
         assert_eq!(cookie.name(), "refresh_token");
         assert_eq!(cookie.value(), "refresh");
@@ -110,7 +118,7 @@ mod tests {
         assert_eq!(cookie.http_only(), Some(true));
         assert_eq!(cookie.secure(), Some(false));
         assert_eq!(cookie.same_site(), Some(SameSite::Strict));
-        assert_eq!(cookie.max_age(), Some(Duration::days(7)));
+        assert_eq!(cookie.max_age(), Some(Duration::seconds(604_800)));
     }
 
     #[test]

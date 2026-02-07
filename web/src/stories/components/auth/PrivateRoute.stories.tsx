@@ -1,5 +1,3 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
 import {
     Outlet,
     RouterProvider,
@@ -8,6 +6,8 @@ import {
     createRoute,
     createRouter,
 } from "@tanstack/react-router";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import PrivateRoute from "@/components/auth/PrivateRoute/PrivateRoute";
 import { AuthContext } from "@/contexts/AuthContext";
 

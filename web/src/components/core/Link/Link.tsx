@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import styles from "./Link.module.scss";
+import type { ReactNode } from "react";
 
 type LinkProps = {
     href: string;

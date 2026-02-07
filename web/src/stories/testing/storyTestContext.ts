@@ -8,7 +8,7 @@
  */
 import type { ContextType } from "react";
 import type { NotificationProps } from "@/components/core/Notification/Notification";
-import { AuthContext } from "@/contexts/AuthContext";
+import type { AuthContext } from "@/contexts/AuthContext";
 
 export type AuthContextValue = NonNullable<ContextType<typeof AuthContext>>;
 
@@ -20,7 +20,7 @@ export type StoryAuthOverrides = Partial<
 >;
 
 export type StoryRouterOverrides = {
-    initialEntries?: string[];
+    initialEntries?: Array<string>;
     storyPath?: string;
 };
 

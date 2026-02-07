@@ -1,5 +1,5 @@
-import ConfirmEmailPage from "@/pages/auth/ConfirmEmailPage/ConfirmEmail";
 import { createFileRoute } from "@tanstack/react-router";
+import ConfirmEmailPage from "@/pages/auth/ConfirmEmailPage/ConfirmEmail";
 
 type SearchParams = {
     email?: string;

@@ -8,6 +8,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import DashboardPage from "./DashboardPage";
+import type * as TanStackRouter from "@tanstack/react-router";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
@@ -16,12 +18,11 @@ import {
     createMockApiResponse,
     mockApiPostHandler,
 } from "@/test-utils/mockApiClient";
-import DashboardPage from "./DashboardPage";
 
 const navigateMock = vi.fn();
 
 vi.mock("@tanstack/react-router", async () => {
-    const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+    const actual = await vi.importActual<typeof TanStackRouter>(
         "@tanstack/react-router",
     );
 

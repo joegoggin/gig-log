@@ -4,7 +4,7 @@ export type FieldError = {
 };
 
 export type ValidationErrorResponse = {
-    errors: FieldError[];
+    errors: Array<FieldError>;
 };
 
 export function parseValidationErrors(

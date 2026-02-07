@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {  createContext, useCallback, useContext, useState } from "react";
+import type {ReactNode} from "react";
 import type { NotificationProps } from "@/components/core/Notification/Notification";
 
 type Notification = NotificationProps & {
@@ -6,7 +7,7 @@ type Notification = NotificationProps & {
 };
 
 type NotificationContextType = {
-    notifications: Notification[];
+    notifications: Array<Notification>;
     addNotification: (notification: Omit<Notification, "id">) => void;
     removeNotification: (id: string) => void;
 };
@@ -20,7 +21,7 @@ type NotificationProviderProps = {
 };
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<Array<Notification>>([]);
 
     const addNotification = useCallback((notification: Omit<Notification, "id">) => {
         const id = crypto.randomUUID();

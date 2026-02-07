@@ -22,7 +22,7 @@ type RouteStubDefinition = {
     label: string;
 };
 
-const routeStubs: RouteStubDefinition[] = [
+const routeStubs: Array<RouteStubDefinition> = [
     { path: "/dashboard", label: "Dashboard Route" },
     { path: "/auth/sign-up", label: "Sign Up Route" },
     { path: "/auth/log-in", label: "Log In Route" },
