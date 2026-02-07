@@ -1,3 +1,8 @@
+//! Environment configuration loading utilities.
+//!
+//! This module reads required and optional environment variables, applies
+//! sensible defaults, and produces the runtime configuration used by the API.
+
 use std::env;
 
 use anyhow::Error;
@@ -5,30 +10,48 @@ use dotenvy::dotenv;
 
 use crate::core::app::AppResult;
 
+/// Runtime configuration loaded from environment variables.
 #[derive(Debug, Clone)]
 pub struct Env {
+    /// PostgreSQL connection string used by SQLx.
     pub database_url: String,
+    /// Allowed CORS origin for browser requests.
     pub cors_allowed_origin: String,
+    /// TCP port for the HTTP server.
     pub port: u16,
-
-    // JWT Configuration
+    /// Secret key used to sign and verify JWTs.
     pub jwt_secret: String,
+    /// Access token lifetime in seconds.
     pub jwt_access_token_expiry_seconds: u64,
+    /// Refresh token lifetime in seconds.
     pub jwt_refresh_token_expiry_seconds: u64,
-
-    // Resend Email Service
+    /// Resend API key for transactional emails.
     pub resend_api_key: String,
+    /// Sender email used by the Resend integration.
     pub resend_from_email: String,
-
-    // Auth Codes
+    /// Authentication code lifetime in seconds.
     pub auth_code_expiry_seconds: u64,
-
-    // Cookie Configuration
+    /// Cookie domain used when setting auth cookies.
     pub cookie_domain: String,
+    /// Whether auth cookies are marked as `Secure`.
     pub cookie_secure: bool,
 }
 
 impl Env {
+    /// Loads application configuration from environment variables.
+    ///
+    /// Required variables:
+    /// - `DATABASE_URL`
+    /// - `JWT_SECRET`
+    /// - `RESEND_API_KEY`
+    /// - `RESEND_FROM_EMAIL`
+    ///
+    /// Optional variables fall back to defaults when unset or empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a required variable is missing or if a numeric
+    /// environment variable cannot be parsed.
     pub fn new() -> AppResult<Self> {
         dotenv().ok();
 
@@ -95,6 +118,15 @@ impl Env {
         })
     }
 
+    /// Reads a required environment variable.
+    ///
+    /// # Arguments
+    ///
+    /// - `var` - Environment variable name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the variable is missing or empty.
     fn get_required_var(var: &str) -> AppResult<String> {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => Ok(value),
@@ -106,6 +138,13 @@ impl Env {
         }
     }
 
+    /// Reads an optional environment variable.
+    ///
+    /// # Arguments
+    ///
+    /// - `var` - Environment variable name.
+    ///
+    /// Returns `None` when the variable is missing or empty.
     fn get_optional_var(var: &str) -> Option<String> {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => Some(value),

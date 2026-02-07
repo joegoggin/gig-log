@@ -1,28 +1,45 @@
+//! Shared API error types and HTTP error response mapping.
+//!
+//! This module defines domain-level API errors and converts them to
+//! standardized JSON error responses with appropriate status codes.
+
 use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use serde_json::json;
 use std::fmt;
 
+/// Standard result type returned by HTTP handlers.
 pub type ApiResult<T> = Result<T, ApiError>;
 
+/// Application error variants exposed by API handlers.
 #[derive(Debug)]
 pub enum ApiError {
-    // Auth errors
+    /// Email/password combination is invalid.
     InvalidCredentials,
+    /// User attempted auth flow before confirming email.
     EmailNotConfirmed,
+    /// Registration attempted with an email that already exists.
     EmailAlreadyExists,
+    /// Provided auth/confirmation code is invalid.
     InvalidAuthCode,
+    /// Provided auth/confirmation code has expired.
     AuthCodeExpired,
+    /// JWT token is valid structurally but no longer valid due to expiry.
     TokenExpired,
+    /// JWT token is malformed or otherwise invalid.
     TokenInvalid,
+    /// Request requires authentication and no valid session/token was provided.
     Unauthorized,
 
-    // Validation errors
+    /// Request payload failed validation with a custom message.
     ValidationError(String),
+    /// Password and password confirmation values did not match.
     PasswordMismatch,
 
-    // Internal errors
+    /// Database operation failed.
     DatabaseError(String),
+    /// Upstream email provider operation failed.
     EmailServiceError(String),
+    /// Unclassified internal application error.
     InternalError(String),
 }
 

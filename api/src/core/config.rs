@@ -1,3 +1,7 @@
+//! API route registration.
+//!
+//! This module centralizes registration of all HTTP route handlers.
+
 use actix_web::web::ServiceConfig;
 
 use crate::routes::auth::{
@@ -6,6 +10,11 @@ use crate::routes::auth::{
 };
 use crate::routes::health::health_check;
 
+/// Registers all API routes with the Actix service configuration.
+///
+/// # Arguments
+///
+/// - `config` - Mutable Actix service configuration used during app startup.
 pub fn configure_routes(config: &mut ServiceConfig) {
     config
         // Health routes
