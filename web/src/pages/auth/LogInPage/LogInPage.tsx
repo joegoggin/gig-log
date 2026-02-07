@@ -22,6 +22,26 @@ type LogInResponse = {
     user_id: string;
 };
 
+/**
+ * The authentication page for returning users.
+ * Accepts credentials and optional remember-me preference before navigating
+ * authenticated users to the dashboard.
+ *
+ * Route: `/auth/log-in`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Form` - Handles form submission lifecycle.
+ * - `TextInput` - Captures email and password values.
+ * - `Checkbox` - Captures remember-me preference.
+ * - `Link` - Navigates to password reset flow.
+ * - `Button` - Submits the log-in form.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 const LogInPage = () => {
     const navigate = useNavigate();
     const { refreshUser } = useAuth();

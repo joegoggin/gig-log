@@ -6,7 +6,7 @@ export const Route = createFileRoute("/dashboard/")({
     component: RouteComponent,
 });
 
-function RouteComponent() {
+export function RouteComponent() {
     return (
         <PrivateRoute>
             <DashboardPage />

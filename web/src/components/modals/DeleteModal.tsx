@@ -45,7 +45,7 @@ export type DeleteModalProps = {
  * ```
  */
 const DeleteModal: React.FC<DeleteModalProps> = ({
-    id,
+    id: _id,
     name,
     table,
     relatedTables,
@@ -54,7 +54,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({
 }) => {
     const handleDelete = () => {
         // TODO: Implement actual delete API call using the id prop
-        // Example: await api.delete(`/companies/${id}`);
+        // Example: await api.delete(`/companies/${_id}`);
         setShowModal(false);
     };
 

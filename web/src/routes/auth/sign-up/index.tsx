@@ -9,7 +9,7 @@ export const Route = createFileRoute("/auth/sign-up/")({
     component: RouteComponent,
 });
 
-function RouteComponent() {
+export function RouteComponent() {
     const navigate = useNavigate();
     const { isLoggedIn, isLoading } = useAuth();
 

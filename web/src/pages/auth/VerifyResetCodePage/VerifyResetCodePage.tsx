@@ -9,6 +9,7 @@ import api from "@/lib/axios";
 import styles from "./VerifyResetCodePage.module.scss";
 
 type VerifyResetCodePageProps = {
+    /** Email tied to the reset-code request */
     email?: string;
 };
 
@@ -20,6 +21,24 @@ type VerifyResetCodeResponse = {
     message: string;
 };
 
+/**
+ * The reset-code verification page in the password recovery flow.
+ * Verifies a one-time code sent to the user's email before allowing
+ * password updates.
+ *
+ * Route: `/auth/verify-reset-code`
+ *
+ * ## Props
+ *
+ * - `email` - Email address associated with the password reset request
+ *
+ * ## Related Components
+ *
+ * - `Form` - Handles verification code submission.
+ * - `TextInput` - Captures the reset code.
+ * - `Button` - Submits code verification.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
     const navigate = useNavigate();
     const { data, errors, setData, setErrors } = useForm<VerifyResetCodeFormData>({

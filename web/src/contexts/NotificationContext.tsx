@@ -11,7 +11,9 @@ type NotificationContextType = {
     removeNotification: (id: string) => void;
 };
 
-const NotificationContext = createContext<NotificationContextType | null>(null);
+export const NotificationContext = createContext<NotificationContextType | null>(
+    null,
+);
 
 type NotificationProviderProps = {
     children: ReactNode;

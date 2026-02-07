@@ -22,6 +22,23 @@ type SignUpResponse = {
     message: string;
 };
 
+/**
+ * The account registration page for new users.
+ * Collects user profile details and credentials to create an account.
+ *
+ * Route: `/auth/sign-up`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Form` - Wraps sign-up inputs and submit handling.
+ * - `TextInput` - Captures user profile and credential fields.
+ * - `Button` - Submits the registration form.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 const SignUpPage: React.FC = () => {
     const navigate = useNavigate();
     const { addNotification } = useNotification();

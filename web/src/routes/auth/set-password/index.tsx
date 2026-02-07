@@ -6,7 +6,7 @@ export const Route = createFileRoute("/auth/set-password/")({
     component: RouteComponent,
 });
 
-function RouteComponent() {
+export function RouteComponent() {
     return (
         <PrivateRoute>
             <SetPasswordPage />

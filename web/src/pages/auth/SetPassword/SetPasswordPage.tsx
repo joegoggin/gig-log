@@ -19,6 +19,23 @@ type SetPasswordResponse = {
     message: string;
 };
 
+/**
+ * The password reset completion page.
+ * Allows users to set and confirm a new password after verification.
+ *
+ * Route: `/auth/set-password`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Form` - Handles password reset submission.
+ * - `TextInput` - Captures password and confirmation fields.
+ * - `Button` - Submits the new password.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 function SetPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();

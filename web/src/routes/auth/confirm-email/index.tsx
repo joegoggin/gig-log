@@ -1,4 +1,4 @@
-import ConfirmEmail from "@/pages/auth/ConfirmEmail/ConfirmEmail";
+import ConfirmEmailPage from "@/pages/auth/ConfirmEmailPage/ConfirmEmail";
 import { createFileRoute } from "@tanstack/react-router";
 
 type SearchParams = {
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/auth/confirm-email/")({
 
 function RouteComponent() {
     const { email } = Route.useSearch();
-    return <ConfirmEmail email={email} />;
+    return <ConfirmEmailPage email={email} />;
 }

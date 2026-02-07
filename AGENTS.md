@@ -553,6 +553,62 @@ Use these title prefixes for organization:
 cd web && pnpm storybook
 ```
 
+## Web Testing Conventions
+
+When implementing or updating tests in `/web`, use the following coverage standard.
+
+### Testing Strategy
+
+1. **Storybook interaction tests for user-facing behavior**
+   - Prefer Storybook `play` tests for page flows and visible UI behavior.
+   - Assert real behavior, not just rendering:
+     - Form submission payloads
+     - Route navigation/redirect outcomes
+     - Success/error notification behavior
+     - Validation error rendering
+2. **Component behavior coverage**
+   - Use Storybook interaction tests for interactive components (buttons, links, form controls, notifications, modals, auth wrappers).
+   - Assert behavior, not only presence:
+     - Event callbacks are fired (`onClick`, `onClose`, etc.)
+     - Navigation actions route to expected targets
+     - Variant/state changes affect output (classes, text, disabled/loading states, visibility)
+     - Accessibility-relevant behavior is preserved (roles, labels, focusable controls)
+   - For mostly presentational components, still test meaningful variants/states, not just a single default render.
+3. **Route-wrapper behavior coverage**
+   - Add stories for auth/protected route wrappers when logic exists in route files.
+   - Cover loading, redirect, and authenticated rendering states.
+4. **Targeted unit tests for internal side effects**
+   - Use `*.test.tsx` for non-visual callback assertions that are awkward in Storybook:
+     - auth context callbacks (e.g., `refreshUser`, `setUser`)
+     - side-effect ordering and callback invocation guarantees
+5. **Deterministic API mocking**
+   - Mock API client calls in behavior tests and assert expected request payloads.
+   - Include success and validation/error branches for form flows.
+
+### Minimum Coverage Expectations for Component Tests
+
+For component-level tests (especially in `web/src/stories/components`), include at least:
+
+1. One behavior assertion beyond visibility (event callback, navigation, state change, or accessibility-relevant interaction)
+2. Coverage for key variants/states exposed by props (e.g., variant enums, disabled/loading/error states)
+3. Negative or alternate-path coverage where meaningful (e.g., no callback when disabled, hidden state when closed)
+
+### Minimum Coverage Expectations for Auth/Page Flows
+
+For page-level behavior tests, include at least:
+
+1. One success-path test asserting payload + resulting navigation
+2. One failure-path test asserting validation or error notification behavior
+3. Route-wrapper state coverage (where applicable): loading + redirect + allowed render
+
+### Test Documentation in Code
+
+When adding or updating test files, add a concise top-of-file comment documenting:
+
+1. What behavior the file covers
+2. Which scenarios are tested
+3. Which regressions the tests are meant to prevent
+
 ## Code Review Process
 
 When asked to perform a code review, follow this interactive process:
@@ -561,6 +617,7 @@ When asked to perform a code review, follow this interactive process:
 
 - **Spelling mistakes** - Check for typos in code, comments, and strings
 - **Documentation compliance** - Ensure all files follow the documentation formats defined in this file (JSDoc comments, Storybook stories, MDX files for routes, etc.)
+- **Testing convention compliance** - Verify new/updated web component and page tests follow the `Web Testing Conventions` section (behavior-focused story tests, component variant/state coverage, route-wrapper coverage where needed, and targeted unit tests for internal side effects)
 - **Code quality issues** - Bugs, logic errors, and other problems
 
 ### Process

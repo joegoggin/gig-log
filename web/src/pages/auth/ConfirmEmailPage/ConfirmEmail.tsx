@@ -10,7 +10,8 @@ import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/Fullscr
 import api from "@/lib/axios";
 import styles from "./ConfirmEmail.module.scss";
 
-type ConfirmEmailProps = {
+type ConfirmEmailPageProps = {
+    /** Email address that should be confirmed */
     email?: string;
 };
 
@@ -22,7 +23,24 @@ type ConfirmEmailResponse = {
     message: string;
 };
 
-function ConfirmEmail({ email }: ConfirmEmailProps) {
+/**
+ * The email confirmation page for newly registered accounts.
+ * Validates a confirmation code sent to the provided email address.
+ *
+ * Route: `/auth/confirm-email`
+ *
+ * ## Props
+ *
+ * - `email` - Email address associated with the confirmation code
+ *
+ * ## Related Components
+ *
+ * - `Form` - Handles confirmation-code submission.
+ * - `TextInput` - Captures the email confirmation code.
+ * - `Button` - Submits the confirmation request.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
+function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
     const navigate = useNavigate();
     const { addNotification } = useNotification();
     const { data, errors, setData, setErrors } = useForm<ConfirmEmailFormData>({
@@ -77,4 +95,4 @@ function ConfirmEmail({ email }: ConfirmEmailProps) {
     );
 }
 
-export default ConfirmEmail;
+export default ConfirmEmailPage;

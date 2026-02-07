@@ -32,6 +32,12 @@ const config: StorybookConfig = {
       '@': resolve(__dirname, '../src'),
       '@sass': resolve(__dirname, '../src/sass'),
     };
+
+    config.optimizeDeps = config.optimizeDeps || {};
+    config.optimizeDeps.include = [
+      ...(config.optimizeDeps.include || []),
+      "@tanstack/react-query",
+    ];
     return config;
   },
 };

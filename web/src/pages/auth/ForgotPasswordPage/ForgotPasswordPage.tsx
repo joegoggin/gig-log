@@ -18,6 +18,23 @@ type ForgotPasswordResponse = {
     message: string;
 };
 
+/**
+ * The forgot-password page for starting password recovery.
+ * Collects an email address and triggers reset-code delivery.
+ *
+ * Route: `/auth/forgot-password`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Form` - Handles forgot-password form submission.
+ * - `TextInput` - Captures the account email.
+ * - `Button` - Submits the reset request.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 function ForgotPasswordPage() {
     const navigate = useNavigate();
     const { addNotification } = useNotification();

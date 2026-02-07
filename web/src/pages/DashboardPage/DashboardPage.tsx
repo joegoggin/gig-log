@@ -16,7 +16,21 @@ type ApiErrorResponse = {
     error: string;
 };
 
-
+/**
+ * The authenticated dashboard page for signed-in users.
+ * Displays dashboard content and provides a log-out action.
+ *
+ * Route: `/dashboard`
+ *
+ * ## Props
+ *
+ * - None.
+ *
+ * ## Related Components
+ *
+ * - `Button` - Triggers the log-out action.
+ * - `FullscreenCenteredLayout` - Centers page content.
+ */
 function DashboardPage() {
     const navigate = useNavigate();
     const { setUser } = useAuth();
