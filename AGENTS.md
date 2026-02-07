@@ -609,6 +609,35 @@ When adding or updating test files, add a concise top-of-file comment documentin
 2. Which scenarios are tested
 3. Which regressions the tests are meant to prevent
 
+## API Testing Conventions
+
+When implementing or updating tests in `/api`, maintain the same coverage bar now established in the auth testing suite.
+
+### Required Coverage for API Changes
+
+1. **Unit coverage for pure logic**
+   - Add unit tests for helper logic in auth utilities, validators, extractors, cookie/JWT/code helpers, and similar pure modules.
+   - Cover both success and failure/edge behavior.
+2. **Handler-level route coverage**
+   - Add tests in the route handler module (for example `api/src/routes/**/handlers.rs`) for request validation, auth-guard behavior, and non-DB early-return branches.
+3. **Integration flow coverage**
+   - Add integration tests in `api/tests/` for primary end-to-end flows with real database persistence checks.
+   - Assert both API responses and key database side effects.
+4. **Success + failure + security behavior**
+   - Include at least one success path and one failure path for changed flows.
+   - Include security-relevant behavior where applicable (for example: anti-enumeration responses, token type checks, cookie behavior, auth-code lifecycle).
+
+### External Service Isolation
+
+1. Do not call third-party services (email providers, external APIs) in tests.
+2. Use trait-based dependency injection with mock implementations for external dependencies.
+
+### Deterministic Test Setup
+
+1. Use deterministic test environment configuration (dotenv/test env vars).
+2. Use unique test data to avoid collisions.
+3. Keep DB-backed integration tests reliable through proper isolation/serialization when needed.
+
 ## Code Review Process
 
 When asked to perform a code review, follow this interactive process:
@@ -617,7 +646,8 @@ When asked to perform a code review, follow this interactive process:
 
 - **Spelling mistakes** - Check for typos in code, comments, and strings
 - **Documentation compliance** - Ensure all files follow the documentation formats defined in this file (JSDoc comments, Storybook stories, MDX files for routes, etc.)
-- **Testing convention compliance** - Verify new/updated web component and page tests follow the `Web Testing Conventions` section (behavior-focused story tests, component variant/state coverage, route-wrapper coverage where needed, and targeted unit tests for internal side effects)
+- **Web testing convention compliance** - Verify new/updated web component and page tests follow the `Web Testing Conventions` section (behavior-focused story tests, component variant/state coverage, route-wrapper coverage where needed, and targeted unit tests for internal side effects)
+- **API testing convention compliance** - Verify new/updated API changes follow the `API Testing Conventions` section (unit + handler-level + integration flow coverage, with failure/security assertions and mocked external services)
 - **Code quality issues** - Bugs, logic errors, and other problems
 
 ### Process

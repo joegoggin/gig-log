@@ -139,3 +139,65 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{App, HttpResponse, Responder, http::StatusCode, post, test};
+    use serde::Deserialize;
+    use serde_json::json;
+    use validator::Validate;
+
+    use super::ValidatedJson;
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct TestPayload {
+        #[validate(length(min = 1, message = "Name is required"))]
+        name: String,
+    }
+
+    #[post("/validated")]
+    async fn validated(body: ValidatedJson<TestPayload>) -> impl Responder {
+        let payload = body.into_inner();
+        HttpResponse::Ok().body(payload.name)
+    }
+
+    #[actix_web::test]
+    // Verifies invalid payloads are rejected with the extractor error shape.
+    async fn returns_bad_request_with_validation_errors_when_payload_is_invalid() {
+        let app = test::init_service(App::new().service(validated)).await;
+        let request = test::TestRequest::post()
+            .uri("/validated")
+            .set_json(json!({ "name": "" }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let body: serde_json::Value = test::read_body_json(response).await;
+        let errors = body
+            .get("errors")
+            .and_then(|value| value.as_array())
+            .expect("validation response should include an errors array");
+
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.get("field") == Some(&json!("name")))
+        );
+    }
+
+    #[actix_web::test]
+    // Verifies valid payloads pass extractor validation and reach the handler.
+    async fn allows_request_when_payload_is_valid() {
+        let app = test::init_service(App::new().service(validated)).await;
+        let request = test::TestRequest::post()
+            .uri("/validated")
+            .set_json(json!({ "name": "GigLog" }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}

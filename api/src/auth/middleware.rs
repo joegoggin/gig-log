@@ -9,6 +9,7 @@ use futures::future::{Ready, err, ok};
 use uuid::Uuid;
 
 use crate::auth::jwt::decode_access_token;
+use crate::core::app_state::AppState;
 use crate::core::error::ApiError;
 
 /// Authenticated user context extracted from a request.
@@ -39,17 +40,17 @@ impl FromRequest for AuthenticatedUser {
         };
 
         // Get JWT secret from app data
-        let env = match req.app_data::<actix_web::web::Data<crate::core::env::Env>>() {
-            Some(env) => env,
+        let app_state = match req.app_data::<actix_web::web::Data<AppState>>() {
+            Some(app_state) => app_state,
             None => {
                 return err(ApiError::InternalError(
-                    "Environment not configured".to_string(),
+                    "Application state not configured".to_string(),
                 ));
             }
         };
 
         // Decode and validate token
-        match decode_access_token(&token, &env.jwt_secret) {
+        match decode_access_token(&token, &app_state.env.jwt_secret) {
             Ok(claims) => match Uuid::parse_str(&claims.sub) {
                 Ok(user_id) => ok(AuthenticatedUser {
                     user_id,

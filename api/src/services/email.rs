@@ -3,9 +3,50 @@
 //! This module wraps the Resend client used to send account confirmation and
 //! password reset emails.
 
+use async_trait::async_trait;
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
 
 use crate::core::error::ApiError;
+
+/// Abstraction for sending authentication-related transactional emails.
+#[async_trait]
+pub trait EmailSender {
+    /// Sends an account confirmation email with a one-time verification code.
+    ///
+    /// # Arguments
+    ///
+    /// - `to_email` - Recipient email address
+    /// - `first_name` - Recipient first name shown in the email body
+    /// - `code` - Confirmation code to include in the email
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiError::EmailServiceError`] when email delivery fails.
+    async fn send_confirmation_email(
+        &self,
+        to_email: &str,
+        first_name: &str,
+        code: &str,
+    ) -> Result<(), ApiError>;
+
+    /// Sends a password reset email with a one-time verification code.
+    ///
+    /// # Arguments
+    ///
+    /// - `to_email` - Recipient email address
+    /// - `first_name` - Recipient first name shown in the email body
+    /// - `code` - Password reset code to include in the email
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiError::EmailServiceError`] when email delivery fails.
+    async fn send_password_reset_email(
+        &self,
+        to_email: &str,
+        first_name: &str,
+        code: &str,
+    ) -> Result<(), ApiError>;
+}
 
 /// Service for sending transactional emails through Resend.
 pub struct EmailService {
@@ -27,7 +68,10 @@ impl EmailService {
             from_email: from_email.to_string(),
         }
     }
+}
 
+#[async_trait]
+impl EmailSender for EmailService {
     /// Sends an account confirmation email with a one-time verification code.
     ///
     /// # Arguments
@@ -40,7 +84,7 @@ impl EmailService {
     ///
     /// Returns [`ApiError::EmailServiceError`] when the upstream email provider
     /// rejects the request or is unavailable.
-    pub async fn send_confirmation_email(
+    async fn send_confirmation_email(
         &self,
         to_email: &str,
         first_name: &str,
@@ -85,7 +129,7 @@ impl EmailService {
     ///
     /// Returns [`ApiError::EmailServiceError`] when the upstream email provider
     /// rejects the request or is unavailable.
-    pub async fn send_password_reset_email(
+    async fn send_password_reset_email(
         &self,
         to_email: &str,
         first_name: &str,

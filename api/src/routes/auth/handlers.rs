@@ -7,7 +7,6 @@
 use actix_web::{HttpResponse, get, post, web};
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
-use sqlx::{Pool, Postgres};
 
 use crate::auth::codes::{generate_auth_code, hash_code, verify_code};
 use crate::auth::cookies::{
@@ -17,12 +16,11 @@ use crate::auth::cookies::{
 use crate::auth::jwt::{create_access_token, create_refresh_token};
 use crate::auth::middleware::AuthenticatedUser;
 use crate::auth::password::{hash_password, verify_password};
-use crate::core::env::Env;
+use crate::core::app_state::AppState;
 use crate::core::error::{ApiError, ApiResult};
 use crate::extractors::ValidatedJson;
 use crate::models::auth_code::AuthCodeType;
 use crate::repository::auth::AuthRepo;
-use crate::services::email::EmailService;
 
 use super::payloads::{
     ConfirmEmailRequest, ConfirmEmailResponse, CurrentUserResponse, ForgotPasswordRequest,
@@ -59,14 +57,13 @@ use super::payloads::{
 /// - `InternalError` - If password hashing or database operations fail
 #[post("/auth/sign-up")]
 pub async fn sign_up(
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     body: ValidatedJson<SignUpRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
 
     // Check if email already exists
-    if AuthRepo::check_email_exists(pool.get_ref(), &body.email).await? {
+    if AuthRepo::check_email_exists(&state.pool, &body.email).await? {
         return Err(ApiError::EmailAlreadyExists);
     }
 
@@ -75,7 +72,7 @@ pub async fn sign_up(
 
     // Create user
     let user_id = AuthRepo::create_user(
-        pool.get_ref(),
+        &state.pool,
         &body.first_name,
         &body.last_name,
         &body.email,
@@ -86,10 +83,10 @@ pub async fn sign_up(
     // Generate and store auth code
     let code = generate_auth_code();
     let code_hash = hash_code(&code);
-    let expires_at = Utc::now() + Duration::seconds(env.auth_code_expiry_seconds as i64);
+    let expires_at = Utc::now() + Duration::seconds(state.env.auth_code_expiry_seconds as i64);
 
     AuthRepo::create_auth_code(
-        pool.get_ref(),
+        &state.pool,
         user_id,
         &code_hash,
         AuthCodeType::EmailConfirmation,
@@ -98,8 +95,8 @@ pub async fn sign_up(
     .await?;
 
     // Send confirmation email
-    let email_service = EmailService::new(&env.resend_api_key, &env.resend_from_email);
-    email_service
+    state
+        .email_sender
         .send_confirmation_email(&body.email, &body.first_name, &code)
         .await?;
 
@@ -134,13 +131,13 @@ pub async fn sign_up(
 /// - `InvalidAuthCode` - If the provided code doesn't match
 #[post("/auth/confirm-email")]
 pub async fn confirm_email(
-    pool: web::Data<Pool<Postgres>>,
+    state: web::Data<AppState>,
     body: ValidatedJson<ConfirmEmailRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_confirmation(pool.get_ref(), &body.email)
+    let user = AuthRepo::find_user_for_confirmation(&state.pool, &body.email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
@@ -152,7 +149,7 @@ pub async fn confirm_email(
 
     // Find valid auth code
     let auth_code =
-        AuthRepo::find_valid_auth_code(pool.get_ref(), user.id, AuthCodeType::EmailConfirmation)
+        AuthRepo::find_valid_auth_code(&state.pool, user.id, AuthCodeType::EmailConfirmation)
             .await?
             .ok_or(ApiError::AuthCodeExpired)?;
 
@@ -162,7 +159,7 @@ pub async fn confirm_email(
     }
 
     // Mark code as used and confirm email in a transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = state.pool.begin().await?;
 
     AuthRepo::mark_auth_code_used(&mut tx, auth_code.id).await?;
     AuthRepo::confirm_user_email(&mut tx, user.id).await?;
@@ -199,14 +196,13 @@ pub async fn confirm_email(
 /// - `EmailNotConfirmed` - If the user hasn't confirmed their email
 #[post("/auth/log-in")]
 pub async fn log_in(
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     body: ValidatedJson<LogInRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_login(pool.get_ref(), &body.email)
+    let user = AuthRepo::find_user_for_login(&state.pool, &body.email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
@@ -224,15 +220,15 @@ pub async fn log_in(
     let access_token = create_access_token(
         user.id,
         &user.email,
-        &env.jwt_secret,
-        env.jwt_access_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
     )?;
 
     // Create refresh token
     let (refresh_token, jti) = create_refresh_token(
         user.id,
-        &env.jwt_secret,
-        env.jwt_refresh_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_refresh_token_expiry_seconds,
     )?;
 
     // Hash and store refresh token
@@ -241,15 +237,22 @@ pub async fn log_in(
         hasher.update(jti.as_bytes());
         hex::encode(hasher.finalize())
     };
-    let expires_at = Utc::now() + Duration::seconds(env.jwt_refresh_token_expiry_seconds as i64);
+    let expires_at =
+        Utc::now() + Duration::seconds(state.env.jwt_refresh_token_expiry_seconds as i64);
 
-    AuthRepo::create_refresh_token(pool.get_ref(), user.id, &token_hash, expires_at).await?;
+    AuthRepo::create_refresh_token(&state.pool, user.id, &token_hash, expires_at).await?;
 
     // Create cookies
-    let access_cookie =
-        create_access_token_cookie(&access_token, &env.cookie_domain, env.cookie_secure);
-    let refresh_cookie =
-        create_refresh_token_cookie(&refresh_token, &env.cookie_domain, env.cookie_secure);
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
+    let refresh_cookie = create_refresh_token_cookie(
+        &refresh_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
 
     Ok(HttpResponse::Ok()
         .cookie(access_cookie)
@@ -275,14 +278,13 @@ pub async fn log_in(
 /// - `message` - Success message
 #[post("/auth/log-out")]
 pub async fn log_out(
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     req: actix_web::HttpRequest,
 ) -> ApiResult<HttpResponse> {
     // Try to revoke refresh token if present
     if let Some(refresh_cookie) = req.cookie("refresh_token") {
         if let Ok(claims) =
-            crate::auth::jwt::decode_refresh_token(refresh_cookie.value(), &env.jwt_secret)
+            crate::auth::jwt::decode_refresh_token(refresh_cookie.value(), &state.env.jwt_secret)
         {
             let token_hash = {
                 let mut hasher = Sha256::new();
@@ -290,13 +292,13 @@ pub async fn log_out(
                 hex::encode(hasher.finalize())
             };
 
-            let _ = AuthRepo::revoke_refresh_token(pool.get_ref(), &token_hash).await;
+            let _ = AuthRepo::revoke_refresh_token(&state.pool, &token_hash).await;
         }
     }
 
     // Clear cookies
-    let clear_access = clear_access_token_cookie(&env.cookie_domain);
-    let clear_refresh = clear_refresh_token_cookie(&env.cookie_domain);
+    let clear_access = clear_access_token_cookie(&state.env.cookie_domain);
+    let clear_refresh = clear_refresh_token_cookie(&state.env.cookie_domain);
 
     Ok(HttpResponse::Ok()
         .cookie(clear_access)
@@ -330,10 +332,10 @@ pub async fn log_out(
 /// - `Unauthorized` - If the access token is invalid or the user doesn't exist
 #[get("/auth/me")]
 pub async fn current_user(
-    pool: web::Data<Pool<Postgres>>,
+    state: web::Data<AppState>,
     auth_user: AuthenticatedUser,
 ) -> ApiResult<HttpResponse> {
-    let user = AuthRepo::find_user_by_id(pool.get_ref(), auth_user.user_id)
+    let user = AuthRepo::find_user_by_id(&state.pool, auth_user.user_id)
         .await?
         .ok_or(ApiError::Unauthorized)?;
 
@@ -359,8 +361,7 @@ pub async fn current_user(
 /// - `message` - Generic message (same whether email exists or not for security)
 #[post("/auth/forgot-password")]
 pub async fn forgot_password(
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     body: ValidatedJson<ForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
@@ -372,21 +373,21 @@ pub async fn forgot_password(
     };
 
     // Find user by email
-    let user = match AuthRepo::find_user_for_password_reset(pool.get_ref(), &body.email).await? {
+    let user = match AuthRepo::find_user_for_password_reset(&state.pool, &body.email).await? {
         Some(user) => user,
         None => return Ok(HttpResponse::Ok().json(response)),
     };
 
     // Invalidate any existing password reset codes
-    AuthRepo::invalidate_password_reset_codes(pool.get_ref(), user.id).await?;
+    AuthRepo::invalidate_password_reset_codes(&state.pool, user.id).await?;
 
     // Generate and store new auth code
     let code = generate_auth_code();
     let code_hash = hash_code(&code);
-    let expires_at = Utc::now() + Duration::seconds(env.auth_code_expiry_seconds as i64);
+    let expires_at = Utc::now() + Duration::seconds(state.env.auth_code_expiry_seconds as i64);
 
     AuthRepo::create_auth_code(
-        pool.get_ref(),
+        &state.pool,
         user.id,
         &code_hash,
         AuthCodeType::PasswordReset,
@@ -395,8 +396,8 @@ pub async fn forgot_password(
     .await?;
 
     // Send password reset email
-    let email_service = EmailService::new(&env.resend_api_key, &env.resend_from_email);
-    let _ = email_service
+    let _ = state
+        .email_sender
         .send_password_reset_email(&body.email, &user.first_name, &code)
         .await;
 
@@ -428,20 +429,19 @@ pub async fn forgot_password(
 /// - `InvalidAuthCode` - If the provided code doesn't match
 #[post("/auth/verify-forgot-password")]
 pub async fn verify_forgot_password(
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     body: ValidatedJson<VerifyForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_verification(pool.get_ref(), &body.email)
+    let user = AuthRepo::find_user_for_verification(&state.pool, &body.email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
     // Find valid auth code
     let auth_code =
-        AuthRepo::find_valid_auth_code(pool.get_ref(), user.id, AuthCodeType::PasswordReset)
+        AuthRepo::find_valid_auth_code(&state.pool, user.id, AuthCodeType::PasswordReset)
             .await?
             .ok_or(ApiError::AuthCodeExpired)?;
 
@@ -451,20 +451,20 @@ pub async fn verify_forgot_password(
     }
 
     // Mark code as used
-    AuthRepo::mark_auth_code_used_without_tx(pool.get_ref(), auth_code.id).await?;
+    AuthRepo::mark_auth_code_used_without_tx(&state.pool, auth_code.id).await?;
 
     // Issue tokens to allow password reset
     let access_token = create_access_token(
         user.id,
         &user.email,
-        &env.jwt_secret,
-        env.jwt_access_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
     )?;
 
     let (refresh_token, jti) = create_refresh_token(
         user.id,
-        &env.jwt_secret,
-        env.jwt_refresh_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_refresh_token_expiry_seconds,
     )?;
 
     // Store refresh token
@@ -473,15 +473,22 @@ pub async fn verify_forgot_password(
         hasher.update(jti.as_bytes());
         hex::encode(hasher.finalize())
     };
-    let expires_at = Utc::now() + Duration::seconds(env.jwt_refresh_token_expiry_seconds as i64);
+    let expires_at =
+        Utc::now() + Duration::seconds(state.env.jwt_refresh_token_expiry_seconds as i64);
 
-    AuthRepo::create_refresh_token(pool.get_ref(), user.id, &token_hash, expires_at).await?;
+    AuthRepo::create_refresh_token(&state.pool, user.id, &token_hash, expires_at).await?;
 
     // Create cookies
-    let access_cookie =
-        create_access_token_cookie(&access_token, &env.cookie_domain, env.cookie_secure);
-    let refresh_cookie =
-        create_refresh_token_cookie(&refresh_token, &env.cookie_domain, env.cookie_secure);
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
+    let refresh_cookie = create_refresh_token_cookie(
+        &refresh_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
 
     Ok(HttpResponse::Ok()
         .cookie(access_cookie)
@@ -516,8 +523,7 @@ pub async fn verify_forgot_password(
 #[post("/auth/set-password")]
 pub async fn set_password(
     user: AuthenticatedUser,
-    pool: web::Data<Pool<Postgres>>,
-    env: web::Data<Env>,
+    state: web::Data<AppState>,
     body: ValidatedJson<SetPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
@@ -526,7 +532,7 @@ pub async fn set_password(
     let hashed_password = hash_password(&body.password)?;
 
     // Start transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = state.pool.begin().await?;
 
     // Update password
     AuthRepo::update_user_password(&mut tx, user.user_id, &hashed_password).await?;
@@ -540,14 +546,14 @@ pub async fn set_password(
     let access_token = create_access_token(
         user.user_id,
         &user.email,
-        &env.jwt_secret,
-        env.jwt_access_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
     )?;
 
     let (refresh_token, jti) = create_refresh_token(
         user.user_id,
-        &env.jwt_secret,
-        env.jwt_refresh_token_expiry_seconds,
+        &state.env.jwt_secret,
+        state.env.jwt_refresh_token_expiry_seconds,
     )?;
 
     // Store new refresh token
@@ -556,15 +562,22 @@ pub async fn set_password(
         hasher.update(jti.as_bytes());
         hex::encode(hasher.finalize())
     };
-    let expires_at = Utc::now() + Duration::seconds(env.jwt_refresh_token_expiry_seconds as i64);
+    let expires_at =
+        Utc::now() + Duration::seconds(state.env.jwt_refresh_token_expiry_seconds as i64);
 
-    AuthRepo::create_refresh_token(pool.get_ref(), user.user_id, &token_hash, expires_at).await?;
+    AuthRepo::create_refresh_token(&state.pool, user.user_id, &token_hash, expires_at).await?;
 
     // Create cookies
-    let access_cookie =
-        create_access_token_cookie(&access_token, &env.cookie_domain, env.cookie_secure);
-    let refresh_cookie =
-        create_refresh_token_cookie(&refresh_token, &env.cookie_domain, env.cookie_secure);
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
+    let refresh_cookie = create_refresh_token_cookie(
+        &refresh_token,
+        &state.env.cookie_domain,
+        state.env.cookie_secure,
+    );
 
     Ok(HttpResponse::Ok()
         .cookie(access_cookie)
@@ -572,4 +585,149 @@ pub async fn set_password(
         .json(SetPasswordResponse {
             message: "Password updated successfully.".to_string(),
         }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use actix_web::{App, http::StatusCode, test, web};
+    use async_trait::async_trait;
+    use serde_json::json;
+    use sqlx::postgres::PgPoolOptions;
+
+    use crate::core::app_state::AppState;
+    use crate::core::config::configure_routes;
+    use crate::core::env::Env;
+    use crate::core::error::ApiError;
+    use crate::services::email::EmailSender;
+
+    #[derive(Debug)]
+    struct NoopEmailSender;
+
+    #[async_trait]
+    impl EmailSender for NoopEmailSender {
+        async fn send_confirmation_email(
+            &self,
+            _to_email: &str,
+            _first_name: &str,
+            _code: &str,
+        ) -> Result<(), ApiError> {
+            Ok(())
+        }
+
+        async fn send_password_reset_email(
+            &self,
+            _to_email: &str,
+            _first_name: &str,
+            _code: &str,
+        ) -> Result<(), ApiError> {
+            Ok(())
+        }
+    }
+
+    fn test_state() -> AppState {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost/gig_log_test")
+            .expect("lazy test pool should be created");
+        let env = Env {
+            database_url: "postgres://postgres:postgres@localhost/gig_log_test".to_string(),
+            cors_allowed_origin: "http://localhost:3000".to_string(),
+            port: 0,
+            jwt_secret: "test-jwt-secret".to_string(),
+            jwt_access_token_expiry_seconds: 900,
+            jwt_refresh_token_expiry_seconds: 604_800,
+            resend_api_key: "test-resend-key".to_string(),
+            resend_from_email: "test@giglog.dev".to_string(),
+            auth_code_expiry_seconds: 600,
+            cookie_domain: "localhost".to_string(),
+            cookie_secure: false,
+        };
+
+        AppState::with_email_sender(pool, env, Arc::new(NoopEmailSender))
+    }
+
+    #[actix_web::test]
+    // Verifies signup rejects invalid payloads before handler DB logic executes.
+    async fn sign_up_returns_bad_request_for_invalid_payload() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/sign-up")
+            .set_json(json!({
+                "first_name": "",
+                "last_name": "",
+                "email": "invalid-email",
+                "password": "short",
+                "confirm": ""
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    // Verifies current-user endpoint returns unauthorized when no access cookie is present.
+    async fn current_user_returns_unauthorized_without_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::get().uri("/auth/me").to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies forgot-password validation rejects malformed emails with a bad request.
+    async fn forgot_password_returns_bad_request_for_invalid_email() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/forgot-password")
+            .set_json(json!({ "email": "not-an-email" }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    // Verifies logout succeeds without a refresh cookie and still clears auth cookies.
+    async fn log_out_returns_ok_and_clears_cookies_without_refresh_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post().uri("/auth/log-out").to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let cookie_names: Vec<String> = response
+            .response()
+            .cookies()
+            .map(|cookie| cookie.name().to_string())
+            .collect();
+        assert!(cookie_names.iter().any(|name| name == "access_token"));
+        assert!(cookie_names.iter().any(|name| name == "refresh_token"));
+    }
 }

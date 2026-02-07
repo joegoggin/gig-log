@@ -55,3 +55,36 @@ fn constant_time_compare(a: &str, b: &str) -> bool {
     }
     result == 0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{generate_auth_code, hash_code, verify_code};
+
+    #[test]
+    // Verifies generated auth codes are always six numeric characters.
+    fn generate_auth_code_returns_six_digit_numeric_value() {
+        let code = generate_auth_code();
+
+        assert_eq!(code.len(), 6);
+        assert!(code.chars().all(|c| c.is_ascii_digit()));
+    }
+
+    #[test]
+    // Verifies hashing is deterministic for the same auth code input.
+    fn hash_code_is_deterministic_for_same_input() {
+        let first = hash_code("123456");
+        let second = hash_code("123456");
+
+        assert_eq!(first, second);
+        assert_eq!(first.len(), 64);
+    }
+
+    #[test]
+    // Verifies code verification succeeds for matches and fails for mismatches.
+    fn verify_code_accepts_matching_and_rejects_non_matching_codes() {
+        let hash = hash_code("654321");
+
+        assert!(verify_code("654321", &hash));
+        assert!(!verify_code("111111", &hash));
+    }
+}

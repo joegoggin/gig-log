@@ -7,7 +7,7 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer, web};
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 
-use crate::core::{app::AppResult, config::configure_routes, env::Env};
+use crate::core::{app::AppResult, app_state::AppState, config::configure_routes, env::Env};
 
 /// HTTP server with initialized shared dependencies.
 pub struct Server {
@@ -44,6 +44,7 @@ impl Server {
         println!("Server running on port {}", self.env.port);
 
         let env = self.env.clone();
+        let app_state = AppState::new(self.pool.clone(), env.clone());
 
         HttpServer::new(move || {
             let cors = Cors::default()
@@ -53,8 +54,7 @@ impl Server {
                 .supports_credentials();
 
             App::new()
-                .app_data(web::Data::new(self.pool.clone()))
-                .app_data(web::Data::new(env.clone()))
+                .app_data(web::Data::new(app_state.clone()))
                 .wrap(cors)
                 .configure(configure_routes)
         })

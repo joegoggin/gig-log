@@ -55,3 +55,38 @@ pub fn validate_set_password_match(
 ) -> Result<(), validator::ValidationError> {
     validate_passwords_match(&req.password, &req.confirm)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_set_password_match, validate_signup_passwords_match};
+    use crate::routes::auth::{SetPasswordRequest, SignUpRequest};
+
+    #[test]
+    // Verifies signup password matching validation accepts equal values.
+    fn signup_password_validator_accepts_matching_passwords() {
+        let request = SignUpRequest {
+            first_name: "Jane".to_string(),
+            last_name: "Doe".to_string(),
+            email: "jane@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm: "password123".to_string(),
+        };
+
+        assert!(validate_signup_passwords_match(&request).is_ok());
+    }
+
+    #[test]
+    // Verifies set-password validation returns a mismatch error when fields differ.
+    fn set_password_validator_rejects_mismatch() {
+        let request = SetPasswordRequest {
+            password: "password123".to_string(),
+            confirm: "different".to_string(),
+        };
+
+        let result = validate_set_password_match(&request);
+        let error = result.expect_err("validator should reject mismatch");
+
+        assert_eq!(error.code.as_ref(), "password_mismatch");
+        assert_eq!(error.message.as_deref(), Some("Passwords do not match"));
+    }
+}

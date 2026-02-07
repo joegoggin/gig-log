@@ -49,3 +49,38 @@ pub fn verify_password(password: &str, password_hash: &str) -> Result<bool, ApiE
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{hash_password, verify_password};
+    use crate::core::error::ApiError;
+
+    #[test]
+    // Verifies a hashed password validates successfully against its original input.
+    fn hash_password_and_verify_password_round_trip() {
+        let password = "my-very-strong-password";
+        let hash = hash_password(password).expect("password should hash");
+
+        let is_valid = verify_password(password, &hash).expect("verification should succeed");
+
+        assert!(is_valid);
+    }
+
+    #[test]
+    // Verifies password verification rejects an incorrect password.
+    fn verify_password_rejects_wrong_password() {
+        let hash = hash_password("correct-password").expect("password should hash");
+
+        let is_valid = verify_password("wrong-password", &hash).expect("verification should run");
+
+        assert!(!is_valid);
+    }
+
+    #[test]
+    // Verifies invalid stored hash formats are surfaced as internal errors.
+    fn verify_password_returns_error_for_invalid_hash_format() {
+        let result = verify_password("password", "not-a-valid-hash");
+
+        assert!(matches!(result, Err(ApiError::InternalError(_))));
+    }
+}

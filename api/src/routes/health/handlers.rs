@@ -28,3 +28,24 @@ pub async fn health_check() -> HttpResponse {
         "status": "ok"
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{App, http::StatusCode, test};
+    use serde_json::json;
+
+    use super::health_check;
+
+    #[actix_web::test]
+    // Verifies the health endpoint returns the expected OK payload.
+    async fn health_check_returns_ok_payload() {
+        let app = test::init_service(App::new().service(health_check)).await;
+        let request = test::TestRequest::get().uri("/health").to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body: serde_json::Value = test::read_body_json(response).await;
+        assert_eq!(body, json!({ "status": "ok" }));
+    }
+}

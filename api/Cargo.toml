@@ -29,3 +29,4 @@ resend-rs = "0.7"
 # Async/futures utilities
 futures = "0.3"
 validator = { version = "0.20.0", features = ["derive"] }
+async-trait = "0.1.89"

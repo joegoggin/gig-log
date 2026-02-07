@@ -74,3 +74,55 @@ pub fn clear_refresh_token_cookie(domain: &str) -> Cookie<'static> {
         .max_age(Duration::ZERO)
         .finish()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        clear_access_token_cookie, clear_refresh_token_cookie, create_access_token_cookie,
+        create_refresh_token_cookie,
+    };
+    use actix_web::cookie::{SameSite, time::Duration};
+
+    #[test]
+    // Verifies access-token cookies include expected security and scope attributes.
+    fn create_access_token_cookie_sets_expected_attributes() {
+        let cookie = create_access_token_cookie("token", "localhost", true);
+
+        assert_eq!(cookie.name(), "access_token");
+        assert_eq!(cookie.value(), "token");
+        assert_eq!(cookie.path(), Some("/"));
+        assert_eq!(cookie.domain(), Some("localhost"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.secure(), Some(true));
+        assert_eq!(cookie.same_site(), Some(SameSite::Strict));
+        assert_eq!(cookie.max_age(), Some(Duration::minutes(15)));
+    }
+
+    #[test]
+    // Verifies refresh-token cookies include expected security and path attributes.
+    fn create_refresh_token_cookie_sets_expected_attributes() {
+        let cookie = create_refresh_token_cookie("refresh", "example.com", false);
+
+        assert_eq!(cookie.name(), "refresh_token");
+        assert_eq!(cookie.value(), "refresh");
+        assert_eq!(cookie.path(), Some("/auth"));
+        assert_eq!(cookie.domain(), Some("example.com"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.secure(), Some(false));
+        assert_eq!(cookie.same_site(), Some(SameSite::Strict));
+        assert_eq!(cookie.max_age(), Some(Duration::days(7)));
+    }
+
+    #[test]
+    // Verifies clear-cookie helpers expire auth cookies immediately.
+    fn clear_cookie_helpers_expire_tokens() {
+        let access = clear_access_token_cookie("localhost");
+        let refresh = clear_refresh_token_cookie("localhost");
+
+        assert_eq!(access.value(), "");
+        assert_eq!(access.max_age(), Some(Duration::ZERO));
+        assert_eq!(refresh.value(), "");
+        assert_eq!(refresh.max_age(), Some(Duration::ZERO));
+        assert_eq!(refresh.path(), Some("/auth"));
+    }
+}

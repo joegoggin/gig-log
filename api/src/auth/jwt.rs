@@ -171,3 +171,68 @@ pub fn decode_refresh_token(token: &str, secret: &str) -> Result<RefreshTokenCla
 
     Ok(token_data.claims)
 }
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::{
+        create_access_token, create_refresh_token, decode_access_token, decode_refresh_token,
+    };
+    use crate::core::error::ApiError;
+
+    const TEST_SECRET: &str = "test-secret-for-jwt-unit-tests";
+
+    #[test]
+    // Verifies access tokens can be created and decoded with expected claims.
+    fn access_token_round_trip_succeeds() {
+        let user_id = Uuid::new_v4();
+        let email = "user@example.com";
+
+        let token =
+            create_access_token(user_id, email, TEST_SECRET, 900).expect("access token created");
+        let claims = decode_access_token(&token, TEST_SECRET).expect("token should decode");
+
+        assert_eq!(claims.sub, user_id.to_string());
+        assert_eq!(claims.email, email);
+        assert_eq!(claims.token_type, "access");
+    }
+
+    #[test]
+    // Verifies refresh tokens can be created and decoded with expected claims.
+    fn refresh_token_round_trip_succeeds() {
+        let user_id = Uuid::new_v4();
+
+        let (token, jti) =
+            create_refresh_token(user_id, TEST_SECRET, 60 * 60).expect("refresh token created");
+        let claims = decode_refresh_token(&token, TEST_SECRET).expect("token should decode");
+
+        assert_eq!(claims.sub, user_id.to_string());
+        assert_eq!(claims.jti, jti);
+        assert_eq!(claims.token_type, "refresh");
+    }
+
+    #[test]
+    // Verifies the access decoder rejects refresh-token payloads.
+    fn decode_access_token_rejects_refresh_token_type() {
+        let user_id = Uuid::new_v4();
+        let (refresh_token, _) =
+            create_refresh_token(user_id, TEST_SECRET, 60 * 60).expect("refresh token created");
+
+        let result = decode_access_token(&refresh_token, TEST_SECRET);
+
+        assert!(matches!(result, Err(ApiError::TokenInvalid)));
+    }
+
+    #[test]
+    // Verifies the refresh decoder rejects access-token payloads.
+    fn decode_refresh_token_rejects_access_token_type() {
+        let user_id = Uuid::new_v4();
+        let access_token = create_access_token(user_id, "user@example.com", TEST_SECRET, 900)
+            .expect("access token created");
+
+        let result = decode_refresh_token(&access_token, TEST_SECRET);
+
+        assert!(matches!(result, Err(ApiError::TokenInvalid)));
+    }
+}
