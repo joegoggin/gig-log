@@ -3,7 +3,7 @@
 //! This module contains the handler function for the health check endpoint
 //! used by load balancers and monitoring systems to verify API availability.
 
-use actix_web::{get, HttpResponse};
+use actix_web::{HttpResponse, get};
 use serde_json::json;
 
 /// Returns the current health status of the API.

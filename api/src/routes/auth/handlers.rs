@@ -4,7 +4,7 @@
 //! requests including user registration, login, logout, email confirmation,
 //! and password management.
 
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{HttpResponse, get, post, web};
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
 use sqlx::{Pool, Postgres};
