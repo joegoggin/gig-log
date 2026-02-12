@@ -35,6 +35,12 @@ pub struct Env {
     pub cookie_domain: String,
     /// Whether auth cookies are marked as `Secure`.
     pub cookie_secure: bool,
+    /// Global log level for the custom logger.
+    pub log_level: String,
+    /// Whether JSON request/response bodies are included in HTTP logs.
+    pub log_http_body_enabled: bool,
+    /// Maximum body size (in bytes) eligible for request/response body logging.
+    pub log_http_max_body_bytes: usize,
 }
 
 impl Env {
@@ -103,6 +109,22 @@ impl Env {
             None => false,
         };
 
+        // Logging
+        let log_level = match Self::get_optional_var("LOG_LEVEL") {
+            Some(val) => val,
+            None => "info".to_string(),
+        };
+
+        let log_http_body_enabled = match Self::get_optional_var("LOG_HTTP_BODY_ENABLED") {
+            Some(val) => val.trim().to_lowercase() == "true",
+            None => false,
+        };
+
+        let log_http_max_body_bytes = match Self::get_optional_var("LOG_HTTP_MAX_BODY_BYTES") {
+            Some(val) => val.trim().parse::<usize>()?,
+            None => 16_384,
+        };
+
         Ok(Self {
             database_url,
             cors_allowed_origin,
@@ -115,6 +137,9 @@ impl Env {
             auth_code_expiry_seconds,
             cookie_domain,
             cookie_secure,
+            log_level,
+            log_http_body_enabled,
+            log_http_max_body_bytes,
         })
     }
 

@@ -2,7 +2,7 @@
 //!
 //! This module wires together environment configuration and server startup.
 
-use crate::core::{env::Env, server::Server};
+use crate::core::{env::Env, logger::Logger, server::Server};
 
 /// Shared result type used by application startup helpers.
 pub type AppResult<T> = anyhow::Result<T>;
@@ -24,7 +24,10 @@ impl App {
     /// Returns an error if environment loading fails, database connection
     /// setup fails, or the server fails to start.
     pub async fn run() -> AppResult<()> {
+        Logger::setup_logging_from_env();
+
         let env = Env::new()?;
+        Logger::setup_logging(&env.log_level);
         let server = Server::new(env).await?;
 
         server.run().await?;
