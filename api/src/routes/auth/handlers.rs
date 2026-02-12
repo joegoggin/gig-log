@@ -549,7 +549,11 @@ pub async fn set_password(
         hex::encode(hasher.finalize())
     };
 
-    if !AuthRepo::is_refresh_token_active(&state.pool, user.user_id, &refresh_token_hash).await? {
+    // Start transaction early so refresh-session validation and password update
+    // are performed atomically against concurrent logout requests.
+    let mut tx = state.pool.begin().await?;
+
+    if !AuthRepo::consume_active_refresh_token(&mut tx, user.user_id, &refresh_token_hash).await? {
         return Err(ApiError::Unauthorized);
     }
 
@@ -563,9 +567,6 @@ pub async fn set_password(
 
     // Hash new password
     let hashed_password = hash_password(&body.password)?;
-
-    // Start transaction
-    let mut tx = state.pool.begin().await?;
 
     // Update password
     AuthRepo::update_user_password(&mut tx, user.user_id, &hashed_password).await?;
