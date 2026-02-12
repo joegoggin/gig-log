@@ -4,7 +4,7 @@
 //! requests including user registration, login, logout, email confirmation,
 //! and password management.
 
-use actix_web::{HttpResponse, get, post, web};
+use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
 
@@ -13,7 +13,7 @@ use crate::auth::cookies::{
     clear_access_token_cookie, clear_refresh_token_cookie, create_access_token_cookie,
     create_refresh_token_cookie,
 };
-use crate::auth::jwt::{create_access_token, create_refresh_token};
+use crate::auth::jwt::{create_access_token, create_refresh_token, decode_refresh_token};
 use crate::auth::middleware::AuthenticatedUser;
 use crate::auth::password::{hash_password, verify_password};
 use crate::core::app_state::AppState;
@@ -504,7 +504,8 @@ pub async fn verify_forgot_password(
 /// Sets a new password for the authenticated user.
 ///
 /// Updates the user's password, revokes all existing refresh tokens for
-/// security, and issues new access/refresh tokens.
+/// security, and issues new access/refresh tokens. Requires both a valid
+/// access token and an active refresh-session token.
 ///
 /// # Route
 ///
@@ -521,21 +522,51 @@ pub async fn verify_forgot_password(
 ///
 /// # Errors
 ///
-/// - `Unauthorized` - If not authenticated
+/// - `Unauthorized` - If not authenticated, no active refresh session exists, or the user no longer exists
+/// - `TokenInvalid` - If the refresh token is malformed or has an invalid token type
+/// - `TokenExpired` - If the refresh token is expired
 /// - `InternalError` - If password hashing or database operations fail
 #[post("/auth/set-password")]
 pub async fn set_password(
+    req: HttpRequest,
     user: AuthenticatedUser,
     state: web::Data<AppState>,
     body: ValidatedJson<SetPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
 
+    // Require an active refresh-session token so logout immediately invalidates set-password access.
+    let refresh_cookie = req.cookie("refresh_token").ok_or(ApiError::Unauthorized)?;
+    let refresh_claims = decode_refresh_token(refresh_cookie.value(), &state.env.jwt_secret)?;
+
+    if refresh_claims.sub != user.user_id.to_string() {
+        return Err(ApiError::Unauthorized);
+    }
+
+    let refresh_token_hash = {
+        let mut hasher = Sha256::new();
+        hasher.update(refresh_claims.jti.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+
+    // Start transaction early so refresh-session validation and password update
+    // are performed atomically against concurrent logout requests.
+    let mut tx = state.pool.begin().await?;
+
+    if !AuthRepo::consume_active_refresh_token(&mut tx, user.user_id, &refresh_token_hash).await? {
+        return Err(ApiError::Unauthorized);
+    }
+
+    // Ensure the authenticated subject still maps to a real user account.
+    if AuthRepo::find_user_by_id(&state.pool, user.user_id)
+        .await?
+        .is_none()
+    {
+        return Err(ApiError::Unauthorized);
+    }
+
     // Hash new password
     let hashed_password = hash_password(&body.password)?;
-
-    // Start transaction
-    let mut tx = state.pool.begin().await?;
 
     // Update password
     AuthRepo::update_user_password(&mut tx, user.user_id, &hashed_password).await?;
@@ -600,7 +631,9 @@ mod tests {
     use async_trait::async_trait;
     use serde_json::json;
     use sqlx::postgres::PgPoolOptions;
+    use uuid::Uuid;
 
+    use crate::auth::jwt::create_access_token;
     use crate::core::app_state::AppState;
     use crate::core::config::configure_routes;
     use crate::core::env::Env;
@@ -691,6 +724,60 @@ mod tests {
         .await;
 
         let request = test::TestRequest::get().uri("/auth/me").to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies set-password requires a refresh-session cookie even with a valid access token.
+    async fn set_password_returns_unauthorized_without_refresh_cookie() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "user@example.com",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("test access token should be created");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/set-password")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "password": "new-password-123",
+                "confirm": "new-password-123"
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies set-password rejects unauthenticated requests before mutating credentials.
+    async fn set_password_returns_unauthorized_without_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/set-password")
+            .set_json(json!({
+                "password": "new-password-123",
+                "confirm": "new-password-123"
+            }))
+            .to_request();
 
         let response = test::call_service(&app, request).await;
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
