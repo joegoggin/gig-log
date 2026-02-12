@@ -36,6 +36,11 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
    cp api/.env.example api/.env
    ```
 
+   Logging defaults are included in `api/.env.example`:
+   - `LOG_LEVEL` - Global log level (`info`, `debug`, etc.)
+   - `LOG_HTTP_BODY_ENABLED` - Enables JSON request/response body logging
+   - `LOG_HTTP_MAX_BODY_BYTES` - Max body size eligible for body logging
+
 4. Install frontend dependencies
 
    ```sh
@@ -229,4 +234,3 @@ Open the [Posting](https://github.com/darrenburns/posting) API client with the p
 ```sh
 just posting
 ```
-

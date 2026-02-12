@@ -647,6 +647,9 @@ mod tests {
             auth_code_expiry_seconds: 600,
             cookie_domain: "localhost".to_string(),
             cookie_secure: false,
+            log_level: "info".to_string(),
+            log_http_body_enabled: true,
+            log_http_max_body_bytes: 16_384,
         };
 
         AppState::with_email_sender(pool, env, Arc::new(NoopEmailSender))

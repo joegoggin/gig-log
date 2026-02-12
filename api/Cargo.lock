@@ -272,10 +272,12 @@ dependencies = [
  "argon2",
  "async-trait",
  "chrono",
+ "colorized",
  "dotenvy",
  "futures",
  "hex",
  "jsonwebtoken",
+ "log",
  "rand 0.8.5",
  "resend-rs",
  "rust_decimal",
@@ -519,6 +521,12 @@ dependencies = [
  "wasm-bindgen",
  "windows-link",
 ]
+
+[[package]]
+name = "colorized"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739281952453521b532f476b5f8b77c4b16d5ab2a248466c8dc153b3f85d6564"
 
 [[package]]
 name = "concurrent-queue"
