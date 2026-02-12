@@ -2,7 +2,7 @@
 //!
 //! These tests cover core auth success and failure paths, including signup,
 //! email confirmation, login, password reset verification, and password update
-//! behavior with real database persistence.
+//! behavior with real database persistence and auth-guard enforcement.
 
 mod support;
 
@@ -14,6 +14,7 @@ use sqlx::{Pool, Postgres};
 use support::{MockEmailKind, app_state_with_mock_email, test_pool, unique_email};
 use uuid::Uuid;
 
+use api::auth::jwt::create_access_token;
 use api::core::config::configure_routes;
 
 fn test_guard() -> MutexGuard<'static, ()> {
@@ -219,6 +220,117 @@ async fn current_user_without_access_cookie_returns_unauthorized() {
     .await;
 
     let request = test::TestRequest::get().uri("/auth/me").to_request();
+    let response = test::call_service(&app, request).await;
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("UNAUTHORIZED")
+    );
+}
+
+#[actix_web::test]
+// Verifies set-password rejects requests that do not include an access token cookie.
+async fn set_password_without_access_cookie_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, _) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let request = test::TestRequest::post()
+        .uri("/auth/set-password")
+        .set_json(json!({
+            "password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let response = test::call_service(&app, request).await;
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("UNAUTHORIZED")
+    );
+}
+
+#[actix_web::test]
+// Verifies set-password rejects malformed access tokens with a token-invalid error.
+async fn set_password_with_invalid_access_token_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, _) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let request = test::TestRequest::post()
+        .uri("/auth/set-password")
+        .insert_header(("Cookie", "access_token=not-a-jwt"))
+        .set_json(json!({
+            "password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let response = test::call_service(&app, request).await;
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("TOKEN_INVALID")
+    );
+}
+
+#[actix_web::test]
+// Verifies set-password rejects signed access tokens when no refresh-session cookie is present.
+async fn set_password_with_only_access_token_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, _) = app_state_with_mock_email(pool);
+    let jwt_secret = state.env.jwt_secret.clone();
+    let access_token_expiry = state.env.jwt_access_token_expiry_seconds;
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let access_token = create_access_token(
+        Uuid::new_v4(),
+        "ghost-user@gig-log.dev",
+        &jwt_secret,
+        access_token_expiry,
+    )
+    .expect("access token should be created for test");
+
+    let request = test::TestRequest::post()
+        .uri("/auth/set-password")
+        .insert_header(("Cookie", format!("access_token={access_token}")))
+        .set_json(json!({
+            "password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
     let response = test::call_service(&app, request).await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -565,6 +677,12 @@ async fn set_password_revokes_old_refresh_tokens_and_stores_new_token() {
         .find(|cookie| cookie.name() == "access_token")
         .map(|cookie| cookie.to_owned())
         .expect("access cookie should be set on login");
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
 
     let user_id = user_id_for_email(&pool, &email).await;
     let old_hash: String = sqlx::query_scalar("SELECT hashed_password FROM users WHERE id = $1")
@@ -576,6 +694,7 @@ async fn set_password_revokes_old_refresh_tokens_and_stores_new_token() {
     let set_password = test::TestRequest::post()
         .uri("/auth/set-password")
         .cookie(access_cookie)
+        .cookie(refresh_cookie)
         .set_json(json!({
             "password": "new-password-123",
             "confirm": "new-password-123"
@@ -596,4 +715,99 @@ async fn set_password_revokes_old_refresh_tokens_and_stores_new_token() {
 
     assert_eq!(active_count, 1);
     assert!(revoked_count >= 1);
+}
+
+#[actix_web::test]
+// Verifies logout invalidates the session so stale auth cookies cannot set a new password.
+async fn log_out_then_set_password_with_old_cookies_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("logout-set-password");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
+
+    let log_out = test::TestRequest::post()
+        .uri("/auth/log-out")
+        .cookie(refresh_cookie.clone())
+        .to_request();
+    let log_out_response = test::call_service(&app, log_out).await;
+    assert_eq!(log_out_response.status(), StatusCode::OK);
+
+    let set_password = test::TestRequest::post()
+        .uri("/auth/set-password")
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .set_json(json!({
+            "password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let set_password_response = test::call_service(&app, set_password).await;
+    assert_eq!(set_password_response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(set_password_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("UNAUTHORIZED")
+    );
 }

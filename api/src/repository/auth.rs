@@ -498,6 +498,43 @@ impl AuthRepo {
         Ok(())
     }
 
+    /// Checks whether a refresh token is still active for a user.
+    ///
+    /// A token is considered active when it belongs to the user, is not
+    /// revoked, and has not expired.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - User that owns the refresh token
+    /// - `token_hash` - Hashed refresh token value to check
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the query fails.
+    pub async fn is_refresh_token_active(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+        token_hash: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let count: i64 = sqlx::query_scalar(
+            r#"
+        SELECT COUNT(*)::bigint
+        FROM refresh_tokens
+        WHERE user_id = $1
+          AND token_hash = $2
+          AND revoked = false
+          AND expires_at > NOW()
+        "#,
+        )
+        .bind(user_id)
+        .bind(token_hash)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(count > 0)
+    }
+
     /// Revokes a refresh token by its hashed token value.
     ///
     /// # Arguments

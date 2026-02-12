@@ -8,8 +8,8 @@ body:
       "first_name": "Joe",
       "last_name": "Goggin",
       "email": "joegoggindev@gmail.com",
-      "password": "JGu4k8s!",
-      "confirm": "JGu4k8s!"
+      "password": "P@33w0rd!",
+      "confirm": "P@33w0rd!"
     }
   content_type: application/json
 headers:
