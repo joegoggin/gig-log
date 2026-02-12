@@ -9,7 +9,7 @@ use std::{env, time::Instant};
 
 use actix_web::{
     Error, HttpMessage,
-    body::{BoxBody, MessageBody, to_bytes},
+    body::{BoxBody, MessageBody},
     dev::{Payload, ServiceRequest, ServiceResponse},
     http::{
         Method, StatusCode,
@@ -110,7 +110,9 @@ impl Logger {
     ///
     /// # Errors
     ///
-    /// Returns an internal Actix error when response-body capture fails.
+    /// Returns downstream handler/middleware errors from `next.call(req)`.
+    /// Response body capture failures are treated as non-fatal and only
+    /// disable body logging for that response.
     pub async fn log_request_and_response<B>(
         mut req: ServiceRequest,
         next: Next<B>,
@@ -118,6 +120,10 @@ impl Logger {
     where
         B: MessageBody + 'static,
     {
+        if !log::log_enabled!(Level::Info) {
+            return next.call(req).await.map(ServiceResponse::map_into_boxed_body);
+        }
+
         let request_id = Uuid::new_v4();
         let method = req.method().clone();
         let path = req.path().to_string();
@@ -155,26 +161,31 @@ impl Logger {
                 let (req_head, http_response) = response.into_parts();
                 let (http_response_head, response_body_stream) = http_response.into_parts();
 
-                let bytes = match to_bytes(response_body_stream).await {
-                    Ok(bytes) => bytes,
-                    Err(error) => {
-                        log::error!("Failed to capture response body for logging: {}", error);
-                        Self::log_response(request_id, status, duration_ms, None);
-                        return Err(actix_web::error::ErrorInternalServerError(
-                            "Failed to capture response body",
-                        ));
+                match response_body_stream.try_into_bytes() {
+                    Ok(bytes) => {
+                        let logged_body = if bytes.len() <= config.max_body_bytes {
+                            Self::parse_redacted_json(&bytes)
+                        } else {
+                            None
+                        };
+                        let rebuilt = http_response_head.set_body(bytes).map_into_boxed_body();
+                        response = ServiceResponse::new(req_head, rebuilt);
+
+                        logged_body
                     }
-                };
+                    Err(response_body_stream) => {
+                        log::debug!(
+                            "Skipping response body logging for request {} (non-bufferable body)",
+                            request_id
+                        );
+                        let rebuilt = http_response_head
+                            .set_body(response_body_stream)
+                            .map_into_boxed_body();
+                        response = ServiceResponse::new(req_head, rebuilt);
 
-                let logged_body = if bytes.len() <= config.max_body_bytes {
-                    Self::parse_redacted_json(&bytes)
-                } else {
-                    None
-                };
-                let rebuilt = http_response_head.set_body(bytes).map_into_boxed_body();
-                response = ServiceResponse::new(req_head, rebuilt);
-
-                logged_body
+                        None
+                    }
+                }
             } else {
                 None
             };
@@ -548,7 +559,7 @@ impl Logger {
             format!("File: {}\nLine Number: {}\n", file_path, line_number),
             Colors::RedFg,
         );
-        colorize_println(format!("{:#}", record.args()), Colors::RedFg);
+        colorize_println(format!("{}", record.args()), Colors::RedFg);
     }
 
     fn log_debug(record: &Record) {
@@ -565,7 +576,7 @@ impl Logger {
             format!("File: {}\nLine Number: {}\n", file_path, line_number),
             Colors::YellowFg,
         );
-        colorize_println(format!("{:#}", record.args()), Colors::YellowFg);
+        colorize_println(format!("{}", record.args()), Colors::YellowFg);
     }
 }
 

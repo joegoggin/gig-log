@@ -117,7 +117,7 @@ impl Env {
 
         let log_http_body_enabled = match Self::get_optional_var("LOG_HTTP_BODY_ENABLED") {
             Some(val) => val.trim().to_lowercase() == "true",
-            None => true,
+            None => false,
         };
 
         let log_http_max_body_bytes = match Self::get_optional_var("LOG_HTTP_MAX_BODY_BYTES") {
