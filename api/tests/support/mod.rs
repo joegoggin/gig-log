@@ -133,6 +133,7 @@ pub fn test_env() -> Env {
 
     Env {
         app_env: "test".to_string(),
+        docker_preflight_enabled: false,
         database_url: env::var("TEST_DATABASE_URL")
             .or_else(|_| env::var("DATABASE_URL"))
             .expect("set TEST_DATABASE_URL or DATABASE_URL for integration tests"),

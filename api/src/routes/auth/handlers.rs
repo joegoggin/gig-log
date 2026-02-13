@@ -670,6 +670,7 @@ mod tests {
             .expect("lazy test pool should be created");
         let env = Env {
             app_env: "test".to_string(),
+            docker_preflight_enabled: false,
             database_url: "postgres://postgres:postgres@localhost/gig_log_test".to_string(),
             cors_allowed_origin: "http://localhost:3000".to_string(),
             port: 0,

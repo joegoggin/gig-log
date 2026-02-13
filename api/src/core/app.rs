@@ -27,7 +27,9 @@ impl App {
         Logger::setup_logging_from_env();
 
         let env = Env::new()?;
-        docker::ensure_docker_compose_ready_for_dev(&env).await?;
+        if env.docker_preflight_enabled {
+            docker::ensure_docker_compose_ready_for_dev(&env).await?;
+        }
         Logger::setup_logging(&env.log_level);
         let server = Server::new(env).await?;
 

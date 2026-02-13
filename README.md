@@ -54,6 +54,8 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
    ```
 
    The API now checks and applies pending migrations automatically at startup.
+   If you want the API to auto-start Docker Compose in development, set
+   `DOCKER_PREFLIGHT_ENABLED=true` in `api/.env`.
    Use this command when you want to run migrations manually.
 
 6. Start the API
