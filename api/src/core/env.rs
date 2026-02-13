@@ -15,8 +15,10 @@ use crate::core::app::AppResult;
 pub struct Env {
     /// Runtime environment name used for behavior gating (`development`, `production`, etc.).
     pub app_env: String,
-    /// Enables Docker Compose preflight checks during development startup.
-    pub docker_preflight_enabled: bool,
+    /// Enables automatically starting Docker Compose dependencies during development startup.
+    pub docker_compose_auto_start_enabled: bool,
+    /// Enables automatic database migration checks and application on API startup.
+    pub auto_apply_migrations_enabled: bool,
     /// PostgreSQL connection string used by SQLx.
     pub database_url: String,
     /// Allowed CORS origin for browser requests.
@@ -60,7 +62,9 @@ impl Env {
     ///
     /// Notably, `APP_ENV` defaults to `production` when not set.
     ///
-    /// `DOCKER_PREFLIGHT_ENABLED` defaults to `false`.
+    /// `DOCKER_COMPOSE_AUTO_START_ENABLED` defaults to `false`.
+    ///
+    /// `AUTO_APPLY_MIGRATIONS_ENABLED` defaults to `false`.
     ///
     /// # Errors
     ///
@@ -74,10 +78,17 @@ impl Env {
             None => "production".to_string(),
         };
 
-        let docker_preflight_enabled = match Self::get_optional_var("DOCKER_PREFLIGHT_ENABLED") {
-            Some(value) => Self::is_enabled_flag(&value),
-            None => false,
-        };
+        let docker_compose_auto_start_enabled =
+            match Self::get_optional_var("DOCKER_COMPOSE_AUTO_START_ENABLED") {
+                Some(value) => Self::is_enabled_flag(&value),
+                None => false,
+            };
+
+        let auto_apply_migrations_enabled =
+            match Self::get_optional_var("AUTO_APPLY_MIGRATIONS_ENABLED") {
+                Some(value) => Self::is_enabled_flag(&value),
+                None => false,
+            };
 
         let database_url = Self::get_required_var("DATABASE_URL")?;
 
@@ -145,7 +156,8 @@ impl Env {
 
         Ok(Self {
             app_env,
-            docker_preflight_enabled,
+            docker_compose_auto_start_enabled,
+            auto_apply_migrations_enabled,
             database_url,
             cors_allowed_origin,
             port,

@@ -1,4 +1,4 @@
-//! Docker Compose preflight checks for local development startup.
+//! Docker Compose auto-start checks for local development startup.
 //!
 //! This module ensures the project's Docker Compose stack is started before
 //! API boot when the runtime environment is development.
@@ -27,7 +27,7 @@ pub async fn ensure_docker_compose_ready_for_dev(env: &Env) -> AppResult<()> {
     }
 
     Logger::log_message("Ensuring Docker Compose services are running");
-    ensure_compose_stack_running().context("development Docker preflight failed")
+    ensure_compose_stack_running().context("development Docker Compose auto-start failed")
 }
 
 fn ensure_compose_stack_running() -> AppResult<()> {
@@ -125,7 +125,7 @@ fn resolve_compose_file_path() -> AppResult<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests for environment gating helpers used by Docker preflight.
+    //! Unit tests for environment gating helpers used by Docker auto-start.
 
     use crate::core::env::Env;
 

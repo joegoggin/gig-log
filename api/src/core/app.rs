@@ -27,7 +27,7 @@ impl App {
         Logger::setup_logging_from_env();
 
         let env = Env::new()?;
-        if env.docker_preflight_enabled {
+        if env.docker_compose_auto_start_enabled {
             docker::ensure_docker_compose_ready_for_dev(&env).await?;
         }
         Logger::setup_logging(&env.log_level);
