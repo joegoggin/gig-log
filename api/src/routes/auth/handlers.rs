@@ -669,6 +669,7 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost/gig_log_test")
             .expect("lazy test pool should be created");
         let env = Env {
+            app_env: "test".to_string(),
             database_url: "postgres://postgres:postgres@localhost/gig_log_test".to_string(),
             cors_allowed_origin: "http://localhost:3000".to_string(),
             port: 0,

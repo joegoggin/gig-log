@@ -2,7 +2,7 @@
 //!
 //! This module wires together environment configuration and server startup.
 
-use crate::core::{env::Env, logger::Logger, server::Server};
+use crate::core::{docker, env::Env, logger::Logger, server::Server};
 
 /// Shared result type used by application startup helpers.
 pub type AppResult<T> = anyhow::Result<T>;
@@ -27,6 +27,7 @@ impl App {
         Logger::setup_logging_from_env();
 
         let env = Env::new()?;
+        docker::ensure_docker_compose_ready_for_dev(&env).await?;
         Logger::setup_logging(&env.log_level);
         let server = Server::new(env).await?;
 
