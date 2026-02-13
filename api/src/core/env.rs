@@ -13,6 +13,12 @@ use crate::core::app::AppResult;
 /// Runtime configuration loaded from environment variables.
 #[derive(Debug, Clone)]
 pub struct Env {
+    /// Runtime environment name used for behavior gating (`development`, `production`, etc.).
+    pub app_env: String,
+    /// Enables automatically starting Docker Compose dependencies during development startup.
+    pub docker_compose_auto_start_enabled: bool,
+    /// Enables automatic database migration checks and application on API startup.
+    pub auto_apply_migrations_enabled: bool,
     /// PostgreSQL connection string used by SQLx.
     pub database_url: String,
     /// Allowed CORS origin for browser requests.
@@ -54,12 +60,35 @@ impl Env {
     ///
     /// Optional variables fall back to defaults when unset or empty.
     ///
+    /// Notably, `APP_ENV` defaults to `production` when not set.
+    ///
+    /// `DOCKER_COMPOSE_AUTO_START_ENABLED` defaults to `false`.
+    ///
+    /// `AUTO_APPLY_MIGRATIONS_ENABLED` defaults to `false`.
+    ///
     /// # Errors
     ///
     /// Returns an error if a required variable is missing or if a numeric
     /// environment variable cannot be parsed.
     pub fn new() -> AppResult<Self> {
         dotenv().ok();
+
+        let app_env = match Self::get_optional_var("APP_ENV") {
+            Some(app_env) => app_env,
+            None => "production".to_string(),
+        };
+
+        let docker_compose_auto_start_enabled =
+            match Self::get_optional_var("DOCKER_COMPOSE_AUTO_START_ENABLED") {
+                Some(value) => Self::is_enabled_flag(&value),
+                None => false,
+            };
+
+        let auto_apply_migrations_enabled =
+            match Self::get_optional_var("AUTO_APPLY_MIGRATIONS_ENABLED") {
+                Some(value) => Self::is_enabled_flag(&value),
+                None => false,
+            };
 
         let database_url = Self::get_required_var("DATABASE_URL")?;
 
@@ -126,6 +155,9 @@ impl Env {
         };
 
         Ok(Self {
+            app_env,
+            docker_compose_auto_start_enabled,
+            auto_apply_migrations_enabled,
             database_url,
             cors_allowed_origin,
             port,
@@ -141,6 +173,29 @@ impl Env {
             log_http_body_enabled,
             log_http_max_body_bytes,
         })
+    }
+
+    /// Returns `true` when the runtime environment is development.
+    pub fn is_development(&self) -> bool {
+        Self::is_development_env(&self.app_env)
+    }
+
+    /// Returns `true` for development-style environment strings.
+    ///
+    /// Accepted values are `development` and `dev` (case-insensitive).
+    pub fn is_development_env(app_env: &str) -> bool {
+        let normalized = app_env.trim().to_lowercase();
+        normalized == "development" || normalized == "dev"
+    }
+
+    /// Returns `true` when an environment flag is enabled.
+    ///
+    /// Accepted enabled values are `true`, `1`, `yes`, and `on` (case-insensitive).
+    fn is_enabled_flag(value: &str) -> bool {
+        matches!(
+            value.trim().to_lowercase().as_str(),
+            "true" | "1" | "yes" | "on"
+        )
     }
 
     /// Reads a required environment variable.

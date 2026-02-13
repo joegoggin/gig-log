@@ -47,11 +47,18 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
    pnpm --dir web install
    ```
 
-5. Run database migrations
+5. Run database migrations (optional)
 
    ```sh
    just db-migrate
    ```
+
+   The application defaults startup migrations and Docker auto-start to disabled
+   when those env vars are unset.
+   The provided `api/.env.example` enables both for local development.
+   Set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or
+   `DOCKER_COMPOSE_AUTO_START_ENABLED=false` in `api/.env` to disable them.
+   Use this command when you want to run migrations manually.
 
 6. Start the API
 
