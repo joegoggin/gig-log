@@ -53,13 +53,14 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
    just db-migrate
    ```
 
-   Automatic startup migrations are disabled by default.
-   Set `AUTO_APPLY_MIGRATIONS_ENABLED=true` in `api/.env` to enable them.
-   If you want the API to auto-start Docker Compose in development, set
-   `DOCKER_COMPOSE_AUTO_START_ENABLED=true` in `api/.env`.
+   The application defaults startup migrations and Docker auto-start to disabled
+   when those env vars are unset.
+   The provided `api/.env.example` enables both for local development.
+   Set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or
+   `DOCKER_COMPOSE_AUTO_START_ENABLED=false` in `api/.env` to disable them.
    Use this command when you want to run migrations manually.
 
-   6. Start the API
+6. Start the API
 
    ```sh
    just api
