@@ -32,10 +32,14 @@ impl Server {
     ///
     /// Returns an error if the database pool cannot connect.
     pub async fn new(env: Env) -> AppResult<Server> {
+        Logger::log_message("Connecting to database");
+
         let pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(&env.database_url)
             .await?;
+
+        Logger::log_success("Database connection established");
 
         Ok(Server { pool, env })
     }
