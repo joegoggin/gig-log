@@ -47,11 +47,14 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
    pnpm --dir web install
    ```
 
-5. Run database migrations
+5. Run database migrations (optional)
 
    ```sh
    just db-migrate
    ```
+
+   The API now checks and applies pending migrations automatically at startup.
+   Use this command when you want to run migrations manually.
 
 6. Start the API
 

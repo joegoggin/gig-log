@@ -24,13 +24,17 @@ pub struct Server {
 impl Server {
     /// Creates a new server instance and initializes the PostgreSQL pool.
     ///
+    /// During startup, this also checks for pending database migrations and
+    /// applies them before the HTTP server begins accepting requests.
+    ///
     /// # Arguments
     ///
     /// - `env` - Runtime environment configuration used for DB and HTTP setup.
     ///
     /// # Errors
     ///
-    /// Returns an error if the database pool cannot connect.
+    /// Returns an error if the database pool cannot connect or if database
+    /// migrations fail to run.
     pub async fn new(env: Env) -> AppResult<Server> {
         Logger::log_message("Connecting to database");
 
@@ -40,6 +44,11 @@ impl Server {
             .await?;
 
         Logger::log_success("Database connection established");
+        Logger::log_message("Checking for pending database migrations");
+
+        sqlx::migrate!("./migrations").run(&pool).await?;
+
+        Logger::log_success("Database migrations are up to date");
 
         Ok(Server { pool, env })
     }
