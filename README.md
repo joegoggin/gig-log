@@ -1,4 +1,4 @@
-# GigLog 💼
+# 💼 GigLog
 
 ![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
@@ -8,13 +8,13 @@ GigLog is a full-stack app for freelancers who need one place to track work, pay
 
 This repo highlights production-minded full-stack engineering across product, API design, testing, and developer experience.
 
-## What GigLog Helps You Do ✨
+## ✨ What GigLog Helps You Do
 
-- Manage companies and jobs in one place 🏢
-- Track work sessions and time-based earnings ⏱️
-- Record payouts and payment history 💸
+- 🏢 Manage companies and jobs in one place
+- ⏱️ Track work sessions and time-based earnings
+- 💸 Record payouts and payment history
 
-## At a Glance 👀
+## 👀 At a Glance
 
 - **Problem solved** - Reduces admin overhead for freelancers managing multiple clients and pay models
 - **End-to-end ownership** - Delivers both product UI (`web/`) and backend domain/API implementation (`api/`)
@@ -22,7 +22,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 - **Developer experience** - Uses reproducible local workflows via `just`, Docker, and documented scripts
 - **Documentation quality** - Keeps visual docs (Storybook) and backend docs (Rustdoc) in the dev workflow
 
-## Table of Contents 🧭
+## 🧭 Table of Contents
 
 - [Overview](#overview)
 - [Active Development Status](#active-development-status)
@@ -46,29 +46,29 @@ This repo highlights production-minded full-stack engineering across product, AP
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
-## Overview 📌
+## 📌 Overview
 
 GigLog reduces admin overhead by combining job tracking, work logging, and payment tracking in one workflow. The project uses a Rust API (`api/`), a React frontend (`web/`), and PostgreSQL.
 
 Engineering focus areas: typed API contracts, clear module boundaries, deterministic tests, and maintainable local tooling.
 
-## Active Development Status 🚧
+## 🚧 Active Development Status
 
 GigLog is still in active development.
 
-### Completed ✅
+### ✅ Completed
 
 - [x] User authentication flow (sign up, log in, session-based access)
 - [x] CI quality gates for lint, build, and tests
 - [x] Storybook and Rustdoc documentation workflows
 
-### In Progress / Planned 🛣️
+### 🛣️ In Progress / Planned
 
 - [ ] Company and job management
 - [ ] Work session tracking and time-based earnings
 - [ ] Payout tracking and payment history
 
-## Tech Stack 🛠️
+## 🛠️ Tech Stack
 
 - **Frontend** - [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Vite](https://vite.dev), [TanStack Router](https://tanstack.com/router/latest)
 - **Backend** - [Rust](https://www.rust-lang.org) with [Actix Web](https://actix.rs)
@@ -76,7 +76,7 @@ GigLog is still in active development.
 - **Styling** - [Sass](https://sass-lang.com) (SCSS modules + shared variables/mixins)
 - **Documentation and UI Testing** - [Storybook](https://storybook.js.org)
 
-## Architecture 🧱
+## 🧱 Architecture
 
 ```mermaid
 flowchart LR
@@ -87,7 +87,7 @@ flowchart LR
     Web --> SB[Storybook at :6006]
 ```
 
-## Key Technical Decisions 🧠
+## 🧠 Key Technical Decisions
 
 - **Rust API with Actix Web** - Prioritizes performance, explicit typing, and predictable errors
 - **SQLx with PostgreSQL** - Uses compile-time checked queries for safer database interactions
@@ -96,7 +96,7 @@ flowchart LR
 - **Task runner via `just`** - Standardizes local workflows and lowers setup friction
 - **Docker-backed local database** - Keeps development environments consistent without external DB setup
 
-## Demo Walkthrough 🎬
+## 🎬 Demo Walkthrough
 
 Use this flow in a portfolio review:
 
@@ -110,9 +110,9 @@ Use this flow in a portfolio review:
 
 To showcase implementation quality, run `just web-test` and `cd api && cargo test` before or during the walkthrough.
 
-## Quick Start 🚀
+## 🚀 Quick Start
 
-### Prerequisites 📦
+### 📦 Prerequisites
 
 Required:
 
@@ -128,7 +128,7 @@ Optional (needed for manual migration workflows):
 
 - [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli)
 
-### One-Time Setup 🧰
+### 🧰 One-Time Setup
 
 ```sh
 git clone https://github.com/joegoggin/gig-log.git
@@ -138,7 +138,7 @@ cp api/.env.example api/.env
 pnpm --dir web install
 ```
 
-### Run Locally 💻
+### 💻 Run Locally
 
 In separate terminals:
 
@@ -150,20 +150,20 @@ just api
 just web
 ```
 
-### Configuration Notes ⚙️
+### ⚙️ Configuration Notes
 
 - `api/.env.example` includes default local-development logging options
 - To run migrations manually, use `just db-migrate`
 - When unset, startup migrations and Docker auto-start are disabled by default
 - In `api/.env`, set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or `DOCKER_COMPOSE_AUTO_START_ENABLED=false` for manual control
 
-## Local URLs 🌐
+## 🌐 Local URLs
 
 - App: <http://localhost:3000>
 - Storybook: <http://localhost:6006>
 - API docs (Rustdoc): <http://localhost:7007>
 
-## Testing and Quality ✅
+## ✅ Testing and Quality
 
 CI runs lint, build, and test checks for API and web on each push via `.github/workflows/ci.yml`.
 
@@ -181,11 +181,11 @@ Quality goals in this repository:
 - Catch regressions early through linting and CI checks
 - Keep docs close to implementation for faster onboarding
 
-## Scripts Reference 📚
+## 📚 Scripts Reference
 
 All project scripts are defined in `justfile`.
 
-### API Scripts 🦀
+### 🦀 API Scripts
 
 | Command | Purpose |
 | --- | --- |
@@ -196,7 +196,7 @@ All project scripts are defined in `justfile`.
 | `just api-build` | Build the API |
 | `just api-release` | Run the API in release mode |
 
-### Web Scripts 🌍
+### 🌍 Web Scripts
 
 | Command | Purpose |
 | --- | --- |
@@ -211,19 +211,19 @@ All project scripts are defined in `justfile`.
 | `just web-check` | Run formatter write + eslint fix |
 | `just web-storybook` | Run Storybook only |
 
-### Database Scripts 🗄️
+### 🗄️ Database Scripts
 
 | Command | Purpose |
 | --- | --- |
 | `just db-migrate` | Run SQLx database migrations |
 
-### Utility Scripts 🔧
+### 🔧 Utility Scripts
 
 | Command | Purpose |
 | --- | --- |
 | `just posting` | Open [Posting](https://github.com/darrenburns/posting) with project collection |
 
-## Project Structure 🗂️
+## 🗂️ Project Structure
 
 ```text
 .
@@ -235,13 +235,13 @@ All project scripts are defined in `justfile`.
 `- justfile              # Project task runner commands
 ```
 
-## Troubleshooting 🧯
+## 🧯 Troubleshooting
 
 - Port already in use: stop existing processes on `3000`, `6006`, `7007`, or `5432`
 - Database connection errors: confirm `docker compose up -d postgres` is running and `DATABASE_URL` is correct in `api/.env`
 - Missing command errors: verify required tooling is installed (`just`, `pnpm`, `cargo-watch`, `sqlx-cli` if used)
 
-## Contributing 🤝
+## 🤝 Contributing
 
 1. Create a feature branch from `main`
 2. Keep changes focused and well-scoped
