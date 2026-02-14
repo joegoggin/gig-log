@@ -1,3 +1,4 @@
+import { expect, within } from "storybook/test";
 import {
     Outlet,
     RouterProvider,
@@ -17,7 +18,6 @@ type PrivateRouteStoryProps = {
     children: ReactNode;
     redirectTo?: string;
     loadingLabel?: string;
-    redirectingLabel?: string;
 };
 
 const createAuthValue = (isLoggedIn: boolean, isLoading: boolean) =>
@@ -45,7 +45,6 @@ const PrivateRouteStory = ({
     children,
     redirectTo,
     loadingLabel,
-    redirectingLabel,
 }: PrivateRouteStoryProps) => {
     const authValue = createAuthValue(isLoggedIn, isLoading);
     const rootRoute = createRootRoute({
@@ -59,7 +58,6 @@ const PrivateRouteStory = ({
                 <PrivateRoute
                     redirectTo={redirectTo}
                     loadingLabel={loadingLabel}
-                    redirectingLabel={redirectingLabel}
                 >
                     {children}
                 </PrivateRoute>
@@ -101,9 +99,6 @@ const meta: Meta<typeof PrivateRouteStory> = {
         loadingLabel: {
             control: { type: "text" },
         },
-        redirectingLabel: {
-            control: { type: "text" },
-        },
     },
 };
 
@@ -116,6 +111,10 @@ export const Authenticated: Story = {
         isLoading: false,
         children: <div>Protected content</div>,
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Protected content")).toBeVisible();
+    },
 };
 
 export const Loading: Story = {
@@ -125,6 +124,10 @@ export const Loading: Story = {
         loadingLabel: "Checking session",
         children: <div>Protected content</div>,
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Checking session")).toBeVisible();
+    },
 };
 
 export const Redirecting: Story = {
@@ -132,5 +135,10 @@ export const Redirecting: Story = {
         isLoggedIn: false,
         isLoading: false,
         children: <div>Protected content</div>,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In")).toBeVisible();
+        await expect(canvas.queryByText("Protected content")).toBeNull();
     },
 };

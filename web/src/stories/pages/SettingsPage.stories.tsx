@@ -1,42 +1,46 @@
 /**
- * Storybook interaction tests for Dashboard page behavior.
+ * Storybook interaction tests for Settings placeholder page behavior.
  *
  * Covered scenarios:
- * - Dashboard content renders inside the authenticated main layout.
+ * - Placeholder content renders for unfinished settings features.
  * - No sidebar controls are rendered at the page-component level.
  */
 import { expect, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
-import DashboardPage from "@/pages/DashboardPage/DashboardPage";
+import SettingsPage from "@/pages/SettingsPage/SettingsPage";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
-const meta: Meta<typeof DashboardPage> = {
-    title: "Pages/DashboardPage",
-    component: DashboardPage,
+const meta: Meta<typeof SettingsPage> = {
+    title: "Pages/SettingsPage",
+    component: SettingsPage,
     tags: ["autodocs"],
     decorators: [withMemoryRouter, withAppProviders],
     parameters: {
         layout: "fullscreen",
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
             },
         },
     },
 };
 
 export default meta;
-type Story = StoryObj<typeof DashboardPage>;
+type Story = StoryObj<typeof SettingsPage>;
 
 export const Default: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
             },
             auth: {
                 isLoggedIn: true,
@@ -46,10 +50,8 @@ export const Default: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(canvas.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-        await expect(
-            canvas.getByText("Welcome back. Use the sidebar to navigate across the app."),
-        ).toBeVisible();
+        await expect(canvas.getByRole("heading", { name: "Settings" })).toBeVisible();
+        await expect(canvas.getByText("Settings management is coming soon.")).toBeVisible();
     },
 };
 
@@ -57,8 +59,8 @@ export const HidesSidebarControls: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
             },
             auth: {
                 isLoggedIn: true,
@@ -68,6 +70,6 @@ export const HidesSidebarControls: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(canvas.queryByRole("button", { name: "Companies" })).toBeNull();
+        await expect(canvas.queryByRole("button", { name: "Jobs" })).toBeNull();
     },
 };

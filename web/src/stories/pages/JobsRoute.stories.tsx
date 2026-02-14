@@ -1,5 +1,5 @@
 /**
- * Storybook interaction tests for `/dashboard` protected-route behavior.
+ * Storybook interaction tests for `/jobs` protected-route behavior.
  *
  * Covered scenarios:
  * - Unauthenticated users are redirected to the log-in route.
@@ -14,7 +14,7 @@ import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
 const meta: Meta<typeof AuthenticatedRouteComponent> = {
-    title: "Pages/DashboardRoute",
+    title: "Pages/JobsRoute",
     component: AuthenticatedRouteComponent,
     tags: ["autodocs"],
     decorators: [withMemoryRouter, withAppProviders],
@@ -22,8 +22,8 @@ const meta: Meta<typeof AuthenticatedRouteComponent> = {
         layout: "fullscreen",
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
         },
     },
@@ -36,8 +36,8 @@ export const RedirectsWhenUnauthenticated: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
             auth: {
                 isLoading: false,
@@ -55,8 +55,8 @@ export const RendersProtectedShellWhenAuthenticated: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
             auth: {
                 isLoading: false,
@@ -75,8 +75,8 @@ export const ShowsLoadingState: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
             auth: {
                 isLoading: true,
