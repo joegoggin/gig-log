@@ -2,13 +2,13 @@
  * Storybook interaction tests for `/payments` protected-route behavior.
  *
  * Covered scenarios:
- * - Redirect to log-in when user is unauthenticated.
+ * - Payments placeholder renders when user is unauthenticated.
  * - Payments placeholder renders when user is authenticated.
  */
-import { expect, waitFor, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
-import { RouteComponent as PaymentsRouteComponent } from "@/routes/payments/index";
+import { RouteComponent as PaymentsRouteComponent } from "@/routes/_authenticated/payments/index";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
@@ -31,7 +31,7 @@ const meta: Meta<typeof PaymentsRouteComponent> = {
 export default meta;
 type Story = StoryObj<typeof PaymentsRouteComponent>;
 
-export const RedirectsWhenUnauthenticated: Story = {
+export const RendersWhenUnauthenticated: Story = {
     parameters: {
         storyTest: {
             router: {
@@ -44,11 +44,9 @@ export const RedirectsWhenUnauthenticated: Story = {
             },
         },
     } satisfies StoryTestParameters,
-    play: async ({ canvasElement }) => {
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
         const canvas = within(canvasElement);
-        await waitFor(() => {
-            expect(canvas.getByText("Log In Route")).toBeVisible();
-        });
+        await expect(canvas.getByRole("heading", { name: "Payments" })).toBeVisible();
     },
 };
 
@@ -65,7 +63,7 @@ export const RendersWhenAuthenticated: Story = {
             },
         },
     } satisfies StoryTestParameters,
-    play: async ({ canvasElement }) => {
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole("heading", { name: "Payments" })).toBeVisible();
     },

@@ -3,9 +3,9 @@
  *
  * Covered scenarios:
  * - Placeholder content renders for unfinished settings features.
- * - Sidebar navigation can move from settings to jobs.
+ * - No sidebar controls are rendered at the page-component level.
  */
-import { expect, userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import SettingsPage from "@/pages/SettingsPage/SettingsPage";
@@ -55,7 +55,7 @@ export const Default: Story = {
     },
 };
 
-export const NavigatesToJobs: Story = {
+export const HidesSidebarControls: Story = {
     parameters: {
         storyTest: {
             router: {
@@ -70,7 +70,6 @@ export const NavigatesToJobs: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await userEvent.click(canvas.getByRole("button", { name: "Jobs" }));
-        await expect(canvas.getByText("Jobs Route")).toBeVisible();
+        await expect(canvas.queryByRole("button", { name: "Jobs" })).toBeNull();
     },
 };

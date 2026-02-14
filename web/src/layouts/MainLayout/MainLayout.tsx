@@ -145,6 +145,7 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
                             <button
                                 key={item.path}
                                 type="button"
+                                aria-label={item.label}
                                 className={getNavItemClassName(item.path)}
                                 onClick={() => navigateTo(item.path)}
                             >
@@ -155,6 +156,7 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
                     </nav>
                     <button
                         type="button"
+                        aria-label="Log Out"
                         className={`${styles["main-layout__menu-item"]} ${styles["main-layout__log-out"]}`}
                         onClick={() => logoutMutation.mutate()}
                     >

@@ -3,9 +3,9 @@
  *
  * Covered scenarios:
  * - Dashboard content renders inside the authenticated main layout.
- * - Sidebar navigation can move from dashboard to another route.
+ * - No sidebar controls are rendered at the page-component level.
  */
-import { expect, userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import DashboardPage from "@/pages/DashboardPage/DashboardPage";
@@ -53,7 +53,7 @@ export const Default: Story = {
     },
 };
 
-export const NavigatesToCompanies: Story = {
+export const HidesSidebarControls: Story = {
     parameters: {
         storyTest: {
             router: {
@@ -68,7 +68,6 @@ export const NavigatesToCompanies: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await userEvent.click(canvas.getByRole("button", { name: "Companies" }));
-        await expect(canvas.getByText("Companies Route")).toBeVisible();
+        await expect(canvas.queryByRole("button", { name: "Companies" })).toBeNull();
     },
 };

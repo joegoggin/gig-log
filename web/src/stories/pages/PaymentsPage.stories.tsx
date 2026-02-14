@@ -3,9 +3,9 @@
  *
  * Covered scenarios:
  * - Placeholder content renders for unfinished payments features.
- * - Sidebar navigation can move from payments to settings.
+ * - No sidebar controls are rendered at the page-component level.
  */
-import { expect, userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
 import PaymentsPage from "@/pages/PaymentsPage/PaymentsPage";
@@ -55,7 +55,7 @@ export const Default: Story = {
     },
 };
 
-export const NavigatesToSettings: Story = {
+export const HidesSidebarControls: Story = {
     parameters: {
         storyTest: {
             router: {
@@ -70,7 +70,6 @@ export const NavigatesToSettings: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await userEvent.click(canvas.getByRole("button", { name: "Settings" }));
-        await expect(canvas.getByText("Settings Route")).toBeVisible();
+        await expect(canvas.queryByRole("button", { name: "Settings" })).toBeNull();
     },
 };
