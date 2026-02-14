@@ -1,42 +1,46 @@
 /**
- * Storybook interaction tests for Dashboard page behavior.
+ * Storybook interaction tests for Jobs placeholder page behavior.
  *
  * Covered scenarios:
- * - Dashboard content renders inside the authenticated main layout.
- * - Sidebar navigation can move from dashboard to another route.
+ * - Placeholder content renders for unfinished jobs features.
+ * - Sidebar navigation can move from jobs to payments.
  */
 import { expect, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
-import DashboardPage from "@/pages/DashboardPage/DashboardPage";
+import JobsPage from "@/pages/JobsPage/JobsPage";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
-const meta: Meta<typeof DashboardPage> = {
-    title: "Pages/DashboardPage",
-    component: DashboardPage,
+const meta: Meta<typeof JobsPage> = {
+    title: "Pages/JobsPage",
+    component: JobsPage,
     tags: ["autodocs"],
     decorators: [withMemoryRouter, withAppProviders],
     parameters: {
         layout: "fullscreen",
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
             },
         },
     },
 };
 
 export default meta;
-type Story = StoryObj<typeof DashboardPage>;
+type Story = StoryObj<typeof JobsPage>;
 
 export const Default: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
             auth: {
                 isLoggedIn: true,
@@ -46,19 +50,17 @@ export const Default: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(canvas.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-        await expect(
-            canvas.getByText("Welcome back. Use the sidebar to navigate across the app."),
-        ).toBeVisible();
+        await expect(canvas.getByRole("heading", { name: "Jobs" })).toBeVisible();
+        await expect(canvas.getByText("Job tracking is coming soon.")).toBeVisible();
     },
 };
 
-export const NavigatesToCompanies: Story = {
+export const NavigatesToPayments: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
             },
             auth: {
                 isLoggedIn: true,
@@ -68,7 +70,7 @@ export const NavigatesToCompanies: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await userEvent.click(canvas.getByRole("button", { name: "Companies" }));
-        await expect(canvas.getByText("Companies Route")).toBeVisible();
+        await userEvent.click(canvas.getByRole("button", { name: "Payments" }));
+        await expect(canvas.getByText("Payments Route")).toBeVisible();
     },
 };

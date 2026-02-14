@@ -1,0 +1,277 @@
+@use "@sass/variables/colors" as colors;
+@use "@sass/mixins/media" as media;
+
+.main-layout {
+    display: flex;
+    min-height: 100dvh;
+
+    svg {
+        width: 36px;
+        height: 36px;
+        color: var(--text-color);
+        fill: var(--text-color);
+        flex-shrink: 0;
+    }
+
+    &__sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 120px;
+        height: 100dvh;
+        padding: 20px 12px;
+        background: colors.$blue-100;
+        transition: width ease-in-out 0.25s;
+        overflow: hidden;
+
+        &:hover {
+            width: 280px;
+
+            .main-layout__brand {
+                justify-content: center;
+                gap: 0;
+
+                h5 {
+                    display: block;
+                }
+            }
+
+            .main-layout__menu-item {
+                justify-content: flex-start;
+                gap: 12px;
+
+                p {
+                    display: block;
+                }
+            }
+        }
+
+        @include media.tablet {
+            position: fixed;
+            z-index: 10;
+            flex-direction: row;
+            width: 100%;
+            height: auto;
+            padding: 10px 14px;
+            gap: 10px;
+
+            &:hover {
+                width: 100%;
+            }
+        }
+    }
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+
+        h5 {
+            color: colors.$black;
+            white-space: nowrap;
+            display: block;
+        }
+
+        svg {
+            color: colors.$black;
+            fill: colors.$black;
+        }
+
+        @include media.tablet {
+            width: auto;
+            margin-right: 6px;
+            gap: 12px;
+
+            h5 {
+                display: block;
+                font-size: 20px;
+            }
+        }
+    }
+
+    &__menu {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        width: 100%;
+        margin-top: 24px;
+        gap: 14px;
+
+        @include media.tablet {
+            flex: 1;
+            flex-direction: row;
+            align-items: center;
+            margin-top: 0;
+            overflow-x: auto;
+            gap: 6px;
+            scrollbar-width: thin;
+        }
+    }
+
+    &__menu-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        cursor: pointer;
+        overflow: hidden;
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        &::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: rgba(255, 255, 255, 0.2);
+            transform: scaleX(0.25);
+            transform-origin: left center;
+            opacity: 0;
+            transition:
+                transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.2s ease;
+        }
+
+        p,
+        svg {
+            position: relative;
+            z-index: 1;
+            transition:
+                color 0.2s ease,
+                fill 0.2s ease,
+                transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.2s ease;
+        }
+
+        &:hover {
+            transform: translateX(4px);
+
+            &::before {
+                transform: scaleX(1);
+                opacity: 1;
+            }
+
+            p,
+            svg {
+                color: #ffffff;
+                fill: #ffffff;
+            }
+
+            svg {
+                transform: translateX(1px) scale(1.06);
+            }
+
+            p {
+                transform: translateX(1px);
+            }
+        }
+
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 2px;
+
+            &::before {
+                transform: scaleX(1);
+                opacity: 1;
+            }
+
+            p,
+            svg {
+                color: #ffffff;
+                fill: #ffffff;
+            }
+        }
+
+        p {
+            display: none;
+            white-space: nowrap;
+            color: colors.$black;
+        }
+
+        svg {
+            color: colors.$black;
+            fill: colors.$black;
+        }
+
+        &--active {
+            &::before {
+                transform: scaleX(1);
+                opacity: 1;
+            }
+
+            p,
+            svg {
+                color: #ffffff;
+                fill: #ffffff;
+            }
+        }
+
+        @include media.tablet {
+            flex: 0 0 auto;
+            width: auto;
+            padding: 8px 12px;
+            gap: 12px;
+
+            &:hover {
+                transform: translateY(-1px);
+
+                svg {
+                    transform: translateY(-1px) scale(1.06);
+                }
+
+                p {
+                    transform: translateY(-1px);
+                }
+            }
+
+            p {
+                display: block;
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__menu-item,
+        &__menu-item::before,
+        &__menu-item p,
+        &__menu-item svg {
+            transition: none;
+        }
+
+        &__menu-item:hover {
+            transform: none;
+        }
+
+        &__menu-item:hover p,
+        &__menu-item:hover svg {
+            transform: none;
+        }
+    }
+
+    &__log-out {
+        margin-top: auto;
+
+        @include media.tablet {
+            margin-top: 0;
+            margin-left: auto;
+        }
+    }
+
+    &__content {
+        flex: 1;
+        padding: 48px;
+
+        @include media.tablet {
+            padding: 100px 20px 20px;
+        }
+    }
+}

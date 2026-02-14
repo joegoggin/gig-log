@@ -1,62 +1,42 @@
 /**
- * Storybook interaction tests for `/dashboard` protected-route behavior.
+ * Storybook interaction tests for `/settings` protected-route behavior.
  *
  * Covered scenarios:
- * - Loading spinner while auth state is resolving.
  * - Redirect to log-in when user is unauthenticated.
- * - Dashboard page render when user is authenticated.
+ * - Settings placeholder renders when user is authenticated.
  */
 import { expect, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
-import { RouteComponent as DashboardRouteComponent } from "@/routes/dashboard/index";
+import { RouteComponent as SettingsRouteComponent } from "@/routes/settings/index";
 import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
-const meta: Meta<typeof DashboardRouteComponent> = {
-    title: "Pages/DashboardRoute",
-    component: DashboardRouteComponent,
+const meta: Meta<typeof SettingsRouteComponent> = {
+    title: "Pages/SettingsRoute",
+    component: SettingsRouteComponent,
     tags: ["autodocs"],
     decorators: [withMemoryRouter, withAppProviders],
     parameters: {
         layout: "fullscreen",
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
             },
         },
     },
 };
 
 export default meta;
-type Story = StoryObj<typeof DashboardRouteComponent>;
-
-export const LoadingState: Story = {
-    parameters: {
-        storyTest: {
-            router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
-            },
-            auth: {
-                isLoading: true,
-                isLoggedIn: false,
-            },
-        },
-    } satisfies StoryTestParameters,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-        await expect(canvas.getByText("Loading")).toBeVisible();
-    },
-};
+type Story = StoryObj<typeof SettingsRouteComponent>;
 
 export const RedirectsWhenUnauthenticated: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
             },
             auth: {
                 isLoading: false,
@@ -72,12 +52,12 @@ export const RedirectsWhenUnauthenticated: Story = {
     },
 };
 
-export const RendersDashboardWhenAuthenticated: Story = {
+export const RendersWhenAuthenticated: Story = {
     parameters: {
         storyTest: {
             router: {
-                storyPath: "/dashboard",
-                initialEntries: ["/dashboard"],
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
             },
             auth: {
                 isLoading: false,
@@ -87,6 +67,6 @@ export const RendersDashboardWhenAuthenticated: Story = {
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(canvas.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+        await expect(canvas.getByRole("heading", { name: "Settings" })).toBeVisible();
     },
 };

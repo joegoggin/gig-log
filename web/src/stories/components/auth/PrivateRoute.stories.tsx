@@ -17,7 +17,6 @@ type PrivateRouteStoryProps = {
     children: ReactNode;
     redirectTo?: string;
     loadingLabel?: string;
-    redirectingLabel?: string;
 };
 
 const createAuthValue = (isLoggedIn: boolean, isLoading: boolean) =>
@@ -45,7 +44,6 @@ const PrivateRouteStory = ({
     children,
     redirectTo,
     loadingLabel,
-    redirectingLabel,
 }: PrivateRouteStoryProps) => {
     const authValue = createAuthValue(isLoggedIn, isLoading);
     const rootRoute = createRootRoute({
@@ -59,7 +57,6 @@ const PrivateRouteStory = ({
                 <PrivateRoute
                     redirectTo={redirectTo}
                     loadingLabel={loadingLabel}
-                    redirectingLabel={redirectingLabel}
                 >
                     {children}
                 </PrivateRoute>
@@ -99,9 +96,6 @@ const meta: Meta<typeof PrivateRouteStory> = {
             control: { type: "text" },
         },
         loadingLabel: {
-            control: { type: "text" },
-        },
-        redirectingLabel: {
             control: { type: "text" },
         },
     },
