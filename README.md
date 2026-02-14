@@ -8,9 +8,9 @@ GigLog starts from a reality most freelancers know firsthand: the work is reward
 
 GigLog is built to reduce that friction. It brings companies, jobs, work sessions, and payment history into one clear workflow so freelancers can stay organized without piecing together disconnected tools. The goal is simple: less mental overhead, more confidence in your records, and more time focused on meaningful billable work.
 
-<br clear="left" />
-
 This repository also serves as a portfolio of production-minded full-stack engineering. It demonstrates a typed React frontend with a Rust API, clear module boundaries, deterministic testing, CI quality gates, and documentation workflows with Storybook and Rustdoc, all designed to reflect maintainable real-world development practices.
+
+<br clear="left" />
 
 ## ✨ What GigLog Helps You Do
 
