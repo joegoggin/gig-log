@@ -1,5 +1,7 @@
 # GigLog
 
+![GigLog logo](web/public/gig-log-logo.png)
+
 GigLog is a full-stack web application for freelancers and gig workers to manage their work across multiple clients. Users can track companies, jobs, work sessions, and payments — all in one place.
 
 ## Getting Started
