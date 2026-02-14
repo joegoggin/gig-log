@@ -656,6 +656,7 @@ When asked to perform a code review, follow this interactive process:
 2. **For each issue found:**
    - Provide a clear description of the issue
    - Show a diff of the proposed fix
+     - display this the same way you display changes to the code being made
    - Ask the user whether to accept or reject the change
 3. **Wait for user confirmation** before moving to the next issue
 4. **After the user responds:**
@@ -666,6 +667,9 @@ When asked to perform a code review, follow this interactive process:
    - Commit the changes
    - Push to the remote branch
    - Create a PR with a summary of all the changes made during the review
+     - The summary and title should reflect all the changes made on the current branch
+     - If a PR for this branch already exists, update the summary to reflect
+       any new changes that might be missing
 
 ### Example Format
 

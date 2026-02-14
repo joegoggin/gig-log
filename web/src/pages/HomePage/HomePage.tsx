@@ -1,6 +1,7 @@
 import styles from "./HomePage.module.scss";
 import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import GigLogLogoIcon from "@/components/icons/GigLogLogoIcon";
 
 /**
  * Props for the HomePage component.
@@ -25,11 +26,14 @@ type HomePageProps = {
  *
  * - `Button` - Used for navigation actions
  * - `FullscreenCenteredLayout` - Page layout wrapper
+ * - `GigLogLogoIcon` - Displays the GigLog brand mark
  */
 function HomePage({ isLoggedIn }: HomePageProps) {
     return (
         <FullscreenCenteredLayout className={styles["home-page"]}>
-            <h1>GigLog</h1>
+            <h1 className={styles["home-page__logo"]} aria-label="GigLog">
+                <GigLogLogoIcon />
+            </h1>
             <div className={styles["home-page__text"]}>
                 <p>
                     Freelancing opens a whole new world of opportunities giving

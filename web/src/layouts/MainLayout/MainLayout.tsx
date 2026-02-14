@@ -5,6 +5,7 @@ import type { AxiosError } from "axios";
 import type { ReactNode } from "react";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import CompanyIcon from "@/components/icons/CompanyIcon";
+import GigLogLogoIcon from "@/components/icons/GigLogLogoIcon";
 import HomeIcon from "@/components/icons/HomeIcon";
 import JobsIcon from "@/components/icons/JobsIcon";
 import LogOutIcon from "@/components/icons/LogOutIcon";
@@ -138,7 +139,19 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
             <div className={styles["main-layout"]}>
                 <aside className={styles["main-layout__sidebar"]}>
                     <div className={styles["main-layout__brand"]}>
-                        <h5>GigLog</h5>
+                        <button
+                            type="button"
+                            aria-label="Go to dashboard"
+                            className={styles["main-layout__brand-button"]}
+                            onClick={() => navigateTo("/dashboard")}
+                        >
+                            <span className={styles["main-layout__brand-logo-mark"]}>
+                                <GigLogLogoIcon showWordmark={false} />
+                            </span>
+                            <span className={styles["main-layout__brand-logo-full"]}>
+                                <GigLogLogoIcon showSubtitle={false} />
+                            </span>
+                        </button>
                     </div>
                     <nav className={styles["main-layout__menu"]}>
                         {navItems.map((item) => {

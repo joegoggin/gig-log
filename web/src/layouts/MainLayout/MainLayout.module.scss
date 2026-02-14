@@ -19,7 +19,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        width: 120px;
+        width: 164px;
         height: 100dvh;
         padding: 20px 12px;
         background: colors.$blue-100;
@@ -32,10 +32,6 @@
             .main-layout__brand {
                 justify-content: center;
                 gap: 0;
-
-                h5 {
-                    display: block;
-                }
             }
 
             .main-layout__menu-item {
@@ -45,6 +41,18 @@
                 p {
                     display: block;
                 }
+            }
+
+            .main-layout__brand-button {
+                width: 140px;
+            }
+
+            .main-layout__brand-logo-mark {
+                opacity: 0;
+            }
+
+            .main-layout__brand-logo-full {
+                opacity: 1;
             }
         }
 
@@ -68,16 +76,13 @@
         align-items: center;
         justify-content: center;
         width: 100%;
+        padding: 8px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.2);
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
-        h5 {
-            color: colors.$black;
-            white-space: nowrap;
-            display: block;
-        }
-
-        svg {
-            color: colors.$black;
-            fill: colors.$black;
+        &:hover {
+            transform: translateX(4px) scale(1.02);
         }
 
         @include media.tablet {
@@ -85,10 +90,77 @@
             margin-right: 6px;
             gap: 12px;
 
-            h5 {
-                display: block;
-                font-size: 20px;
+            &:hover {
+                transform: translateY(-1px) scale(1.02);
             }
+        }
+    }
+
+    &__brand-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        position: relative;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: colors.$black;
+        cursor: pointer;
+        overflow: hidden;
+        transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 2px;
+        }
+
+        @include media.tablet {
+            width: 140px;
+        }
+    }
+
+    &__brand-logo-mark,
+    &__brand-logo-full {
+        position: absolute;
+        inset: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+        transition: opacity 0.2s ease;
+
+        svg {
+            color: #ffffff;
+        }
+    }
+
+    &__brand-logo-mark {
+        opacity: 1;
+
+        svg {
+            width: 48px;
+            height: 48px;
+        }
+    }
+
+    &__brand-logo-full {
+        opacity: 0;
+
+        svg {
+            width: 140px;
+            height: 48px;
+        }
+    }
+
+    @include media.tablet {
+        &__brand-logo-mark {
+            opacity: 0;
+        }
+
+        &__brand-logo-full {
+            opacity: 1;
         }
     }
 
@@ -240,6 +312,14 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+        &__brand {
+            transition: none;
+        }
+
+        &__brand:hover {
+            transform: none;
+        }
+
         &__menu-item,
         &__menu-item::before,
         &__menu-item p,
