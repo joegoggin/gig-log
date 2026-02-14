@@ -7,6 +7,17 @@ type GigLogLogoIconProps = {
 
 /**
  * The GigLog brand logo with the mark and optional company wordmark.
+ *
+ * ## Props
+ *
+ * - `showWordmark` - Whether to render the GigLog wordmark text next to the logo mark
+ * - `showSubtitle` - Whether to render the subtitle under the GigLog wordmark
+ *
+ * ## Example
+ *
+ * ```tsx
+ * <GigLogLogoIcon showWordmark={false} />
+ * ```
  */
 const GigLogLogoIcon: React.FC<GigLogLogoIconProps> = ({
     showWordmark = true,

@@ -667,7 +667,9 @@ When asked to perform a code review, follow this interactive process:
    - Commit the changes
    - Push to the remote branch
    - Create a PR with a summary of all the changes made during the review
-     - The summary and title should reflect all the changes made on the current branch.
+     - The summary and title should reflect all the changes made on the current branch
+     - If a PR for this branch already exists, update the summary to reflect
+       any new changes that might be missing
 
 ### Example Format
 

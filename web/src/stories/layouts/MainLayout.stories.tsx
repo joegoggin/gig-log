@@ -75,6 +75,35 @@ export const NavigatesFromSidebar: Story = {
     },
 };
 
+export const NavigatesToDashboardFromBrand: Story = {
+    args: {
+        children: <h1>Dashboard</h1>,
+    },
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+                setUser: setUserSpy,
+            },
+            spies: {
+                addNotification: addNotificationSpy,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Go to dashboard" }),
+        );
+        await expect(canvas.getByText("Dashboard Route")).toBeVisible();
+    },
+};
+
 export const LogsOutOnSuccess: Story = {
     args: {
         children: <h1>Dashboard</h1>,
