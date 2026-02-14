@@ -4,6 +4,7 @@
  * Covered scenarios:
  * - Successful log in posts credentials, refreshes auth context,
  *   and navigates to dashboard.
+ * - Failed auth refresh after log in does not navigate to dashboard.
  * - Validation error responses are rendered and block navigation.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -124,6 +125,34 @@ describe("LogInPage", () => {
             expect(refreshUser).toHaveBeenCalledTimes(1);
         });
         expect(navigateMock).toHaveBeenCalledWith({ to: "/dashboard" });
+    });
+
+    it("does not navigate when auth refresh fails after log in", async () => {
+        const refreshUser = vi.fn(async () => {
+            throw new Error("Unauthorized");
+        });
+
+        restorePost = mockApiPostHandler(async () =>
+            createMockApiResponse({
+                message: "Logged in",
+                user_id: "user-1",
+            }),
+        );
+
+        renderPage(refreshUser);
+
+        fireEvent.change(screen.getByPlaceholderText("Email"), {
+            target: { value: "demo@example.com" },
+        });
+        fireEvent.change(screen.getByPlaceholderText("Password"), {
+            target: { value: "password123" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Log In" }));
+
+        await waitFor(() => {
+            expect(refreshUser).toHaveBeenCalledTimes(1);
+        });
+        expect(navigateMock).not.toHaveBeenCalled();
     });
 
     it("renders field errors from validation response", async () => {
