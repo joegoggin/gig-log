@@ -76,11 +76,23 @@
         align-items: center;
         justify-content: center;
         width: 100%;
+        padding: 8px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.2);
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        &:hover {
+            transform: translateX(4px) scale(1.02);
+        }
 
         @include media.tablet {
             width: auto;
             margin-right: 6px;
             gap: 12px;
+
+            &:hover {
+                transform: translateY(-1px) scale(1.02);
+            }
         }
     }
 
@@ -99,6 +111,11 @@
         overflow: hidden;
         transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 2px;
+        }
+
         @include media.tablet {
             width: 140px;
         }
@@ -111,6 +128,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        z-index: 1;
         transition: opacity 0.2s ease;
 
         svg {
@@ -294,6 +312,14 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+        &__brand {
+            transition: none;
+        }
+
+        &__brand:hover {
+            transform: none;
+        }
+
         &__menu-item,
         &__menu-item::before,
         &__menu-item p,
