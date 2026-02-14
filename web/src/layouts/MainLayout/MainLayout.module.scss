@@ -19,7 +19,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        width: 120px;
+        width: 164px;
         height: 100dvh;
         padding: 20px 12px;
         background: colors.$blue-100;
@@ -32,10 +32,6 @@
             .main-layout__brand {
                 justify-content: center;
                 gap: 0;
-
-                h5 {
-                    display: block;
-                }
             }
 
             .main-layout__menu-item {
@@ -45,6 +41,18 @@
                 p {
                     display: block;
                 }
+            }
+
+            .main-layout__brand-button {
+                width: 140px;
+            }
+
+            .main-layout__brand-logo-mark {
+                opacity: 0;
+            }
+
+            .main-layout__brand-logo-full {
+                opacity: 1;
             }
         }
 
@@ -69,26 +77,72 @@
         justify-content: center;
         width: 100%;
 
-        h5 {
-            color: colors.$black;
-            white-space: nowrap;
-            display: block;
-        }
-
-        svg {
-            color: colors.$black;
-            fill: colors.$black;
-        }
-
         @include media.tablet {
             width: auto;
             margin-right: 6px;
             gap: 12px;
+        }
+    }
 
-            h5 {
-                display: block;
-                font-size: 20px;
-            }
+    &__brand-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        position: relative;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: colors.$black;
+        cursor: pointer;
+        overflow: hidden;
+        transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        @include media.tablet {
+            width: 140px;
+        }
+    }
+
+    &__brand-logo-mark,
+    &__brand-logo-full {
+        position: absolute;
+        inset: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s ease;
+
+        svg {
+            color: #ffffff;
+        }
+    }
+
+    &__brand-logo-mark {
+        opacity: 1;
+
+        svg {
+            width: 48px;
+            height: 48px;
+        }
+    }
+
+    &__brand-logo-full {
+        opacity: 0;
+
+        svg {
+            width: 140px;
+            height: 48px;
+        }
+    }
+
+    @include media.tablet {
+        &__brand-logo-mark {
+            opacity: 0;
+        }
+
+        &__brand-logo-full {
+            opacity: 1;
         }
     }
 

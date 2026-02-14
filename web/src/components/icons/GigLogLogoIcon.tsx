@@ -1,16 +1,21 @@
+type GigLogLogoIconProps = {
+    /** Whether to render the GigLog wordmark text next to the logo mark. */
+    showWordmark?: boolean;
+};
+
 /**
- * The GigLog brand logo with the mark and company name.
+ * The GigLog brand logo with the mark and optional company wordmark.
  */
-const GigLogLogoIcon: React.FC = () => {
+const GigLogLogoIcon: React.FC<GigLogLogoIconProps> = ({ showWordmark = true }) => {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 180 48"
-            width="180"
+            viewBox={showWordmark ? "0 0 140 48" : "0 0 48 48"}
+            width={showWordmark ? "140" : "48"}
             height="48"
             fill="none"
         >
-            <g transform="translate(2 2) scale(1.8)">
+            <g className="giglog-logo__mark" transform="translate(2 2) scale(1.8)">
                 <path
                     d="M7.53 2.5h10.83a1 1 0 0 1 .86 1.51l-1.65 2.84a1 1 0 0 1-.86.49H5.88a1 1 0 0 1-.87-1.49l1.66-2.85a1 1 0 0 1 .86-.5Z"
                     fill="#7AA2F7"
@@ -57,17 +62,20 @@ const GigLogLogoIcon: React.FC = () => {
                     opacity="0.7"
                 />
             </g>
-            <text
-                x="52"
-                y="31"
-                fill="#A9B1D6"
-                fontFamily="Poppins, sans-serif"
-                fontSize="22"
-                fontWeight="600"
-                letterSpacing="0.4"
-            >
-                GigLog
-            </text>
+            {showWordmark ? (
+                <text
+                    className="giglog-logo__wordmark"
+                    x="52"
+                    y="31"
+                    fill="currentColor"
+                    fontFamily="Poppins, sans-serif"
+                    fontSize="22"
+                    fontWeight="600"
+                    letterSpacing="0.4"
+                >
+                    GigLog
+                </text>
+            ) : null}
         </svg>
     );
 };
