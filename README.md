@@ -2,9 +2,11 @@
 
 ![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
-<img src="web/public/gig-log-logo.png" alt="GigLog logo" width="360" />
+<img src="web/public/gig-log-logo.png" alt="GigLog logo" width="360" align="left" />
 
 GigLog starts from a reality most freelancers know firsthand: the work is rewarding, but the admin can be exhausting. Between multiple clients, overlapping projects, different pay structures, and day-to-day life, it becomes easy to lose time to manual tracking. Hours live in one place, payouts in another, and job details end up scattered across notes or spreadsheets. That constant context switching creates stress and makes it harder to feel fully in control of your business.
+
+<br clear="left" />
 
 GigLog is built to reduce that friction. It brings companies, jobs, work sessions, and payment history into one clear workflow so freelancers can stay organized without piecing together disconnected tools. The goal is simple: less mental overhead, more confidence in your records, and more time focused on meaningful billable work.
 
