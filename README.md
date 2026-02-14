@@ -13,7 +13,6 @@ This repo highlights production-minded full-stack engineering across product, AP
 - Manage companies and jobs in one place
 - Track work sessions and time-based earnings
 - Record payouts and payment history
-- Keep development and product documentation close to the codebase with Rustdoc and Storybook
 
 ## At a Glance
 
@@ -28,7 +27,6 @@ This repo highlights production-minded full-stack engineering across product, AP
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
-- [At a Glance](#at-a-glance)
 - [Key Technical Decisions](#key-technical-decisions)
 - [Demo Walkthrough](#demo-walkthrough)
 - [Quick Start](#quick-start)
