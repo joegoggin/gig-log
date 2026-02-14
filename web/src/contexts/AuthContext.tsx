@@ -48,7 +48,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const refreshUser = useCallback(async (options?: RefreshUserOptions) => {
         if (inFlightRefreshRef.current) {
-            return inFlightRefreshRef.current;
+            return inFlightRefreshRef.current.catch((error) => {
+                if (options?.throwOnError) {
+                    throw error;
+                }
+            });
         }
 
         const refreshPromise = (async () => {
@@ -57,10 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 setUser(response.data.user);
             } catch (error) {
                 setUser(null);
-
-                if (options?.throwOnError) {
-                    throw error;
-                }
+                throw error;
             } finally {
                 inFlightRefreshRef.current = null;
             }
@@ -68,7 +69,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         inFlightRefreshRef.current = refreshPromise;
 
-        return refreshPromise;
+        return refreshPromise.catch((error) => {
+            if (options?.throwOnError) {
+                throw error;
+            }
+        });
     }, []);
 
     useEffect(() => {
@@ -77,6 +82,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
             try {
                 await refreshUser();
+            } catch {
+                // unauthenticated on app start is expected
             } finally {
                 setIsLoading(false);
             }
