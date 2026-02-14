@@ -1,4 +1,4 @@
-# GigLog 🎸
+# GigLog 💼
 
 ![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
@@ -14,7 +14,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 - Track work sessions and time-based earnings ⏱️
 - Record payouts and payment history 💸
 
-## At a Glance
+## At a Glance 👀
 
 - **Problem solved** - Reduces admin overhead for freelancers managing multiple clients and pay models
 - **End-to-end ownership** - Delivers both product UI (`web/`) and backend domain/API implementation (`api/`)
@@ -22,7 +22,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 - **Developer experience** - Uses reproducible local workflows via `just`, Docker, and documented scripts
 - **Documentation quality** - Keeps visual docs (Storybook) and backend docs (Rustdoc) in the dev workflow
 
-## Table of Contents
+## Table of Contents 🧭
 
 - [Overview](#overview)
 - [Active Development Status](#active-development-status)
@@ -46,23 +46,23 @@ This repo highlights production-minded full-stack engineering across product, AP
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
-## Overview
+## Overview 📌
 
 GigLog reduces admin overhead by combining job tracking, work logging, and payment tracking in one workflow. The project uses a Rust API (`api/`), a React frontend (`web/`), and PostgreSQL.
 
 Engineering focus areas: typed API contracts, clear module boundaries, deterministic tests, and maintainable local tooling.
 
-## Active Development Status
+## Active Development Status 🚧
 
 GigLog is still in active development.
 
-### Completed
+### Completed ✅
 
 - [x] User authentication flow (sign up, log in, session-based access)
 - [x] CI quality gates for lint, build, and tests
 - [x] Storybook and Rustdoc documentation workflows
 
-### In Progress / Planned
+### In Progress / Planned 🛣️
 
 - [ ] Company and job management
 - [ ] Work session tracking and time-based earnings
@@ -87,7 +87,7 @@ flowchart LR
     Web --> SB[Storybook at :6006]
 ```
 
-## Key Technical Decisions
+## Key Technical Decisions 🧠
 
 - **Rust API with Actix Web** - Prioritizes performance, explicit typing, and predictable errors
 - **SQLx with PostgreSQL** - Uses compile-time checked queries for safer database interactions
@@ -112,7 +112,7 @@ To showcase implementation quality, run `just web-test` and `cd api && cargo tes
 
 ## Quick Start 🚀
 
-### Prerequisites
+### Prerequisites 📦
 
 Required:
 
@@ -128,7 +128,7 @@ Optional (needed for manual migration workflows):
 
 - [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli)
 
-### One-Time Setup
+### One-Time Setup 🧰
 
 ```sh
 git clone https://github.com/joegoggin/gig-log.git
@@ -138,7 +138,7 @@ cp api/.env.example api/.env
 pnpm --dir web install
 ```
 
-### Run Locally
+### Run Locally 💻
 
 In separate terminals:
 
@@ -150,7 +150,7 @@ just api
 just web
 ```
 
-### Configuration Notes
+### Configuration Notes ⚙️
 
 - `api/.env.example` includes default local-development logging options
 - To run migrations manually, use `just db-migrate`
@@ -185,7 +185,7 @@ Quality goals in this repository:
 
 All project scripts are defined in `justfile`.
 
-### API Scripts
+### API Scripts 🦀
 
 | Command | Purpose |
 | --- | --- |
@@ -196,7 +196,7 @@ All project scripts are defined in `justfile`.
 | `just api-build` | Build the API |
 | `just api-release` | Run the API in release mode |
 
-### Web Scripts
+### Web Scripts 🌍
 
 | Command | Purpose |
 | --- | --- |
@@ -211,13 +211,13 @@ All project scripts are defined in `justfile`.
 | `just web-check` | Run formatter write + eslint fix |
 | `just web-storybook` | Run Storybook only |
 
-### Database Scripts
+### Database Scripts 🗄️
 
 | Command | Purpose |
 | --- | --- |
 | `just db-migrate` | Run SQLx database migrations |
 
-### Utility Scripts
+### Utility Scripts 🔧
 
 | Command | Purpose |
 | --- | --- |
