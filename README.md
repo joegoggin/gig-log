@@ -10,8 +10,6 @@ GigLog is built to reduce that friction. It brings companies, jobs, work session
 
 This repository also serves as a portfolio of production-minded full-stack engineering. It demonstrates a typed React frontend with a Rust API, clear module boundaries, deterministic testing, CI quality gates, and documentation workflows with Storybook and Rustdoc, all designed to reflect maintainable real-world development practices.
 
-<br clear="left" />
-
 ## ✨ What GigLog Helps You Do
 
 - 🏢 Manage companies and jobs in one place
