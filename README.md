@@ -105,8 +105,8 @@ Use this flow in a portfolio review:
 1. Start services with `just api` and `just web`
 2. Open the app at <http://localhost:3000>
 3. Sign up or log in
-4. Add a company and create a job
-5. Log a work session and record a payout
+4. Complete the auth flow (sign up, email confirmation, and log in)
+5. Navigate through dashboard and placeholder feature areas (`/companies`, `/jobs`, `/payments`) to preview planned workflow
 6. Open Storybook at <http://localhost:6006> for documented UI states
 7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
 
