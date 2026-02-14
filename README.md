@@ -1,12 +1,122 @@
-# GigLog
+# 💼 GigLog
 
-![GigLog logo](web/public/gig-log-logo.png)
+![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
-GigLog is a full-stack web application for freelancers and gig workers to manage their work across multiple clients. Users can track companies, jobs, work sessions, and payments — all in one place.
+<img src="web/public/gig-log-logo.png" alt="GigLog logo" width="360" align="left" />
 
-## Getting Started
+GigLog starts from a reality most freelancers know firsthand: the work is rewarding, but the admin can be exhausting. Between multiple clients, overlapping projects, different pay structures, and day-to-day life, it becomes easy to lose time to manual tracking. Hours live in one place, payouts in another, and job details end up scattered across notes or spreadsheets. That constant context switching creates stress and makes it harder to feel fully in control of your business.
 
-### Requirements
+GigLog is built to reduce that friction. It brings companies, jobs, work sessions, and payment history into one clear workflow so freelancers can stay organized without piecing together disconnected tools. The goal is simple: less mental overhead, more confidence in your records, and more time focused on meaningful billable work.
+
+This repository also serves as a portfolio of production-minded full-stack engineering. It demonstrates a typed React frontend with a Rust API, clear module boundaries, deterministic testing, CI quality gates, and documentation workflows with Storybook and Rustdoc, all designed to reflect maintainable real-world development practices.
+
+## ✨ What GigLog Helps You Do
+
+- 🏢 Manage companies and jobs in one place
+- ⏱️ Track work sessions and time-based earnings
+- 💸 Record payouts and payment history
+
+## 👀 At a Glance
+
+- **Problem solved** - Reduces admin overhead for freelancers managing multiple clients and pay models
+- **End-to-end ownership** - Delivers both product UI (`web/`) and backend domain/API implementation (`api/`)
+- **Engineering quality** - Enforces lint/build/test gates in CI for both layers
+- **Developer experience** - Uses reproducible local workflows via `just`, Docker, and documented scripts
+- **Documentation quality** - Keeps visual docs (Storybook) and backend docs (Rustdoc) in the dev workflow
+
+## 🧭 Table of Contents
+
+- [Overview](#overview)
+- [Active Development Status](#active-development-status)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Key Technical Decisions](#key-technical-decisions)
+- [Demo Walkthrough](#demo-walkthrough)
+- [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [One-Time Setup](#one-time-setup)
+  - [Run Locally](#run-locally)
+  - [Configuration Notes](#configuration-notes)
+- [Local URLs](#local-urls)
+- [Testing and Quality](#testing-and-quality)
+- [Scripts Reference](#scripts-reference)
+  - [API Scripts](#api-scripts)
+  - [Web Scripts](#web-scripts)
+  - [Database Scripts](#database-scripts)
+  - [Utility Scripts](#utility-scripts)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+## 📌 Overview
+
+GigLog reduces admin overhead by combining job tracking, work logging, and payment tracking in one workflow. The project uses a Rust API (`api/`), a React frontend (`web/`), and PostgreSQL.
+
+Engineering focus areas: typed API contracts, clear module boundaries, deterministic tests, and maintainable local tooling.
+
+## 🚧 Active Development Status
+
+GigLog is still in active development.
+
+### ✅ Completed
+
+- [x] User authentication flow (sign up, log in, session-based access)
+- [x] CI quality gates for lint, build, and tests
+- [x] Storybook and Rustdoc documentation workflows
+
+### 🛣️ In Progress / Planned
+
+- [ ] Company and job management
+- [ ] Work session tracking and time-based earnings
+- [ ] Payout tracking and payment history
+
+## 🛠️ Tech Stack
+
+- **Frontend** - [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Vite](https://vite.dev), [TanStack Router](https://tanstack.com/router/latest)
+- **Backend** - [Rust](https://www.rust-lang.org) with [Actix Web](https://actix.rs)
+- **Database** - [PostgreSQL](https://www.postgresql.org) with [SQLx](https://github.com/launchbadge/sqlx)
+- **Styling** - [Sass](https://sass-lang.com) (SCSS modules + shared variables/mixins)
+- **Documentation and UI Testing** - [Storybook](https://storybook.js.org)
+
+## 🧱 Architecture
+
+```mermaid
+flowchart LR
+    User[Browser User] --> Web[web: React + Vite]
+    Web --> API[api: Actix Web]
+    API --> DB[(PostgreSQL)]
+    API --> Docs[Rustdoc at :7007]
+    Web --> SB[Storybook at :6006]
+```
+
+## 🧠 Key Technical Decisions
+
+- **Rust API with Actix Web** - Prioritizes performance, explicit typing, and predictable errors
+- **SQLx with PostgreSQL** - Uses compile-time checked queries for safer database interactions
+- **TanStack Router + React + TypeScript** - Encourages route-level structure with strong type safety in the UI layer
+- **Storybook-first UI documentation** - Keeps UI behavior and visual docs close to implementation
+- **Task runner via `just`** - Standardizes local workflows and lowers setup friction
+- **Docker-backed local database** - Keeps development environments consistent without external DB setup
+
+## 🎬 Demo Walkthrough
+
+Use this flow in a portfolio review:
+
+1. Start services with `just api` and `just web`
+2. Open the app at <http://localhost:3000>
+3. Sign up or log in
+4. Complete the auth flow (sign up, email confirmation, and log in)
+5. Navigate through dashboard and placeholder feature areas (`/companies`, `/jobs`, `/payments`) to preview planned workflow
+6. Open Storybook at <http://localhost:6006> for documented UI states
+7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
+
+To showcase implementation quality, run `just web-test` and `cd api && cargo test` before or during the walkthrough.
+
+## 🚀 Quick Start
+
+### 📦 Prerequisites
+
+Required:
 
 - [Node.js](https://nodejs.org)
 - [pnpm](https://pnpm.io)
@@ -15,231 +125,129 @@ GigLog is a full-stack web application for freelancers and gig workers to manage
 - [Python 3](https://www.python.org/downloads/)
 - [just](https://github.com/casey/just)
 - [cargo-watch](https://github.com/watchexec/cargo-watch)
+
+Optional (needed for manual migration workflows):
+
 - [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli)
 
-### Setup
+### 🧰 One-Time Setup
 
-1. Clone the repo
+```sh
+git clone https://github.com/joegoggin/gig-log.git
+cd gig-log
+docker compose up -d postgres
+cp api/.env.example api/.env
+pnpm --dir web install
+```
 
-   ```sh
-   git clone https://github.com/joegoggin/gig-log.git
-   cd gig-log
-   ```
+### 💻 Run Locally
 
-2. Start PostgreSQL via Docker
-
-   ```sh
-   docker compose up -d postgres
-   ```
-
-3. Copy `api/.env.example` to `api/.env` and fill in values
-
-   ```sh
-   cp api/.env.example api/.env
-   ```
-
-   Logging defaults are included in `api/.env.example`:
-   - `LOG_LEVEL` - Global log level (`info`, `debug`, etc.)
-   - `LOG_HTTP_BODY_ENABLED` - Enables JSON request/response body logging
-   - `LOG_HTTP_MAX_BODY_BYTES` - Max body size eligible for body logging
-
-4. Install frontend dependencies
-
-   ```sh
-   pnpm --dir web install
-   ```
-
-5. Run database migrations (optional)
-
-   ```sh
-   just db-migrate
-   ```
-
-   The application defaults startup migrations and Docker auto-start to disabled
-   when those env vars are unset.
-   The provided `api/.env.example` enables both for local development.
-   Set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or
-   `DOCKER_COMPOSE_AUTO_START_ENABLED=false` in `api/.env` to disable them.
-   Use this command when you want to run migrations manually.
-
-6. Start the API
-
-   ```sh
-   just api
-   ```
-
-7. Start the frontend
-
-   ```sh
-   just web
-   ```
-
-### Local URLs
-
-- App: <http://localhost:3000>
-- Storybook: <http://localhost:6006>
-- API docs: <http://localhost:7007>
-
-## Tech Stack
-
-- **Frontend** — [TanStack Router](https://tanstack.com/router/latest) (React, TypeScript, Vite)
-- **Backend** — [Actix Web](https://actix.rs) (Rust)
-- **Database** — [PostgreSQL](https://www.postgresql.org) with [SQLx](https://github.com/launchbadge/sqlx)
-- **Styling** — [Sass](https://sass-lang.com) (SCSS modules + shared variables/mixins)
-- **Component Documentation** — [Storybook](https://storybook.js.org)
-
-## Scripts
-
-All commands are run with [just](https://github.com/casey/just).
-
-### API
-
-#### `just api`
-
-Run the API dev server with hot-reload (via `cargo-watch`) and a local Rustdoc server on port 7007.
+In separate terminals:
 
 ```sh
 just api
 ```
 
-#### `just api-add <package>`
-
-Add a Rust dependency to the API.
-
-```sh
-just api-add serde
-```
-
-#### `just api-remove <package>`
-
-Remove a Rust dependency from the API.
-
-```sh
-just api-remove serde
-```
-
-#### `just api-clean`
-
-Clean API build artifacts.
-
-```sh
-just api-clean
-```
-
-#### `just api-build`
-
-Build the API.
-
-```sh
-just api-build
-```
-
-#### `just api-release`
-
-Build and run the API in release mode.
-
-```sh
-just api-release
-```
-
-### Frontend
-
-#### `just web`
-
-Run Vite and Storybook in parallel (app on port 3000, Storybook on port 6006).
-
 ```sh
 just web
 ```
 
-#### `just web-add <package>`
+### ⚙️ Configuration Notes
 
-Add a frontend dependency.
+- `api/.env.example` includes default local-development logging options
+- To run migrations manually, use `just db-migrate`
+- When unset, startup migrations and Docker auto-start are disabled by default
+- In `api/.env`, set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or `DOCKER_COMPOSE_AUTO_START_ENABLED=false` for manual control
 
-```sh
-just web-add axios
+## 🌐 Local URLs
+
+- App: <http://localhost:3000>
+- Storybook: <http://localhost:6006>
+- API docs (Rustdoc): <http://localhost:7007>
+
+## ✅ Testing and Quality
+
+CI runs lint, build, and test checks for API and web on each push via `.github/workflows/ci.yml`.
+
+Common local checks:
+
+- `just web-lint` - Lint frontend code
+- `just web-test` - Run frontend test suite
+- `just api-build` - Build API locally
+- `cd api && cargo clippy -- -D warnings` - Lint API with strict warnings
+- `cd api && cargo test` - Run API tests
+
+Quality goals in this repository:
+
+- Keep API and web changes covered by automated tests
+- Catch regressions early through linting and CI checks
+- Keep docs close to implementation for faster onboarding
+
+## 📚 Scripts Reference
+
+All project scripts are defined in `justfile`.
+
+### 🦀 API Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `just api` | Run API dev server (hot reload) and Rustdoc server |
+| `just api-add <package>` | Add a Rust dependency in `api/` |
+| `just api-remove <package>` | Remove a Rust dependency from `api/` |
+| `just api-clean` | Clean API build artifacts |
+| `just api-build` | Build the API |
+| `just api-release` | Run the API in release mode |
+
+### 🌍 Web Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `just web` | Run Vite app and Storybook in parallel |
+| `just web-add <package>` | Add a web dependency in `web/` |
+| `just web-remove <package>` | Remove a web dependency from `web/` |
+| `just web-build` | Build web app for production |
+| `just web-preview` | Preview production web build |
+| `just web-test` | Run web tests |
+| `just web-lint` | Lint web code |
+| `just web-format` | Format web code |
+| `just web-check` | Run formatter write + eslint fix |
+| `just web-storybook` | Run Storybook only |
+
+### 🗄️ Database Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `just db-migrate` | Run SQLx database migrations |
+
+### 🔧 Utility Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `just posting` | Open [Posting](https://github.com/darrenburns/posting) with project collection |
+
+## 🗂️ Project Structure
+
+```text
+.
+|- api/                  # Rust API service
+|- web/                  # React frontend and Storybook
+|- docker/               # Docker-related assets
+|- .github/workflows/    # CI workflows
+|- docker-compose.yaml   # Local PostgreSQL and service orchestration
+`- justfile              # Project task runner commands
 ```
 
-#### `just web-remove <package>`
+## 🧯 Troubleshooting
 
-Remove a frontend dependency.
+- Port already in use: stop existing processes on `3000`, `6006`, `7007`, or `5432`
+- Database connection errors: confirm `docker compose up -d postgres` is running and `DATABASE_URL` is correct in `api/.env`
+- Missing command errors: verify required tooling is installed (`just`, `pnpm`, `cargo-watch`, `sqlx-cli` if used)
 
-```sh
-just web-remove axios
-```
+## 🤝 Contributing
 
-#### `just web-build`
+1. Create a feature branch from `main`
+2. Keep changes focused and well-scoped
+3. Run relevant checks before opening a PR
+4. Open a PR with context, implementation notes, and testing details
 
-Build the frontend for production.
-
-```sh
-just web-build
-```
-
-#### `just web-preview`
-
-Preview the production build.
-
-```sh
-just web-preview
-```
-
-#### `just web-test`
-
-Run frontend tests.
-
-```sh
-just web-test
-```
-
-#### `just web-lint`
-
-Lint frontend code.
-
-```sh
-just web-lint
-```
-
-#### `just web-format`
-
-Format frontend code.
-
-```sh
-just web-format
-```
-
-#### `just web-check`
-
-Auto-format code and auto-fix lint issues.
-
-```sh
-just web-check
-```
-
-#### `just web-storybook`
-
-Run Storybook.
-
-```sh
-just web-storybook
-```
-
-### Database
-
-#### `just db-migrate`
-
-Run database migrations with SQLx.
-
-```sh
-just db-migrate
-```
-
-### Utilities
-
-#### `just posting`
-
-Open the [Posting](https://github.com/darrenburns/posting) API client with the project's request collection.
-
-```sh
-just posting
-```
+For UI and component documentation changes, include Storybook stories alongside code updates.

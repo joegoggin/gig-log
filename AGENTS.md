@@ -6,6 +6,12 @@ When asked to add documentation to React components, layouts, or pages, **always
 1. JSDoc comments on the component (as described below)
 2. A corresponding `.stories.tsx` file with visual examples
 
+Always perform a documentation consistency check when making changes that affect behavior, workflows, scripts, architecture, testing expectations, or project status:
+1. Compare the implementation and any newly added docs against `README.md`
+2. Update `README.md` if anything has become outdated or contradictory
+3. Ensure related docs (component docs, Storybook stories, Rustdoc comments, and route/payload docs) stay aligned with `README.md`
+4. Flag and resolve conflicts instead of leaving mismatched documentation
+
 ## Component Documentation
 
 All React components in `/web/src/components` and `/web/src/layouts` should follow these JSDoc documentation conventions.
