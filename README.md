@@ -25,6 +25,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 ## Table of Contents
 
 - [Overview](#overview)
+- [Active Development Status](#active-development-status)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Key Technical Decisions](#key-technical-decisions)
@@ -43,7 +44,6 @@ This repo highlights production-minded full-stack engineering across product, AP
   - [Utility Scripts](#utility-scripts)
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
-- [What I'd Build Next](#what-id-build-next)
 - [Contributing](#contributing)
 
 ## Overview
@@ -51,6 +51,22 @@ This repo highlights production-minded full-stack engineering across product, AP
 GigLog reduces admin overhead by combining job tracking, work logging, and payment tracking in one workflow. The project uses a Rust API (`api/`), a React frontend (`web/`), and PostgreSQL.
 
 Engineering focus areas: typed API contracts, clear module boundaries, deterministic tests, and maintainable local tooling.
+
+## Active Development Status
+
+GigLog is still in active development.
+
+### Completed
+
+- [x] User authentication flow (sign up, log in, session-based access)
+- [x] CI quality gates for lint, build, and tests
+- [x] Storybook and Rustdoc documentation workflows
+
+### In Progress / Planned
+
+- [ ] Company and job management
+- [ ] Work session tracking and time-based earnings
+- [ ] Payout tracking and payment history
 
 ## Tech Stack
 
@@ -224,14 +240,6 @@ All project scripts are defined in `justfile`.
 - Port already in use: stop existing processes on `3000`, `6006`, `7007`, or `5432`
 - Database connection errors: confirm `docker compose up -d postgres` is running and `DATABASE_URL` is correct in `api/.env`
 - Missing command errors: verify required tooling is installed (`just`, `pnpm`, `cargo-watch`, `sqlx-cli` if used)
-
-## What I'd Build Next
-
-- Add reporting dashboards for weekly/monthly earnings and client-level profitability
-- Add export workflows (CSV and tax-oriented summaries) for end-of-year bookkeeping
-- Add recurring job/session templates to speed up repeated admin actions
-- Add role-based collaboration for freelancers and assistants/bookkeepers
-- Expand observability with structured metrics and request tracing dashboards
 
 ## Contributing
 
