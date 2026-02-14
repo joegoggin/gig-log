@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_authenticated")({
     component: RouteComponent,
 });
 
-function RouteComponent() {
+export function RouteComponent() {
     return (
         <PrivateRoute>
             <MainLayout>

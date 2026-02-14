@@ -1,3 +1,4 @@
+import { expect, within } from "storybook/test";
 import {
     Outlet,
     RouterProvider,
@@ -110,6 +111,10 @@ export const Authenticated: Story = {
         isLoading: false,
         children: <div>Protected content</div>,
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Protected content")).toBeVisible();
+    },
 };
 
 export const Loading: Story = {
@@ -119,6 +124,10 @@ export const Loading: Story = {
         loadingLabel: "Checking session",
         children: <div>Protected content</div>,
     },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Checking session")).toBeVisible();
+    },
 };
 
 export const Redirecting: Story = {
@@ -126,5 +135,10 @@ export const Redirecting: Story = {
         isLoggedIn: false,
         isLoading: false,
         children: <div>Protected content</div>,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In")).toBeVisible();
+        await expect(canvas.queryByText("Protected content")).toBeNull();
     },
 };

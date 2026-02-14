@@ -141,18 +141,23 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
                         <h5>GigLog</h5>
                     </div>
                     <nav className={styles["main-layout__menu"]}>
-                        {navItems.map((item) => (
-                            <button
-                                key={item.path}
-                                type="button"
-                                aria-label={item.label}
-                                className={getNavItemClassName(item.path)}
-                                onClick={() => navigateTo(item.path)}
-                            >
-                                {item.icon}
-                                <p>{item.label}</p>
-                            </button>
-                        ))}
+                        {navItems.map((item) => {
+                            const isActive = isPathActive(item.path);
+
+                            return (
+                                <button
+                                    key={item.path}
+                                    type="button"
+                                    aria-label={item.label}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={getNavItemClassName(item.path)}
+                                    onClick={() => navigateTo(item.path)}
+                                >
+                                    {item.icon}
+                                    <p>{item.label}</p>
+                                </button>
+                            );
+                        })}
                     </nav>
                     <button
                         type="button"

@@ -55,7 +55,11 @@ export const Default: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(canvas.getByRole("button", { name: "Dashboard" })).toBeVisible();
+        const dashboardButton = canvas.getByRole("button", { name: "Dashboard" });
+        const jobsButton = canvas.getByRole("button", { name: "Jobs" });
+        await expect(dashboardButton).toBeVisible();
+        await expect(dashboardButton).toHaveAttribute("aria-current", "page");
+        await expect(jobsButton).not.toHaveAttribute("aria-current");
         await expect(canvas.getByRole("button", { name: "Log Out" })).toBeVisible();
     },
 };
