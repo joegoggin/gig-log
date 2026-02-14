@@ -1,4 +1,4 @@
-# GigLog
+# GigLog 🎸
 
 ![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
@@ -8,11 +8,11 @@ GigLog is a full-stack app for freelancers who need one place to track work, pay
 
 This repo highlights production-minded full-stack engineering across product, API design, testing, and developer experience.
 
-## What GigLog Helps You Do
+## What GigLog Helps You Do ✨
 
-- Manage companies and jobs in one place
-- Track work sessions and time-based earnings
-- Record payouts and payment history
+- Manage companies and jobs in one place 🏢
+- Track work sessions and time-based earnings ⏱️
+- Record payouts and payment history 💸
 
 ## At a Glance
 
@@ -68,7 +68,7 @@ GigLog is still in active development.
 - [ ] Work session tracking and time-based earnings
 - [ ] Payout tracking and payment history
 
-## Tech Stack
+## Tech Stack 🛠️
 
 - **Frontend** - [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Vite](https://vite.dev), [TanStack Router](https://tanstack.com/router/latest)
 - **Backend** - [Rust](https://www.rust-lang.org) with [Actix Web](https://actix.rs)
@@ -76,7 +76,7 @@ GigLog is still in active development.
 - **Styling** - [Sass](https://sass-lang.com) (SCSS modules + shared variables/mixins)
 - **Documentation and UI Testing** - [Storybook](https://storybook.js.org)
 
-## Architecture
+## Architecture 🧱
 
 ```mermaid
 flowchart LR
@@ -96,7 +96,7 @@ flowchart LR
 - **Task runner via `just`** - Standardizes local workflows and lowers setup friction
 - **Docker-backed local database** - Keeps development environments consistent without external DB setup
 
-## Demo Walkthrough
+## Demo Walkthrough 🎬
 
 Use this flow in a portfolio review:
 
@@ -110,7 +110,7 @@ Use this flow in a portfolio review:
 
 To showcase implementation quality, run `just web-test` and `cd api && cargo test` before or during the walkthrough.
 
-## Quick Start
+## Quick Start 🚀
 
 ### Prerequisites
 
@@ -157,13 +157,13 @@ just web
 - When unset, startup migrations and Docker auto-start are disabled by default
 - In `api/.env`, set `AUTO_APPLY_MIGRATIONS_ENABLED=false` and/or `DOCKER_COMPOSE_AUTO_START_ENABLED=false` for manual control
 
-## Local URLs
+## Local URLs 🌐
 
 - App: <http://localhost:3000>
 - Storybook: <http://localhost:6006>
 - API docs (Rustdoc): <http://localhost:7007>
 
-## Testing and Quality
+## Testing and Quality ✅
 
 CI runs lint, build, and test checks for API and web on each push via `.github/workflows/ci.yml`.
 
@@ -181,7 +181,7 @@ Quality goals in this repository:
 - Catch regressions early through linting and CI checks
 - Keep docs close to implementation for faster onboarding
 
-## Scripts Reference
+## Scripts Reference 📚
 
 All project scripts are defined in `justfile`.
 
@@ -223,7 +223,7 @@ All project scripts are defined in `justfile`.
 | --- | --- |
 | `just posting` | Open [Posting](https://github.com/darrenburns/posting) with project collection |
 
-## Project Structure
+## Project Structure 🗂️
 
 ```text
 .
@@ -235,13 +235,13 @@ All project scripts are defined in `justfile`.
 `- justfile              # Project task runner commands
 ```
 
-## Troubleshooting
+## Troubleshooting 🧯
 
 - Port already in use: stop existing processes on `3000`, `6006`, `7007`, or `5432`
 - Database connection errors: confirm `docker compose up -d postgres` is running and `DATABASE_URL` is correct in `api/.env`
 - Missing command errors: verify required tooling is installed (`just`, `pnpm`, `cargo-watch`, `sqlx-cli` if used)
 
-## Contributing
+## Contributing 🤝
 
 1. Create a feature branch from `main`
 2. Keep changes focused and well-scoped
