@@ -7,6 +7,7 @@ import CompanyIcon from "@/components/icons/CompanyIcon";
 import DeleteIcon from "@/components/icons/DeleteIcon";
 import EditIcon from "@/components/icons/EditIcon";
 import ErrorIcon from "@/components/icons/ErrorIcon";
+import GigLogLogoIcon from "@/components/icons/GigLogLogoIcon";
 import HamburgerIcon from "@/components/icons/HamburgerIcon";
 import HomeIcon from "@/components/icons/HomeIcon";
 import InfoIcon from "@/components/icons/InfoIcon";
@@ -26,6 +27,7 @@ const IconGallery = () => {
         { name: "DeleteIcon", component: DeleteIcon },
         { name: "EditIcon", component: EditIcon },
         { name: "ErrorIcon", component: ErrorIcon },
+        { name: "GigLogLogoIcon", component: GigLogLogoIcon },
         { name: "HamburgerIcon", component: HamburgerIcon },
         { name: "HomeIcon", component: HomeIcon },
         { name: "InfoIcon", component: InfoIcon },
@@ -146,6 +148,14 @@ export const Error: StoryObj<typeof ErrorIcon> = {
     render: () => (
         <IconWrapper>
             <ErrorIcon />
+        </IconWrapper>
+    ),
+};
+
+export const GigLogLogo: StoryObj<typeof GigLogLogoIcon> = {
+    render: () => (
+        <IconWrapper>
+            <GigLogLogoIcon />
         </IconWrapper>
     ),
 };

@@ -1,6 +1,11 @@
 .home-page {
-    h1 {
+    &__logo {
         margin-bottom: 40px;
+
+        svg {
+            width: clamp(200px, 36vw, 400px);
+            height: auto;
+        }
     }
 
     &__text {
