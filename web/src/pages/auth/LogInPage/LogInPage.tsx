@@ -60,7 +60,7 @@ const LogInPage = () => {
             return response.data;
         },
         onSuccess: async () => {
-            await refreshUser();
+            await refreshUser({ throwOnError: true });
             navigate({ to: "/dashboard" });
         },
         onError: setErrors,

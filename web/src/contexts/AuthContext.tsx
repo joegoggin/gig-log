@@ -1,4 +1,11 @@
-import {  createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import type {ReactNode} from "react";
 import api from "@/lib/axios";
 
@@ -12,11 +19,15 @@ type AuthUser = {
     updated_at: string;
 };
 
+type RefreshUserOptions = {
+    throwOnError?: boolean;
+};
+
 type AuthContextValue = {
     user: AuthUser | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    refreshUser: () => Promise<void>;
+    refreshUser: (options?: RefreshUserOptions) => Promise<void>;
     setUser: (user: AuthUser | null) => void;
 };
 
@@ -33,22 +44,45 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const inFlightRefreshRef = useRef<Promise<void> | null>(null);
 
-    const refreshUser = useCallback(async () => {
-        setIsLoading(true);
-
-        try {
-            const response = await api.get<CurrentUserResponse>("/auth/me");
-            setUser(response.data.user);
-        } catch {
-            setUser(null);
-        } finally {
-            setIsLoading(false);
+    const refreshUser = useCallback(async (options?: RefreshUserOptions) => {
+        if (inFlightRefreshRef.current) {
+            return inFlightRefreshRef.current;
         }
+
+        const refreshPromise = (async () => {
+            try {
+                const response = await api.get<CurrentUserResponse>("/auth/me");
+                setUser(response.data.user);
+            } catch (error) {
+                setUser(null);
+
+                if (options?.throwOnError) {
+                    throw error;
+                }
+            } finally {
+                inFlightRefreshRef.current = null;
+            }
+        })();
+
+        inFlightRefreshRef.current = refreshPromise;
+
+        return refreshPromise;
     }, []);
 
     useEffect(() => {
-        void refreshUser();
+        const checkAuthOnAppStart = async () => {
+            setIsLoading(true);
+
+            try {
+                await refreshUser();
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        void checkAuthOnAppStart();
     }, [refreshUser]);
 
     return (
