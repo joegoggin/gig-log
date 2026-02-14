@@ -1,18 +1,28 @@
 type GigLogLogoIconProps = {
     /** Whether to render the GigLog wordmark text next to the logo mark. */
     showWordmark?: boolean;
+    /** Whether to render the subtitle under the GigLog wordmark. */
+    showSubtitle?: boolean;
 };
 
 /**
  * The GigLog brand logo with the mark and optional company wordmark.
  */
-const GigLogLogoIcon: React.FC<GigLogLogoIconProps> = ({ showWordmark = true }) => {
+const GigLogLogoIcon: React.FC<GigLogLogoIconProps> = ({
+    showWordmark = true,
+    showSubtitle = true,
+}) => {
+    const showSubtitleText = showWordmark && showSubtitle;
+
+    const wordmarkWidth = 140;
+    const textX = 48;
+
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox={showWordmark ? "0 0 140 48" : "0 0 48 48"}
-            width={showWordmark ? "140" : "48"}
-            height="48"
+            viewBox={showWordmark ? (showSubtitleText ? `0 0 ${wordmarkWidth} 56` : `0 0 ${wordmarkWidth} 48`) : "0 0 48 48"}
+            width={showWordmark ? `${wordmarkWidth}` : "48"}
+            height={showWordmark ? (showSubtitleText ? "56" : "48") : "48"}
             fill="none"
         >
             <g className="giglog-logo__mark" transform="translate(2 2) scale(1.8)">
@@ -63,18 +73,33 @@ const GigLogLogoIcon: React.FC<GigLogLogoIconProps> = ({ showWordmark = true }) 
                 />
             </g>
             {showWordmark ? (
-                <text
-                    className="giglog-logo__wordmark"
-                    x="52"
-                    y="31"
-                    fill="currentColor"
-                    fontFamily="Poppins, sans-serif"
-                    fontSize="22"
-                    fontWeight="600"
-                    letterSpacing="0.4"
-                >
-                    GigLog
-                </text>
+                <>
+                    <text
+                        className="giglog-logo__wordmark"
+                        x={textX}
+                        y={showSubtitleText ? "30" : "31"}
+                        fill="currentColor"
+                        fontFamily="Poppins, sans-serif"
+                        fontSize="24"
+                        fontWeight="600"
+                        letterSpacing="0.15"
+                    >
+                        GigLog
+                    </text>
+                    {showSubtitleText ? (
+                        <text
+                            x={textX}
+                            y="41.5"
+                            fill="currentColor"
+                            fontFamily="Poppins, sans-serif"
+                            fontSize="5.3"
+                            fontWeight="500"
+                            letterSpacing="0"
+                        >
+                            Track Your Gigs. Fuel Your Freedom.
+                        </text>
+                    ) : null}
+                </>
             ) : null}
         </svg>
     );

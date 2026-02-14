@@ -149,7 +149,7 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
                                 <GigLogLogoIcon showWordmark={false} />
                             </span>
                             <span className={styles["main-layout__brand-logo-full"]}>
-                                <GigLogLogoIcon />
+                                <GigLogLogoIcon showSubtitle={false} />
                             </span>
                         </button>
                     </div>
