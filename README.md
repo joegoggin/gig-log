@@ -4,9 +4,11 @@
 
 ![GigLog logo](web/public/gig-log-logo.png)
 
-GigLog is a full-stack app for freelancers who need one place to track work, payments, and clients.
+GigLog starts from a reality most freelancers know firsthand: the work is rewarding, but the admin can be exhausting. Between multiple clients, overlapping projects, different pay structures, and day-to-day life, it becomes easy to lose time to manual tracking. Hours live in one place, payouts in another, and job details end up scattered across notes or spreadsheets. That constant context switching creates stress and makes it harder to feel fully in control of your business.
 
-This repo highlights production-minded full-stack engineering across product, API design, testing, and developer experience.
+GigLog is built to reduce that friction. It brings companies, jobs, work sessions, and payment history into one clear workflow so freelancers can stay organized without piecing together disconnected tools. The goal is simple: less mental overhead, more confidence in your records, and more time focused on meaningful billable work.
+
+This repository also serves as a portfolio of production-minded full-stack engineering. It demonstrates a typed React frontend with a Rust API, clear module boundaries, deterministic testing, CI quality gates, and documentation workflows with Storybook and Rustdoc, all designed to reflect maintainable real-world development practices.
 
 ## ✨ What GigLog Helps You Do
 
