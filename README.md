@@ -15,7 +15,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 - Record payouts and payment history
 - Keep development and product documentation close to the codebase with Rustdoc and Storybook
 
-## Recruiter Snapshot
+## At a Glance
 
 - **Problem solved** - Reduces admin overhead for freelancers managing multiple clients and pay models
 - **End-to-end ownership** - Delivers both product UI (`web/`) and backend domain/API implementation (`api/`)
@@ -28,6 +28,7 @@ This repo highlights production-minded full-stack engineering across product, AP
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
+- [At a Glance](#at-a-glance)
 - [Key Technical Decisions](#key-technical-decisions)
 - [Demo Walkthrough](#demo-walkthrough)
 - [Quick Start](#quick-start)
