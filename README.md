@@ -1,4 +1,4 @@
-# 💼 GigLog
+# GigLog - Track Your Gigs. Fuel Your Freedom. 
 
 ![CI](https://github.com/joegoggin/gig-log/actions/workflows/ci.yml/badge.svg)
 
