@@ -97,7 +97,7 @@ Documentation should be placed on the component function (not at the file level)
 Pages should include:
 1. A description of the page
 2. A `Route:` section with the path
-3. A `## Props` section listing each prop with a description
+3. A `## Props` section listing each prop with a description (or `None` if the page has no props)
 4. A `## Related Components` section listing components used on the page
 
 ```tsx
@@ -512,7 +512,7 @@ All stories use CSF3 format with types from `@storybook/react-vite`:
 
 ```tsx
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import Button, { ButtonVariant } from "./Button";
+import Button, { ButtonVariant } from "@/components/core/Button/Button";
 
 const meta: Meta<typeof Button> = {
     title: "Core/Button",
@@ -739,3 +739,63 @@ export default IconNameIcon;
 ### Theme Support
 
 Icons use `currentColor` to automatically adapt to light/dark themes. To ensure icons inherit the correct color, wrap them in an element with `color: var(--text-color)` or ensure a parent element sets this property.
+
+## GitHub
+
+### Project
+
+All issues for this project should be included in the [GigLog Project](https://github.com/users/joegoggin/projects/1)
+This project consists of three different fields:
+
+#### Labels
+
+- Feature
+- Bug
+- DevOps
+- Documentation
+- Refactor
+- Testing
+- Update
+
+#### Status
+
+- Todo
+- In Progress
+- Done
+
+#### Priority
+
+- Low 
+- Medium
+- High
+- Urgent
+
+### Issues
+
+#### Creating Issues
+
+When creating issues on GitHub for this project you should use the following
+conventions:
+
+- All new issues should be given a status of `Todo`
+- If a priority isn't provided set the priority to `Medium` by default 
+- Create a main issue with a summary of the full task that needs to be completed
+- Break up the full task into small tasks and add those as sub-issues
+- Each sub task should have a summary of the small task and match the priority
+  of the main issue
+- The order of the sub-task should be in the order the tasks should be
+  implemented
+
+#### Implementing Issues
+
+When asked to implement an issue you should do the following:
+
+- Read the main issue for context and update its status to `In Progress`
+- Walk through each sub-issue and do the following
+    - Read the sub-issue for context
+    - Update the status of the sub-issue to `In Progress`
+    - Implement the task    
+    - Describe what you did and provide steps to test  
+    - Wait for me to tell you to move to the next task
+    - Once you move to the next task set the status of the sub-issue to `Done`
+- Once you are done with all the sub-tasks prompt me for a code review
