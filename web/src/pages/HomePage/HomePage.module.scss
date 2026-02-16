@@ -21,30 +21,120 @@
 
     &__ambient {
         position: absolute !important;
-        inset: -15% -10% auto;
-        display: flex;
-        justify-content: space-between;
+        inset: 0;
         pointer-events: none;
         z-index: 0 !important;
     }
 
     &__orb {
-        width: clamp(180px, 28vw, 360px);
+        position: absolute;
+        width: var(--orb-size, clamp(180px, 28vw, 360px));
         aspect-ratio: 1;
         border-radius: 50%;
         filter: blur(12px);
 
         &:nth-child(1) {
+            top: 8%;
+            left: 4%;
             background: radial-gradient(circle at 35% 35%, rgba(colors.$green-100, 0.65), rgba(colors.$green-100, 0));
+            animation: home-orb-drift-a 28s ease-in-out infinite;
         }
 
         &:nth-child(2) {
+            top: 20%;
+            right: 10%;
             background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-100, 0.6), rgba(colors.$cyan-100, 0));
-            transform: translateY(16px);
+            animation: home-orb-drift-b 32s ease-in-out infinite;
+            animation-delay: -6s;
         }
 
         &:nth-child(3) {
+            bottom: 8%;
+            left: 36%;
             background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-100, 0.58), rgba(colors.$yellow-100, 0));
+            animation: home-orb-drift-c 30s ease-in-out infinite;
+            animation-delay: -12s;
+        }
+
+        &:nth-child(4) {
+            top: 6%;
+            right: 30%;
+            --orb-size: clamp(140px, 20vw, 260px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-100, 0.56), rgba(colors.$blue-100, 0));
+            animation: home-orb-drift-c 34s ease-in-out infinite;
+            animation-delay: -18s;
+        }
+
+        &:nth-child(5) {
+            bottom: 18%;
+            left: 8%;
+            --orb-size: clamp(130px, 18vw, 240px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-100, 0.54), rgba(colors.$magenta-100, 0));
+            animation: home-orb-drift-b 36s ease-in-out infinite;
+            animation-delay: -9s;
+        }
+
+        &:nth-child(6) {
+            bottom: 5%;
+            right: 6%;
+            --orb-size: clamp(120px, 16vw, 220px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-100, 0.52), rgba(colors.$red-100, 0));
+            animation: home-orb-drift-a 33s ease-in-out infinite;
+            animation-delay: -15s;
+        }
+
+        &:nth-child(7) {
+            top: 38%;
+            left: 2%;
+            --orb-size: clamp(110px, 15vw, 210px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-80, 0.48), rgba(colors.$green-80, 0));
+            animation: home-orb-drift-b 29s ease-in-out infinite;
+            animation-delay: -20s;
+        }
+
+        &:nth-child(8) {
+            top: 12%;
+            right: 2%;
+            --orb-size: clamp(105px, 14vw, 200px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-80, 0.46), rgba(colors.$cyan-80, 0));
+            animation: home-orb-drift-c 31s ease-in-out infinite;
+            animation-delay: -24s;
+        }
+
+        &:nth-child(9) {
+            bottom: 34%;
+            left: 26%;
+            --orb-size: clamp(115px, 16vw, 215px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-80, 0.46), rgba(colors.$yellow-80, 0));
+            animation: home-orb-drift-a 35s ease-in-out infinite;
+            animation-delay: -28s;
+        }
+
+        &:nth-child(10) {
+            top: 46%;
+            right: 28%;
+            --orb-size: clamp(100px, 13vw, 190px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-80, 0.44), rgba(colors.$blue-80, 0));
+            animation: home-orb-drift-b 30s ease-in-out infinite;
+            animation-delay: -11s;
+        }
+
+        &:nth-child(11) {
+            bottom: 2%;
+            left: 52%;
+            --orb-size: clamp(95px, 12vw, 180px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-80, 0.44), rgba(colors.$magenta-80, 0));
+            animation: home-orb-drift-c 37s ease-in-out infinite;
+            animation-delay: -17s;
+        }
+
+        &:nth-child(12) {
+            top: 58%;
+            right: 12%;
+            --orb-size: clamp(90px, 11vw, 170px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-80, 0.42), rgba(colors.$red-80, 0));
+            animation: home-orb-drift-a 34s ease-in-out infinite;
+            animation-delay: -26s;
         }
     }
 
@@ -257,5 +347,68 @@
         &__panel-points li {
             padding: 12px;
         }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__orb {
+            animation: none;
+        }
+    }
+}
+
+@keyframes home-orb-drift-a {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(38vw, 10vh, 0) scale(1.06);
+    }
+
+    50% {
+        transform: translate3d(16vw, 48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-8vw, 28vh, 0) scale(1.04);
+    }
+}
+
+@keyframes home-orb-drift-b {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(-34vw, 16vh, 0) scale(1.05);
+    }
+
+    50% {
+        transform: translate3d(-10vw, 54vh, 0) scale(0.94);
+    }
+
+    75% {
+        transform: translate3d(6vw, 26vh, 0) scale(1.03);
+    }
+}
+
+@keyframes home-orb-drift-c {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(24vw, -30vh, 0) scale(1.04);
+    }
+
+    50% {
+        transform: translate3d(-20vw, -48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-32vw, -8vh, 0) scale(1.05);
     }
 }

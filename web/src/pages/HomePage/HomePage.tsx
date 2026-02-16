@@ -68,6 +68,15 @@ function HomePage({ isLoggedIn }: HomePageProps) {
                 <span className={styles["home-page__orb"]} />
                 <span className={styles["home-page__orb"]} />
                 <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
             </div>
 
             <main className={styles["home-page__content"]}>
