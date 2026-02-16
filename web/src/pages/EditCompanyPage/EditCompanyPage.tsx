@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import styles from "./EditCompanyPage.module.scss";
 import type { Company } from "@/types/models/Company";
@@ -46,6 +47,7 @@ type CompanyResponse = {
  */
 function EditCompanyPage({ companyId }: EditCompanyPageProps) {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { addNotification } = useNotification();
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const { data, errors, setData, setErrors } = useForm<EditCompanyFormData>({
@@ -87,10 +89,11 @@ function EditCompanyPage({ companyId }: EditCompanyPageProps) {
                     : null,
             };
 
-            const response = await api.put(`/companies/${companyId}`, payload);
+            const response = await api.put<CompanyResponse>(`/companies/${companyId}`, payload);
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (response) => {
+            queryClient.setQueryData(["company", companyId], response.company);
             addNotification({
                 type: NotificationType.SUCCESS,
                 title: "Company Updated",

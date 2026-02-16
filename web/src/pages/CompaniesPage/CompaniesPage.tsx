@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import styles from "./CompaniesPage.module.scss";
 import type { Company } from "@/types/models/Company";
-import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import AddIcon from "@/components/icons/AddIcon";
+import DeleteIcon from "@/components/icons/DeleteIcon";
+import EditIcon from "@/components/icons/EditIcon";
+import InfoIcon from "@/components/icons/InfoIcon";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import { useNotification } from "@/contexts/NotificationContext";
 import api from "@/lib/axios";
@@ -31,6 +35,7 @@ type CompaniesPageProps = {
  * - `Button` - Navigates to create, detail, and edit routes.
  */
 function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
+    const navigate = useNavigate();
     const { addNotification } = useNotification();
     const hasInitialCompanies = initialCompanies !== undefined;
     const [companies, setCompanies] = useState<Array<Company>>(initialCompanies || []);
@@ -92,6 +97,10 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
         }
     };
 
+    const navigateTo = (to: string) => {
+        navigate({ to });
+    };
+
     return (
         <section className={styles["companies-page"]}>
             <header className={styles["companies-page__header"]}>
@@ -99,7 +108,16 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                     <h1>Companies</h1>
                     <p>Manage the clients you track work and payments for.</p>
                 </div>
-                <Button href="/companies/create">Create Company</Button>
+                <button
+                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
+                    onClick={() => {
+                        navigateTo("/companies/create");
+                    }}
+                    type="button"
+                >
+                    <AddIcon />
+                    <p>Add Company</p>
+                </button>
             </header>
 
             {isLoading && <p>Loading companies...</p>}
@@ -117,7 +135,7 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                             key={company.id}
                             className={styles["companies-page__company-card"]}
                         >
-                            <h2>{company.name}</h2>
+                            <h3>{company.name}</h3>
                             <p>
                                 Tax withholdings:{" "}
                                 {company.requires_tax_withholdings
@@ -125,36 +143,60 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                                     : "Disabled"}
                             </p>
                             <div className={styles["companies-page__actions"]}>
-                                <Button
-                                    href="/jobs"
-                                    variant={ButtonVariant.SECONDARY}
+                                <button
+                                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
+                                    onClick={() => {
+                                        navigateTo("/jobs");
+                                    }}
+                                    type="button"
                                 >
-                                    Add Job
-                                </Button>
-                                <Button
-                                    href="/payments"
-                                    variant={ButtonVariant.SECONDARY}
+                                    <AddIcon />
+                                    <p>Add Job</p>
+                                </button>
+                                <button
+                                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
+                                    onClick={() => {
+                                        navigateTo("/payments");
+                                    }}
+                                    type="button"
                                 >
-                                    Add Payment
-                                </Button>
-                                <Button href={`/companies/${company.id}`}>View Company</Button>
-                                <Button
-                                    href={`/companies/${company.id}/edit`}
-                                    variant={ButtonVariant.SECONDARY}
+                                    <AddIcon />
+                                    <p>Add Payment</p>
+                                </button>
+                                <button
+                                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__view-action"]}`}
+                                    onClick={() => {
+                                        navigateTo(`/companies/${company.id}`);
+                                    }}
+                                    type="button"
                                 >
-                                    Edit Company
-                                </Button>
-                                <Button
-                                    className={styles["companies-page__delete-action"]}
+                                    <InfoIcon />
+                                    <p>View Company</p>
+                                </button>
+                                <button
+                                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__edit-action"]}`}
+                                    onClick={() => {
+                                        navigateTo(`/companies/${company.id}/edit`);
+                                    }}
+                                    type="button"
+                                >
+                                    <EditIcon />
+                                    <p>Edit Company</p>
+                                </button>
+                                <button
+                                    className={`${styles["companies-page__icon-button"]} ${styles["companies-page__delete-action"]}`}
                                     onClick={() => {
                                         void handleDeleteCompany(company);
                                     }}
-                                    variant={ButtonVariant.SECONDARY}
+                                    type="button"
                                 >
-                                    {deletingCompanyId === company.id
-                                        ? "Deleting..."
-                                        : "Delete Company"}
-                                </Button>
+                                    <DeleteIcon />
+                                    <p>
+                                        {deletingCompanyId === company.id
+                                            ? "Deleting Company..."
+                                            : "Delete Company"}
+                                    </p>
+                                </button>
                             </div>
                         </article>
                     ))}
