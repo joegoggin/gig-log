@@ -6,7 +6,7 @@
     gap: 8px;
     background: transparent;
     border: none;
-    color: colors.$blue-100;
+    color: var(--text-color, #1a1b26);
     font-family: Roboto, sans-serif;
     font-size: 14px;
     font-weight: 500;
@@ -40,7 +40,7 @@
         transition: transform ease-in-out 0.2s;
 
         svg {
-            fill: colors.$blue-100;
+            fill: currentColor;
         }
     }
 
