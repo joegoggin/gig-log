@@ -35,6 +35,7 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
     const hasInitialCompanies = initialCompanies !== undefined;
     const [companies, setCompanies] = useState<Array<Company>>(initialCompanies || []);
     const [isLoading, setIsLoading] = useState<boolean>(!hasInitialCompanies);
+    const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
 
     useEffect(() => {
         if (hasInitialCompanies) {
@@ -58,6 +59,38 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
 
         fetchCompanies();
     }, [addNotification, hasInitialCompanies]);
+
+    const handleDeleteCompany = async (company: Company) => {
+        const shouldDelete = window.confirm(
+            `Delete "${company.name}"? This also removes related jobs and payments.`,
+        );
+
+        if (!shouldDelete || deletingCompanyId) {
+            return;
+        }
+
+        setDeletingCompanyId(company.id);
+
+        try {
+            await api.delete(`/companies/${company.id}`);
+            setCompanies((currentCompanies) =>
+                currentCompanies.filter((currentCompany) => currentCompany.id !== company.id),
+            );
+            addNotification({
+                type: NotificationType.SUCCESS,
+                title: "Company Deleted",
+                message: `${company.name} was deleted successfully.`,
+            });
+        } catch {
+            addNotification({
+                type: NotificationType.ERROR,
+                title: "Delete Failed",
+                message: "Unable to delete this company right now.",
+            });
+        } finally {
+            setDeletingCompanyId(null);
+        }
+    };
 
     return (
         <section className={styles["companies-page"]}>
@@ -92,12 +125,35 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                                     : "Disabled"}
                             </p>
                             <div className={styles["companies-page__actions"]}>
+                                <Button
+                                    href="/jobs"
+                                    variant={ButtonVariant.SECONDARY}
+                                >
+                                    Add Job
+                                </Button>
+                                <Button
+                                    href="/payments"
+                                    variant={ButtonVariant.SECONDARY}
+                                >
+                                    Add Payment
+                                </Button>
                                 <Button href={`/companies/${company.id}`}>View Company</Button>
                                 <Button
                                     href={`/companies/${company.id}/edit`}
                                     variant={ButtonVariant.SECONDARY}
                                 >
                                     Edit Company
+                                </Button>
+                                <Button
+                                    className={styles["companies-page__delete-action"]}
+                                    onClick={() => {
+                                        void handleDeleteCompany(company);
+                                    }}
+                                    variant={ButtonVariant.SECONDARY}
+                                >
+                                    {deletingCompanyId === company.id
+                                        ? "Deleting..."
+                                        : "Delete Company"}
                                 </Button>
                             </div>
                         </article>
