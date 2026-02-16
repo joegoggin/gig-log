@@ -7,7 +7,6 @@ import type {
     CompanyJob,
     CompanyPayment,
 } from "@/types/models/Company";
-import AddIcon from "@/components/icons/AddIcon";
 import DeleteIcon from "@/components/icons/DeleteIcon";
 import EditIcon from "@/components/icons/EditIcon";
 import InfoIcon from "@/components/icons/InfoIcon";
@@ -37,6 +36,7 @@ type CompanyPageProps = {
  *
  * ## Related Components
  *
+ * - `BackButton` - Navigates back to the companies list.
  * - `Button` - Handles list pagination actions.
  */
 function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {

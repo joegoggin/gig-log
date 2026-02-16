@@ -32,7 +32,8 @@ type CreateCompanyFormData = {
  * - `Form` - Handles create-company submission.
  * - `TextInput` - Captures company name and optional tax rate.
  * - `CheckBox` - Toggles tax-withholding behavior.
- * - `Button` - Submits the form and navigates back.
+ * - `BackButton` - Navigates back to the companies list.
+ * - `Button` - Submits the create-company form.
  */
 function CreateCompanyPage() {
     const navigate = useNavigate();

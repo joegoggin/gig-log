@@ -44,7 +44,8 @@ type CompanyResponse = {
  * - `Form` - Handles update submission lifecycle.
  * - `TextInput` - Captures company name and optional tax rate.
  * - `CheckBox` - Toggles tax-withholding behavior.
- * - `Button` - Submits the update and navigates back.
+ * - `BackButton` - Navigates back to the company detail page.
+ * - `Button` - Submits company updates.
  */
 function EditCompanyPage({ companyId }: EditCompanyPageProps) {
     const navigate = useNavigate();
