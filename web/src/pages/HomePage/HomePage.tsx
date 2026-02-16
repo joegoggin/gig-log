@@ -1,5 +1,5 @@
 import styles from "./HomePage.module.scss";
-import FullscreenCenteredLayout from "@/layouts/FullscreenCenteredLayout/FullscreenCenteredLayout";
+import RootLayout from "@/layouts/RootLayout/RootLayout";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 import GigLogLogoIcon from "@/components/icons/GigLogLogoIcon";
 
@@ -25,43 +25,135 @@ type HomePageProps = {
  * ## Related Components
  *
  * - `Button` - Used for navigation actions
- * - `FullscreenCenteredLayout` - Page layout wrapper
+ * - `RootLayout` - Global page layout wrapper
  * - `GigLogLogoIcon` - Displays the GigLog brand mark
  */
 function HomePage({ isLoggedIn }: HomePageProps) {
+    const featureHighlights = [
+        {
+            title: "One source of truth for every client",
+            description:
+                "Keep clients, jobs, sessions, and payouts in one dashboard so your records stay organized.",
+        },
+        {
+            title: "Built for freelance cash flow",
+            description:
+                "Track hourly work and fixed payouts side-by-side so billing details are always clear.",
+        },
+        {
+            title: "Know where your week went",
+            description:
+                "See your active gigs at a glance and quickly spot what needs attention next.",
+        },
+    ];
+
+    const workflowSteps = [
+        {
+            title: "Create your companies",
+            description: "Set up your clients once and reuse them for every new job.",
+        },
+        {
+            title: "Log sessions and payouts",
+            description: "Capture your work as it happens without juggling multiple tools.",
+        },
+        {
+            title: "Review your dashboard",
+            description: "Get a clear snapshot of your freelance business before invoices and tax time.",
+        },
+    ];
+
     return (
-        <FullscreenCenteredLayout className={styles["home-page"]}>
-            <h1 className={styles["home-page__logo"]} aria-label="GigLog">
-                <GigLogLogoIcon />
-            </h1>
-            <div className={styles["home-page__text"]}>
-                <p>
-                    Freelancing opens a whole new world of opportunities giving
-                    you the freedom to work on your own terms. This freedom
-                    comes at a cost though. As a freelancer you are expected to
-                    keep track of your own hours, payments, taxes, and expenses.
-                    This can be hard to keep track of especially when you are
-                    working multiple different gigs as many freelancers do. Our
-                    goal at GigLog is to create a robust platform that has
-                    everything you need to keep track of in one place.
-                </p>
+        <RootLayout className={styles["home-page"]}>
+            <div className={styles["home-page__ambient"]} aria-hidden="true">
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
+                <span className={styles["home-page__orb"]} />
             </div>
-            <div className={styles["home-page__buttons"]}>
-                {isLoggedIn ? (
-                    <Button href="/dashboard">View Dashboard</Button>
-                ) : (
-                    <>
-                        <Button href="/auth/sign-up">Sign Up</Button>
-                        <Button
-                            href="/auth/log-in"
-                            variant={ButtonVariant.SECONDARY}
+
+            <main className={styles["home-page__content"]}>
+                <section className={styles["home-page__hero"]}>
+                    <div className={styles["home-page__hero-copy"]}>
+                        <p className={styles["home-page__eyebrow"]}>The freelancer command center</p>
+                        <div
+                            className={styles["home-page__logo"]}
+                            aria-label="GigLog"
+                            role="img"
                         >
-                            Log In
-                        </Button>
-                    </>
-                )}
-            </div>
-        </FullscreenCenteredLayout>
+                            <GigLogLogoIcon />
+                        </div>
+                        <h1>Run every gig with less admin and more clarity.</h1>
+                        <p className={styles["home-page__lead"]}>
+                            GigLog helps freelancers stay on top of hours, payouts, and client work without
+                            maintaining scattered notes and spreadsheets.
+                        </p>
+                        <div className={styles["home-page__buttons"]}>
+                            {isLoggedIn ? (
+                                <Button href="/dashboard">View Dashboard</Button>
+                            ) : (
+                                <>
+                                    <Button href="/auth/sign-up">Sign Up</Button>
+                                    <Button
+                                        href="/auth/log-in"
+                                        variant={ButtonVariant.SECONDARY}
+                                    >
+                                        Log In
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <aside className={styles["home-page__hero-panel"]}>
+                        <p className={styles["home-page__panel-label"]}>Workflow Preview</p>
+                        <h2>Everything your freelance business needs in one place.</h2>
+                        <ul className={styles["home-page__panel-points"]}>
+                            <li>
+                                <h3>Client records</h3>
+                                <p>Keep company contacts and job details connected from day one.</p>
+                            </li>
+                            <li>
+                                <h3>Work logs</h3>
+                                <p>Capture sessions and payouts as you go so billing stays accurate.</p>
+                            </li>
+                            <li>
+                                <h3>Tax-ready history</h3>
+                                <p>Review everything by client or date when it is time to file.</p>
+                            </li>
+                        </ul>
+                    </aside>
+                </section>
+
+                <section className={styles["home-page__section"]}>
+                    <h2>Why freelancers choose GigLog</h2>
+                    <div className={styles["home-page__feature-grid"]}>
+                        {featureHighlights.map((feature) => (
+                            <article
+                                key={feature.title}
+                                className={styles["home-page__feature-card"]}
+                            >
+                                <h3>{feature.title}</h3>
+                                <p>{feature.description}</p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+
+                <section className={styles["home-page__section"]}>
+                    <h2>Simple workflow from first client to payday</h2>
+                    <ol className={styles["home-page__steps"]}>
+                        {workflowSteps.map((step, index) => (
+                            <li key={step.title}>
+                                <span>{index + 1}</span>
+                                <div>
+                                    <h3>{step.title}</h3>
+                                    <p>{step.description}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+            </main>
+        </RootLayout>
     );
 }
 
