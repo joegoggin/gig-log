@@ -26,6 +26,23 @@ type PutCall = {
     data: unknown;
 };
 
+type StoryLoadedContext = {
+    restoreGet: () => void;
+};
+
+const createCompanyDetailResponse = () =>
+    createMockApiResponse({
+        company: {
+            id: "123",
+            user_id: "u1",
+            name: "Acme Studio",
+            requires_tax_withholdings: false,
+            tax_withholding_rate: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+    });
+
 const meta: Meta<typeof EditCompanyPage> = {
     title: "Pages/EditCompanyPage",
     component: EditCompanyPage,
@@ -53,6 +70,17 @@ export default meta;
 type Story = StoryObj<typeof EditCompanyPage>;
 
 export const PrefillsAndSubmitsUpdate: Story = {
+    loaders: [
+        async () => ({
+            restoreGet: mockApiGetHandler(async (url) => {
+                if (url === "/companies/123") {
+                    return createCompanyDetailResponse();
+                }
+
+                return createMockApiResponse({});
+            }),
+        }),
+    ],
     parameters: {
         storyTest: {
             router: {
@@ -68,25 +96,9 @@ export const PrefillsAndSubmitsUpdate: Story = {
             },
         },
     } satisfies StoryTestParameters,
-    play: async ({ canvasElement }) => {
+    play: async ({ canvasElement, loaded }) => {
         const putCalls: Array<PutCall> = [];
-        const restoreGet = mockApiGetHandler(async (url) => {
-            if (url === "/companies/123") {
-                return createMockApiResponse({
-                    company: {
-                        id: "123",
-                        user_id: "u1",
-                        name: "Acme Studio",
-                        requires_tax_withholdings: false,
-                        tax_withholding_rate: null,
-                        created_at: "2026-01-01T00:00:00Z",
-                        updated_at: "2026-01-01T00:00:00Z",
-                    },
-                });
-            }
-
-            return createMockApiResponse({});
-        });
+        const { restoreGet } = loaded as StoryLoadedContext;
         const restorePut = mockApiPutHandler(async (url, data) => {
             putCalls.push({ url, data });
             return createMockApiResponse({
@@ -137,20 +149,13 @@ export const PrefillsAndSubmitsUpdate: Story = {
 };
 
 export const ShowsValidationErrorsFromApi: Story = {
-    play: async ({ canvasElement }) => {
-        const restoreGet = mockApiGetHandler(async () =>
-            createMockApiResponse({
-                company: {
-                    id: "123",
-                    user_id: "u1",
-                    name: "Acme Studio",
-                    requires_tax_withholdings: false,
-                    tax_withholding_rate: null,
-                    created_at: "2026-01-01T00:00:00Z",
-                    updated_at: "2026-01-01T00:00:00Z",
-                },
-            }),
-        );
+    loaders: [
+        async () => ({
+            restoreGet: mockApiGetHandler(async () => createCompanyDetailResponse()),
+        }),
+    ],
+    play: async ({ canvasElement, loaded }) => {
+        const { restoreGet } = loaded as StoryLoadedContext;
         const restorePut = mockApiPutHandler(async () => {
             throw createValidationAxiosError([
                 { field: "name", message: "Company name is required" },
