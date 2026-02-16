@@ -1,0 +1,40 @@
+.companies-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    &__empty {
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+
+    &__company-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}

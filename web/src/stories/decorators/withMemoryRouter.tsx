@@ -25,6 +25,9 @@ type RouteStubDefinition = {
 const routeStubs: Array<RouteStubDefinition> = [
     { path: "/dashboard", label: "Dashboard Route" },
     { path: "/companies", label: "Companies Route" },
+    { path: "/companies/create", label: "Create Company Route" },
+    { path: "/companies/123", label: "Company Route" },
+    { path: "/companies/123/edit", label: "Edit Company Route" },
     { path: "/jobs", label: "Jobs Route" },
     { path: "/payments", label: "Payments Route" },
     { path: "/settings", label: "Settings Route" },

@@ -1,0 +1,16 @@
+.edit-company-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    form {
+        max-width: 520px;
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+}

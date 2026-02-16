@@ -63,12 +63,13 @@ GigLog is still in active development.
 ### ✅ Completed
 
 - [x] User authentication flow (sign up, log in, session-based access)
+- [x] Company management flow (list, view, create, and edit companies)
 - [x] CI quality gates for lint, build, and tests
 - [x] Storybook and Rustdoc documentation workflows
 
 ### 🛣️ In Progress / Planned
 
-- [ ] Company and job management
+- [ ] Job management
 - [ ] Work session tracking and time-based earnings
 - [ ] Payout tracking and payment history
 
@@ -108,7 +109,7 @@ Use this flow in a portfolio review:
 2. Open the app at <http://localhost:3000>
 3. Sign up or log in
 4. Complete the auth flow (sign up, email confirmation, and log in)
-5. Navigate through dashboard and placeholder feature areas (`/companies`, `/jobs`, `/payments`) to preview planned workflow
+5. Navigate through dashboard and company management routes (`/companies`, `/companies/create`, `/companies/:id`) and preview remaining placeholders (`/jobs`, `/payments`)
 6. Open Storybook at <http://localhost:6006> for documented UI states
 7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
 

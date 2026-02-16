@@ -87,6 +87,24 @@ export function mockApiGet(implementation: typeof api.get): () => void {
     };
 }
 
+export function mockApiPut(implementation: typeof api.put): () => void {
+    const originalPut = api.put;
+    api.put = implementation;
+
+    return () => {
+        api.put = originalPut;
+    };
+}
+
+export function mockApiDelete(implementation: typeof api.delete): () => void {
+    const originalDelete = api.delete;
+    api.delete = implementation;
+
+    return () => {
+        api.delete = originalDelete;
+    };
+}
+
 export function mockApiPostHandler(
     handler: (
         url: string,
@@ -105,4 +123,21 @@ export function mockApiGetHandler(
     ) => Promise<AxiosResponse<unknown>>,
 ): () => void {
     return mockApiGet(((url, config) => handler(url, config)) as typeof api.get);
+}
+
+export function mockApiPutHandler(
+    handler: (
+        url: string,
+        data?: unknown,
+        config?: unknown,
+    ) => Promise<AxiosResponse<unknown>>,
+): () => void {
+    return mockApiPut(((url, data, config) =>
+        handler(url, data, config)) as typeof api.put);
+}
+
+export function mockApiDeleteHandler(
+    handler: (url: string, config?: unknown) => Promise<AxiosResponse<unknown>>,
+): () => void {
+    return mockApiDelete(((url, config) => handler(url, config)) as typeof api.delete);
 }
