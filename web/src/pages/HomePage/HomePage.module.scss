@@ -1,6 +1,6 @@
 .home-page {
     &__logo {
-        margin-bottom: 40px;
+        margin-bottom: 32px;
 
         svg {
             width: clamp(320px, 56vw, 620px);
@@ -9,14 +9,16 @@
     }
 
     &__text {
-        width: 60%;
+        width: 100%;
+        max-width: 560px;
         text-align: center;
     }
 
     &__buttons {
         display: flex;
         justify-content: space-evenly;
-        width: 50%;
-        margin-top: 100px;
+        width: auto;
+        margin-top: 48px;
+        gap: 16px;
     }
 }

@@ -1,3 +1,5 @@
+@use "@sass/variables/colors" as colors;
+
 .modal {
     position: fixed;
     top: 0;
@@ -12,10 +14,12 @@
 }
 
 .modal__content {
-    background-color: var(--background-color, #fff);
-    border-radius: 8px;
+    background-color: var(--bg-color);
+    border-radius: 12px;
     padding: 24px;
     max-width: 90%;
     max-height: 90%;
     overflow: auto;
+    box-shadow: 0 8px 32px rgba(colors.$black, 0.4);
+    border: 1px solid rgba(colors.$white, 0.08);
 }

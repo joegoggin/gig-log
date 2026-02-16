@@ -2,55 +2,55 @@
 
 .l1-r {
     font-family: Roboto;
-    font-size: 18px;
+    font-size: 16px;
     font-style: normal;
     font-weight: 400;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 16px;
+        font-size: 14px;
     }
 }
 
 .l1-b {
     font-family: Roboto;
-    font-size: 18px;
+    font-size: 16px;
     font-style: normal;
     font-weight: 600;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 16px;
+        font-size: 14px;
     }
 }
 
 .l2-r {
     font-family: Roboto;
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
     font-weight: 400;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 
 .l2-b {
     font-family: Roboto;
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
     font-weight: 600;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 
 .l3-r {
     font-family: Roboto;
-    font-size: 14px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 400;
     line-height: 125%;
@@ -62,7 +62,7 @@
 
 .l3-b {
     font-family: Roboto;
-    font-size: 14px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 600;
     line-height: 125%;

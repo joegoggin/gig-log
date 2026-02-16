@@ -3,55 +3,55 @@
 // Note the 'p' tags will default to p1-r styles
 .p1-r {
     font-family: Roboto;
-    font-size: 18px;
+    font-size: 16px;
     font-style: normal;
     font-weight: 400;
     line-height: 150%;
 
     @include media.tablet {
-        font-size: 16px;
+        font-size: 14px;
     }
 }
 
 .p1-b {
     font-family: Roboto;
-    font-size: 18px;
+    font-size: 16px;
     font-style: normal;
     font-weight: 500;
     line-height: 150%;
 
     @include media.tablet {
-        font-size: 16px;
+        font-size: 14px;
     }
 }
 
 .p2-r {
     font-family: Roboto;
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
     font-weight: 400;
     line-height: 150%;
 
     @include media.tablet {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 
 .p2-b {
     font-family: Roboto;
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
     font-weight: 500;
     line-height: 150%;
 
     @include media.tablet {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 
 .p3-r {
     font-family: Roboto;
-    font-size: 14px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 400;
     line-height: 150%;
@@ -63,7 +63,7 @@
 
 .p3-b {
     font-family: Roboto;
-    font-size: 14px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 500;
     line-height: 150%;
