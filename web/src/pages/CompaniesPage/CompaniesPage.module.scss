@@ -10,15 +10,14 @@
     &__header {
         display: flex;
         align-items: center;
-        width: 100%;
-        gap: 20px;
 
-        h1 {
+        div {
             margin-right: auto;
         }
 
         @include media.tablet {
             flex-wrap: wrap;
+            gap: 10px;
         }
     }
 
