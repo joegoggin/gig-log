@@ -53,8 +53,10 @@ const LogInPage = () => {
 
     const loginMutation = useFormMutation({
         mutationFn: async () => {
+            const normalizedEmail = data.email.trim().toLowerCase();
+
             const response = await api.post<LogInResponse>("/auth/log-in", {
-                email: data.email,
+                email: normalizedEmail,
                 password: data.password,
             });
             return response.data;
@@ -83,6 +85,10 @@ const LogInPage = () => {
                     <TextInput
                         name="email"
                         placeholder="Email"
+                        type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data={data}
                         setData={setData}
                         errors={errors}

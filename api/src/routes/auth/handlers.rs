@@ -61,9 +61,10 @@ pub async fn sign_up(
     body: ValidatedJson<SignUpRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
+    let normalized_email = body.email.trim().to_lowercase();
 
     // Check if email already exists
-    if AuthRepo::check_email_exists(&state.pool, &body.email).await? {
+    if AuthRepo::check_email_exists(&state.pool, &normalized_email).await? {
         return Err(ApiError::EmailAlreadyExists);
     }
 
@@ -75,7 +76,7 @@ pub async fn sign_up(
         &state.pool,
         &body.first_name,
         &body.last_name,
-        &body.email,
+        &normalized_email,
         &hashed_password,
     )
     .await?;
@@ -97,7 +98,7 @@ pub async fn sign_up(
     // Send confirmation email
     state
         .email_sender
-        .send_confirmation_email(&body.email, &body.first_name, &code)
+        .send_confirmation_email(&normalized_email, &body.first_name, &code)
         .await?;
 
     Ok(HttpResponse::Created().json(SignUpResponse {
@@ -135,9 +136,10 @@ pub async fn confirm_email(
     body: ValidatedJson<ConfirmEmailRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
+    let normalized_email = body.email.trim().to_lowercase();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_confirmation(&state.pool, &body.email)
+    let user = AuthRepo::find_user_for_confirmation(&state.pool, &normalized_email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
@@ -200,9 +202,10 @@ pub async fn log_in(
     body: ValidatedJson<LogInRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
+    let normalized_email = body.email.trim().to_lowercase();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_login(&state.pool, &body.email)
+    let user = AuthRepo::find_user_for_login(&state.pool, &normalized_email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
@@ -245,13 +248,13 @@ pub async fn log_in(
     // Create cookies
     let access_cookie = create_access_token_cookie(
         &access_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_refresh_token_expiry_seconds,
     );
@@ -297,8 +300,8 @@ pub async fn log_out(
     }
 
     // Clear cookies
-    let clear_access = clear_access_token_cookie(&state.env.cookie_domain);
-    let clear_refresh = clear_refresh_token_cookie(&state.env.cookie_domain);
+    let clear_access = clear_access_token_cookie(state.env.cookie_domain.as_deref());
+    let clear_refresh = clear_refresh_token_cookie(state.env.cookie_domain.as_deref());
 
     Ok(HttpResponse::Ok()
         .cookie(clear_access)
@@ -365,6 +368,7 @@ pub async fn forgot_password(
     body: ValidatedJson<ForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
+    let normalized_email = body.email.trim().to_lowercase();
 
     // Always return success to prevent email enumeration
     let response = ForgotPasswordResponse {
@@ -373,7 +377,7 @@ pub async fn forgot_password(
     };
 
     // Find user by email
-    let user = match AuthRepo::find_user_for_password_reset(&state.pool, &body.email).await? {
+    let user = match AuthRepo::find_user_for_password_reset(&state.pool, &normalized_email).await? {
         Some(user) => user,
         None => return Ok(HttpResponse::Ok().json(response)),
     };
@@ -398,7 +402,7 @@ pub async fn forgot_password(
     // Send password reset email
     let _ = state
         .email_sender
-        .send_password_reset_email(&body.email, &user.first_name, &code)
+        .send_password_reset_email(&normalized_email, &user.first_name, &code)
         .await;
 
     Ok(HttpResponse::Ok().json(response))
@@ -433,9 +437,10 @@ pub async fn verify_forgot_password(
     body: ValidatedJson<VerifyForgotPasswordRequest>,
 ) -> ApiResult<HttpResponse> {
     let body = body.into_inner();
+    let normalized_email = body.email.trim().to_lowercase();
 
     // Find user by email
-    let user = AuthRepo::find_user_for_verification(&state.pool, &body.email)
+    let user = AuthRepo::find_user_for_verification(&state.pool, &normalized_email)
         .await?
         .ok_or(ApiError::InvalidCredentials)?;
 
@@ -481,13 +486,13 @@ pub async fn verify_forgot_password(
     // Create cookies
     let access_cookie = create_access_token_cookie(
         &access_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_refresh_token_expiry_seconds,
     );
@@ -603,13 +608,13 @@ pub async fn set_password(
     // Create cookies
     let access_cookie = create_access_token_cookie(
         &access_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_access_token_expiry_seconds,
     );
     let refresh_cookie = create_refresh_token_cookie(
         &refresh_token,
-        &state.env.cookie_domain,
+        state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
         state.env.jwt_refresh_token_expiry_seconds,
     );
@@ -680,7 +685,7 @@ mod tests {
             resend_api_key: "test-resend-key".to_string(),
             resend_from_email: "test@giglog.dev".to_string(),
             auth_code_expiry_seconds: 600,
-            cookie_domain: "localhost".to_string(),
+            cookie_domain: Some("localhost".to_string()),
             cookie_secure: false,
             log_level: "info".to_string(),
             log_http_body_enabled: true,

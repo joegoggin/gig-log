@@ -155,6 +155,12 @@ just api
 just web
 ```
 
+For iPhone access over Tailscale, run web in Tailscale mode instead:
+
+```sh
+just web-tailscale
+```
+
 ### ⚙️ Configuration Notes
 
 - `api/.env.example` includes default local-development logging options
@@ -167,6 +173,20 @@ just web
 - App: <http://localhost:3000>
 - Storybook: <http://localhost:6006>
 - API docs (Rustdoc): <http://localhost:7007>
+
+## 📱 Tailscale Access (iPhone)
+
+Use proxy mode so the frontend and API share one browser origin:
+
+1. Run the API normally (`just api`) on your Mac
+2. Run web with `just web-tailscale`
+3. Open the app from iPhone at `http://<your-machine>.<your-tailnet>.ts.net:3000`
+
+In this mode, the frontend sends requests to `/api/*` and Vite proxies them to `http://127.0.0.1:8000`, so API CORS and direct API exposure over Tailscale are not required.
+
+Proxy mode also rewrites cookie domain/path for auth cookies so iPhone browsers can store them correctly when accessing the app via Tailscale hosts or IPs.
+
+For backend cookie config, leave `COOKIE_DOMAIN` unset in local/Tailscale environments to use host-only cookies.
 
 ## ✅ Testing and Quality
 
@@ -206,6 +226,7 @@ All project scripts are defined in `justfile`.
 | Command | Purpose |
 | --- | --- |
 | `just web` | Run Vite app and Storybook in parallel |
+| `just web-tailscale` | Run Vite and Storybook bound to `0.0.0.0` for Tailscale/iPhone access |
 | `just web-add <package>` | Add a web dependency in `web/` |
 | `just web-remove <package>` | Remove a web dependency from `web/` |
 | `just web-build` | Build web app for production |
@@ -245,6 +266,7 @@ All project scripts are defined in `justfile`.
 - Port already in use: stop existing processes on `3000`, `6006`, `7007`, or `5432`
 - Database connection errors: confirm `docker compose up -d postgres` is running and `DATABASE_URL` is correct in `api/.env`
 - Missing command errors: verify required tooling is installed (`just`, `pnpm`, `cargo-watch`, `sqlx-cli` if used)
+- Tailscale iPhone API/auth failures: use `just web-tailscale` so frontend calls `/api/*` through Vite proxy with cookie domain/path rewrites
 
 ## 🤝 Contributing
 

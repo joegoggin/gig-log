@@ -21,7 +21,11 @@ const Form: React.FC<FormProps> = ({ className = "", onSubmit, children }) => {
     };
 
     return (
-        <form className={`${styles.form} ${className}`} onSubmit={handleSubmit}>
+        <form
+            className={`${styles.form} ${className}`}
+            onSubmit={handleSubmit}
+            noValidate
+        >
             {children}
         </form>
     );

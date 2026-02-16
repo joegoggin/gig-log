@@ -30,6 +30,19 @@ export default defineConfig({
             "@sass": fileURLToPath(new URL("./src/sass", import.meta.url)),
         },
     },
+    server: {
+        proxy: {
+            "/api": {
+                target: "http://127.0.0.1:8000",
+                changeOrigin: true,
+                cookieDomainRewrite: "",
+                cookiePathRewrite: {
+                    "/auth": "/api/auth",
+                },
+                rewrite: (path) => path.replace(/^\/api/, ""),
+            },
+        },
+    },
     test: {
         projects: [
             {

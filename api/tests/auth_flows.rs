@@ -518,6 +518,67 @@ async fn log_in_sets_auth_cookies_and_persists_refresh_token() {
 }
 
 #[actix_web::test]
+// Verifies auth endpoints normalize email case across sign-up, confirm, and login.
+async fn auth_flow_normalizes_email_case_across_auth_steps() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let normalized_email = unique_email("email-normalization");
+    let mixed_case_email = normalized_email.to_uppercase();
+
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": mixed_case_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == normalized_email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured for normalized email");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": normalized_email.to_uppercase(),
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": normalized_email.to_uppercase(),
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let user_id = user_id_for_email(&pool, &normalized_email).await;
+    let refresh_count = active_refresh_token_count(&pool, user_id).await;
+    assert_eq!(refresh_count, 1);
+}
+
+#[actix_web::test]
 // Verifies forgot-password responses remain generic for unknown emails (anti-enumeration).
 async fn forgot_password_unknown_email_returns_generic_success_message() {
     let _guard = test_guard();

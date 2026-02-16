@@ -146,7 +146,7 @@ pub fn test_env() -> Env {
         resend_api_key: "test-resend-key".to_string(),
         resend_from_email: "test@giglog.dev".to_string(),
         auth_code_expiry_seconds: 600,
-        cookie_domain: "localhost".to_string(),
+        cookie_domain: Some("localhost".to_string()),
         cookie_secure: false,
         log_level: "info".to_string(),
         log_http_body_enabled: true,
