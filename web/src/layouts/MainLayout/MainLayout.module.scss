@@ -4,11 +4,13 @@
 [data-theme="light"] .main-layout {
     --layout-sidebar-surface: rgba(70, 115, 176, 0.82);
     --layout-sidebar-border: rgba(255, 255, 255, 0.24);
+    --layout-nav-item-color: rgba(201, 221, 247, 0.88);
 }
 
 [data-theme="dark"] .main-layout {
     --layout-sidebar-surface: rgba(35, 60, 94, 0.82);
     --layout-sidebar-border: rgba(169, 177, 214, 0.24);
+    --layout-nav-item-color: rgba(173, 197, 229, 0.86);
 }
 
 .main-layout {
@@ -280,12 +282,12 @@
         p {
             display: none;
             white-space: nowrap;
-            color: colors.$black;
+            color: var(--layout-nav-item-color);
         }
 
         svg {
-            color: colors.$black;
-            fill: colors.$black;
+            color: var(--layout-nav-item-color);
+            fill: var(--layout-nav-item-color);
         }
 
         &--active {
