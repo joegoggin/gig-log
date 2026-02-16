@@ -144,6 +144,17 @@
         & > div {
             margin-bottom: 12px;
         }
+
+        @media (max-width: 650px) {
+            top: calc(env(safe-area-inset-top) + 12px);
+            right: 12px;
+            left: 12px;
+
+            & > div {
+                width: 100%;
+                max-width: none;
+            }
+        }
     }
 
     > :not(.root-layout__ambient):not(.root-layout__notifications) {
