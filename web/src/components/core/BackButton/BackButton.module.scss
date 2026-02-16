@@ -1,0 +1,50 @@
+@use "@sass/variables/colors" as colors;
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: colors.$blue-100;
+    font-family: Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color ease-in-out 0.2s;
+
+    &:hover {
+        color: colors.$blue-80;
+
+        .back-button__label {
+            text-decoration: underline;
+        }
+
+        .back-button__icon {
+            transform: translateX(-4px);
+
+            svg {
+                fill: colors.$blue-80;
+            }
+        }
+    }
+
+    &:focus-visible {
+        outline: 2px solid rgba(colors.$blue-100, 0.4);
+        outline-offset: 2px;
+    }
+
+    &__icon {
+        display: flex;
+        transition: transform ease-in-out 0.2s;
+
+        svg {
+            fill: colors.$blue-100;
+        }
+    }
+
+    &__label {
+        transition: text-decoration ease-in-out 0.2s;
+    }
+}
