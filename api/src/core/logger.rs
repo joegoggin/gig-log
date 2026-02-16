@@ -121,7 +121,10 @@ impl Logger {
         B: MessageBody + 'static,
     {
         if !log::log_enabled!(Level::Info) {
-            return next.call(req).await.map(ServiceResponse::map_into_boxed_body);
+            return next
+                .call(req)
+                .await
+                .map(ServiceResponse::map_into_boxed_body);
         }
 
         let request_id = Uuid::new_v4();

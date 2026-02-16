@@ -8,6 +8,9 @@ use crate::routes::auth::{
     confirm_email, current_user, forgot_password, log_in, log_out, set_password, sign_up,
     verify_forgot_password,
 };
+use crate::routes::companies::{
+    create_company, delete_company, get_company, list_companies, update_company,
+};
 use crate::routes::health::health_check;
 
 /// Registers all API routes with the Actix service configuration.
@@ -27,5 +30,11 @@ pub fn configure_routes(config: &mut ServiceConfig) {
         .service(current_user)
         .service(forgot_password)
         .service(verify_forgot_password)
-        .service(set_password);
+        .service(set_password)
+        // Company routes
+        .service(list_companies)
+        .service(get_company)
+        .service(create_company)
+        .service(update_company)
+        .service(delete_company);
 }

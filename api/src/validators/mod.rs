@@ -6,6 +6,8 @@
 //!
 //! # Modules
 //!
+//! - [`company_tax_rate`] - Company tax-withholding cross-field validation
 //! - [`password_match`] - Password confirmation validation for sign-up and password reset flows
 
+pub mod company_tax_rate;
 pub mod password_match;

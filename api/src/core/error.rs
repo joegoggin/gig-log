@@ -29,6 +29,8 @@ pub enum ApiError {
     TokenInvalid,
     /// Request requires authentication and no valid session/token was provided.
     Unauthorized,
+    /// A requested resource was not found.
+    NotFound(String),
 
     /// Request payload failed validation with a custom message.
     ValidationError(String),
@@ -54,6 +56,7 @@ impl fmt::Display for ApiError {
             ApiError::TokenExpired => write!(f, "Token has expired"),
             ApiError::TokenInvalid => write!(f, "Invalid token"),
             ApiError::Unauthorized => write!(f, "Unauthorized"),
+            ApiError::NotFound(msg) => write!(f, "{}", msg),
             ApiError::ValidationError(msg) => write!(f, "{}", msg),
             ApiError::PasswordMismatch => write!(f, "Passwords do not match"),
             ApiError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
@@ -74,6 +77,7 @@ impl ResponseError for ApiError {
             ApiError::TokenExpired => StatusCode::UNAUTHORIZED,
             ApiError::TokenInvalid => StatusCode::UNAUTHORIZED,
             ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
+            ApiError::NotFound(_) => StatusCode::NOT_FOUND,
             ApiError::ValidationError(_) => StatusCode::BAD_REQUEST,
             ApiError::PasswordMismatch => StatusCode::BAD_REQUEST,
             ApiError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -92,6 +96,7 @@ impl ResponseError for ApiError {
             ApiError::TokenExpired => "TOKEN_EXPIRED",
             ApiError::TokenInvalid => "TOKEN_INVALID",
             ApiError::Unauthorized => "UNAUTHORIZED",
+            ApiError::NotFound(_) => "NOT_FOUND",
             ApiError::ValidationError(_) => "VALIDATION_ERROR",
             ApiError::PasswordMismatch => "PASSWORD_MISMATCH",
             ApiError::DatabaseError(_) => "DATABASE_ERROR",
