@@ -72,27 +72,33 @@ function SetPasswordPage() {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["set-password-page"]}>
-            <h1>Set Password</h1>
-            <Form onSubmit={onSubmit}>
-                <TextInput
-                    name="password"
-                    placeholder="Password"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                    password
-                />
-                <TextInput
-                    name="confirm"
-                    placeholder="Confirm Password"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                    password
-                />
-                <Button type="submit">Set Password</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["set-password-page"]}>
+                <p className={styles["set-password-page__eyebrow"]}>Step 3 of 3</p>
+                <h1>Set Password</h1>
+                <p className={styles["set-password-page__lead"]}>
+                    Choose a strong password so your account stays secure.
+                </p>
+                <Form onSubmit={onSubmit}>
+                    <TextInput
+                        name="password"
+                        placeholder="Password"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        password
+                    />
+                    <TextInput
+                        name="confirm"
+                        placeholder="Confirm Password"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        password
+                    />
+                    <Button type="submit">Set Password</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 }

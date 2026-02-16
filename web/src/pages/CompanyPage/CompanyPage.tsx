@@ -174,14 +174,30 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
             {!isLoading && companyDetail && (
                 <>
                     <div className={styles["company-page__title-bar"]}>
-                        <h1>{companyDetail.company.name}</h1>
+                        <div>
+                            <p className={styles["company-page__eyebrow"]}>Company details</p>
+                            <h1>{companyDetail.company.name}</h1>
+                        </div>
                         <BackButton href="/companies">Back to Companies</BackButton>
                     </div>
-                    {companyDetail.company.requires_tax_withholdings && (
-                        <h3>Tax Withholding Rate: {companyDetail.company.tax_withholding_rate} %</h3>
-                    )}
-                    <h3>${companyDetail.company.payment_total}</h3>
-                    <h3>{companyDetail.company.hours}</h3>
+
+                    <div className={styles["company-page__summary"]}>
+                        {companyDetail.company.requires_tax_withholdings && (
+                            <article className={styles["company-page__summary-card"]}>
+                                <p>Tax withholding</p>
+                                <h3>{companyDetail.company.tax_withholding_rate}%</h3>
+                            </article>
+                        )}
+                        <article className={styles["company-page__summary-card"]}>
+                            <p>Total payments</p>
+                            <h3>${companyDetail.company.payment_total}</h3>
+                        </article>
+                        <article className={styles["company-page__summary-card"]}>
+                            <p>Total hours</p>
+                            <h3>{companyDetail.company.hours}</h3>
+                        </article>
+                    </div>
+
                     <div className={styles["company-page__lists"]}>
                         <section className={styles["company-page__list"]}>
                             <div className={styles["company-page__list-title-bar"]}>

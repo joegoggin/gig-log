@@ -1,15 +1,39 @@
 @use "@sass/mixins/media" as media;
 @use "@sass/variables/colors" as colors;
 
+[data-theme="light"] .companies-page {
+    --page-surface: rgba(255, 255, 255, 0.62);
+    --page-border: rgba(26, 27, 38, 0.14);
+    --page-muted: rgba(26, 27, 38, 0.78);
+}
+
+[data-theme="dark"] .companies-page {
+    --page-surface: rgba(169, 177, 214, 0.1);
+    --page-border: rgba(169, 177, 214, 0.2);
+    --page-muted: rgba(169, 177, 214, 0.88);
+}
+
 .companies-page {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
 
+    &__header,
+    &__empty,
+    &__company-card {
+        background: var(--page-surface);
+        border: 1px solid var(--page-border);
+        border-radius: 20px;
+        backdrop-filter: blur(8px);
+    }
+
     &__header {
         display: flex;
         align-items: center;
+        gap: 16px;
+        padding: clamp(22px, 3.4vw, 34px);
+        animation: companies-fade-up 0.45s ease-out;
 
         div {
             margin-right: auto;
@@ -21,12 +45,27 @@
         }
     }
 
+    &__eyebrow {
+        display: inline-flex;
+        margin-bottom: 10px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(colors.$cyan-100, 0.2);
+        color: var(--page-muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    &__lead {
+        margin-top: 10px;
+        color: var(--page-muted);
+    }
+
     &__empty {
-        padding: 20px;
-        border: 1px solid rgba(colors.$blue-100, 0.3);
-        border-radius: 12px;
-        background: rgba(colors.$blue-100, 0.04);
-        box-shadow: 0 2px 8px rgba(colors.$black, 0.2);
+        padding: 22px;
+        animation: companies-fade-up 0.45s ease-out;
     }
 
     &__grid {
@@ -48,50 +87,59 @@
         flex-direction: column;
         gap: 12px;
         padding: 20px;
-        border: 1px solid rgba(colors.$blue-100, 0.3);
-        border-radius: 12px;
-        background: rgba(colors.$blue-100, 0.04);
-        box-shadow: 0 2px 8px rgba(colors.$black, 0.2);
-        transition: all ease-in-out 0.3s;
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+        animation: companies-fade-up 0.45s ease-out;
 
         &:hover {
-            border-color: rgba(colors.$blue-100, 0.6);
-            box-shadow: 0 4px 16px rgba(colors.$black, 0.3);
+            transform: translateY(-2px);
+            border-color: rgba(colors.$cyan-100, 0.4);
+            box-shadow: 0 14px 26px rgba(colors.$black, 0.16);
         }
 
         h3 {
-            color: colors.$blue-100;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+        }
+
+        > p {
+            color: var(--page-muted);
         }
     }
 
     &__actions {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-wrap: wrap;
         gap: 8px;
-        margin-top: 12px;
+        margin-top: 10px;
     }
 
     &__icon-button {
-        display: flex;
+        display: inline-flex;
         align-items: center;
+        gap: 4px;
         width: max-content;
         cursor: pointer;
-        transition: all ease-in-out 0.3s;
+        transition: transform 0.2s ease;
         border: none;
-        background: transparent;
-        padding: 0;
+        border-radius: 999px;
+        background: rgba(colors.$black, 0.14);
+        padding: 6px 10px;
+
+        &:hover {
+            transform: translateY(-1px);
+        }
 
         p {
             font-weight: 500;
+            font-size: 14px;
             color: var(--text-color);
         }
 
         svg {
-            width: 20px;
-            height: 20px;
-            margin-right: 5px;
+            width: 18px;
+            height: 18px;
             color: var(--text-color);
             fill: currentColor;
         }
@@ -102,26 +150,12 @@
         svg {
             color: colors.$green-100;
         }
-
-        &:hover {
-            p,
-            svg {
-                color: colors.$green-80;
-            }
-        }
     }
 
     &__view-action {
         p,
         svg {
             color: colors.$blue-100;
-        }
-
-        &:hover {
-            p,
-            svg {
-                color: colors.$blue-80;
-            }
         }
     }
 
@@ -130,13 +164,6 @@
         svg {
             color: colors.$yellow-100;
         }
-
-        &:hover {
-            p,
-            svg {
-                color: colors.$yellow-60;
-            }
-        }
     }
 
     &__delete-action {
@@ -144,12 +171,25 @@
         svg {
             color: colors.$red-100;
         }
+    }
 
-        &:hover {
-            p,
-            svg {
-                color: colors.$red-80;
-            }
+    @media (prefers-reduced-motion: reduce) {
+        &__header,
+        &__empty,
+        &__company-card {
+            animation: none;
         }
+    }
+}
+
+@keyframes companies-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

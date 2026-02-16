@@ -12,6 +12,8 @@ import { useNotification } from "@/contexts/NotificationContext";
 type RootLayoutProps = {
     /** Additional CSS class names to apply to the layout */
     className?: string;
+    /** Whether to render decorative ambient background shapes */
+    showAmbient?: boolean;
     /** Content to render inside the layout */
     children: ReactNode;
 };
@@ -32,6 +34,7 @@ type Modal = {
  * ## Props
  *
  * - `className` - Additional CSS class names to apply to the layout (default: "")
+ * - `showAmbient` - Whether to render decorative background shapes (default: `true`)
  * - `children` - Content to render inside the layout
  *
  * ## Example
@@ -42,7 +45,7 @@ type Modal = {
  * </RootLayout>
  * ```
  */
-function RootLayout({ className = "", children }: RootLayoutProps) {
+function RootLayout({ className = "", showAmbient = true, children }: RootLayoutProps) {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
     const { notifications, removeNotification } = useNotification();
 
@@ -61,6 +64,13 @@ function RootLayout({ className = "", children }: RootLayoutProps) {
     return (
         <>
             <div className={`${styles["root-layout"]} ${className}`}>
+                {showAmbient && (
+                    <div className={styles["root-layout__ambient"]} aria-hidden="true">
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                    </div>
+                )}
                 <div className={styles["root-layout__notifications"]}>
                     {notifications.map((notification) => (
                         <Notification

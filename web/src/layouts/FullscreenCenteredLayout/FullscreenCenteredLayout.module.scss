@@ -3,5 +3,29 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100dvh;
+    min-height: 100dvh;
+    padding: 24px;
+
+    &__content {
+        width: min(560px, 100%);
+        animation: centered-layout-reveal 0.5s ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__content {
+            animation: none;
+        }
+    }
+}
+
+@keyframes centered-layout-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

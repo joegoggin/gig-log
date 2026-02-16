@@ -1,5 +1,70 @@
+@use "@sass/variables/colors" as colors;
+
+[data-theme="light"] .verify-reset-code-page {
+    --auth-surface: rgba(255, 255, 255, 0.68);
+    --auth-border: rgba(26, 27, 38, 0.14);
+    --auth-muted: rgba(26, 27, 38, 0.78);
+}
+
+[data-theme="dark"] .verify-reset-code-page {
+    --auth-surface: rgba(169, 177, 214, 0.12);
+    --auth-border: rgba(169, 177, 214, 0.24);
+    --auth-muted: rgba(169, 177, 214, 0.88);
+}
+
 .verify-reset-code-page {
+    padding: clamp(24px, 4vw, 36px);
+    background: var(--auth-surface);
+    border: 1px solid var(--auth-border);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 20px 40px rgba(colors.$black, 0.16);
+    animation: auth-card-reveal 0.45s ease-out;
+
     h1 {
-        margin-bottom: 32px;
+        margin-bottom: 8px;
+    }
+
+    &__eyebrow {
+        display: inline-flex;
+        margin-bottom: 10px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(colors.$cyan-100, 0.2);
+        color: var(--auth-muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    &__lead {
+        margin-bottom: 20px;
+        color: var(--auth-muted);
+    }
+
+    :global(form) {
+        max-width: none;
+    }
+
+    :global(button) {
+        width: 100%;
+        margin-top: 26px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}
+
+@keyframes auth-card-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

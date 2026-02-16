@@ -128,38 +128,46 @@ function EditCompanyPage({ companyId }: EditCompanyPageProps) {
     return (
         <section className={styles["edit-company-page"]}>
             <header className={styles["edit-company-page__header"]}>
-                <h1>Edit Company</h1>
+                <div>
+                    <p className={styles["edit-company-page__eyebrow"]}>Client details</p>
+                    <h1>Edit Company</h1>
+                    <p className={styles["edit-company-page__lead"]}>
+                        Update this company profile to keep records accurate.
+                    </p>
+                </div>
                 <BackButton href={`/companies/${companyId}`}>Back to Company</BackButton>
             </header>
 
             {isLoading && <p>Loading company...</p>}
 
             {!isLoading && (
-                <Form onSubmit={handleSubmit}>
-                    <TextInput
-                        name="name"
-                        placeholder="Company Name"
-                        data={data}
-                        setData={setData}
-                        errors={errors}
-                    />
-                    <CheckBox
-                        name="requires_tax_withholdings"
-                        label="Requires Tax Withholdings"
-                        data={data}
-                        setData={setData}
-                    />
-                    {data.requires_tax_withholdings && (
+                <div className={styles["edit-company-page__panel"]}>
+                    <Form onSubmit={handleSubmit}>
                         <TextInput
-                            name="tax_withholding_rate"
-                            placeholder="Tax Withholding Rate"
+                            name="name"
+                            placeholder="Company Name"
                             data={data}
                             setData={setData}
                             errors={errors}
                         />
-                    )}
-                    <Button type="submit">Save Company</Button>
-                </Form>
+                        <CheckBox
+                            name="requires_tax_withholdings"
+                            label="Requires Tax Withholdings"
+                            data={data}
+                            setData={setData}
+                        />
+                        {data.requires_tax_withholdings && (
+                            <TextInput
+                                name="tax_withholding_rate"
+                                placeholder="Tax Withholding Rate"
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                            />
+                        )}
+                        <Button type="submit">Save Company</Button>
+                    </Form>
+                </div>
             )}
         </section>
     );

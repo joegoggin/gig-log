@@ -63,7 +63,7 @@ function HomePage({ isLoggedIn }: HomePageProps) {
     ];
 
     return (
-        <RootLayout className={styles["home-page"]}>
+        <RootLayout className={styles["home-page"]} showAmbient={false}>
             <div className={styles["home-page__ambient"]} aria-hidden="true">
                 <span className={styles["home-page__orb"]} />
                 <span className={styles["home-page__orb"]} />

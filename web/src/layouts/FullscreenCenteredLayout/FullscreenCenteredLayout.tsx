@@ -34,11 +34,13 @@ function FullscreenCenteredLayout({
     className,
     children,
 }: FullscreenCenteredLayoutProps) {
+    const layoutClassName = className
+        ? `${styles["fullscreen-centered-layout"]} ${className}`
+        : styles["fullscreen-centered-layout"];
+
     return (
-        <RootLayout
-            className={`${styles["fullscreen-centered-layout"]}${className ? ` ${className}` : ""}`}
-        >
-            {children}
+        <RootLayout className={layoutClassName}>
+            <main className={styles["fullscreen-centered-layout__content"]}>{children}</main>
         </RootLayout>
     );
 }

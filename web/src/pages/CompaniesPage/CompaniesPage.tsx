@@ -105,8 +105,11 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
         <section className={styles["companies-page"]}>
             <header className={styles["companies-page__header"]}>
                 <div>
+                    <p className={styles["companies-page__eyebrow"]}>Client records</p>
                     <h1>Companies</h1>
-                    <p>Manage the clients you track work and payments for.</p>
+                    <p className={styles["companies-page__lead"]}>
+                        Manage the clients you track work and payments for.
+                    </p>
                 </div>
                 <button
                     className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}

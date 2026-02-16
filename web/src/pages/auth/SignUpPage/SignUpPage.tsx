@@ -81,48 +81,54 @@ const SignUpPage: React.FC = () => {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["sign-up"]}>
-            <h1>Sign Up</h1>
-            <Form onSubmit={handleSubmit}>
-                <TextInput
-                    name="first_name"
-                    placeholder="First Name"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <TextInput
-                    name="last_name"
-                    placeholder="Last Name"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <TextInput
-                    name="email"
-                    placeholder="Email"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <TextInput
-                    name="password"
-                    placeholder="Password"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                    password
-                />
-                <TextInput
-                    name="confirm"
-                    placeholder="Confirm Password"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                    password
-                />
-                <Button type="submit">Sign Up</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["sign-up"]}>
+                <p className={styles["sign-up__eyebrow"]}>Create account</p>
+                <h1>Sign Up</h1>
+                <p className={styles["sign-up__lead"]}>
+                    Start tracking companies, gigs, and payouts from one place.
+                </p>
+                <Form onSubmit={handleSubmit}>
+                    <TextInput
+                        name="first_name"
+                        placeholder="First Name"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <TextInput
+                        name="last_name"
+                        placeholder="Last Name"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <TextInput
+                        name="email"
+                        placeholder="Email"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <TextInput
+                        name="password"
+                        placeholder="Password"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        password
+                    />
+                    <TextInput
+                        name="confirm"
+                        placeholder="Confirm Password"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        password
+                    />
+                    <Button type="submit">Sign Up</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 };

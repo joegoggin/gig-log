@@ -70,18 +70,24 @@ function ForgotPasswordPage() {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["forgot-password-page"]}>
-            <h1>Forgot Password</h1>
-            <Form onSubmit={onSubmit}>
-                <TextInput
-                    name="email"
-                    placeholder="Email"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <Button type="submit">Reset Password</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["forgot-password-page"]}>
+                <p className={styles["forgot-password-page__eyebrow"]}>Account recovery</p>
+                <h1>Forgot Password</h1>
+                <p className={styles["forgot-password-page__lead"]}>
+                    Enter your email and we will send a code to get you back in.
+                </p>
+                <Form onSubmit={onSubmit}>
+                    <TextInput
+                        name="email"
+                        placeholder="Email"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <Button type="submit">Reset Password</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 }
