@@ -69,6 +69,15 @@ function RootLayout({ className = "", showAmbient = true, children }: RootLayout
                         <span className={styles["root-layout__orb"]} />
                         <span className={styles["root-layout__orb"]} />
                         <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
+                        <span className={styles["root-layout__orb"]} />
                     </div>
                 )}
                 <div className={styles["root-layout__notifications"]}>
