@@ -242,6 +242,9 @@ function MainLayout({ className = "", children }: MainLayoutProps) {
                 <button
                     type="button"
                     aria-label="Dismiss navigation overlay"
+                    aria-hidden={!isMobileMenuOpen}
+                    tabIndex={isMobileMenuOpen ? 0 : -1}
+                    disabled={!isMobileMenuOpen}
                     className={`${styles["main-layout__backdrop"]} ${
                         isMobileMenuOpen ? styles["main-layout__backdrop--visible"] : ""
                     }`}
