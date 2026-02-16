@@ -92,7 +92,8 @@ impl AuthRepo {
         pool: &Pool<Postgres>,
         email: &str,
     ) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query_scalar!(r#"SELECT id FROM users WHERE email = $1"#, email)
+        let result =
+            sqlx::query_scalar!(r#"SELECT id FROM users WHERE LOWER(email) = LOWER($1)"#, email)
             .fetch_optional(pool)
             .await?;
 
@@ -115,7 +116,7 @@ impl AuthRepo {
     ) -> Result<Option<UserForLogin>, sqlx::Error> {
         let result = sqlx::query_as!(
             UserForLogin,
-            r#"SELECT id, email, hashed_password, email_confirmed FROM users WHERE email = $1"#,
+            r#"SELECT id, email, hashed_password, email_confirmed FROM users WHERE LOWER(email) = LOWER($1)"#,
             email
         )
         .fetch_optional(pool)
@@ -140,7 +141,7 @@ impl AuthRepo {
     ) -> Result<Option<UserForConfirmation>, sqlx::Error> {
         let result = sqlx::query_as!(
             UserForConfirmation,
-            r#"SELECT id, email_confirmed FROM users WHERE email = $1"#,
+            r#"SELECT id, email_confirmed FROM users WHERE LOWER(email) = LOWER($1)"#,
             email
         )
         .fetch_optional(pool)
@@ -165,7 +166,7 @@ impl AuthRepo {
     ) -> Result<Option<UserForPasswordReset>, sqlx::Error> {
         let result = sqlx::query_as!(
             UserForPasswordReset,
-            r#"SELECT id, first_name FROM users WHERE email = $1"#,
+            r#"SELECT id, first_name FROM users WHERE LOWER(email) = LOWER($1)"#,
             email
         )
         .fetch_optional(pool)
@@ -190,7 +191,7 @@ impl AuthRepo {
     ) -> Result<Option<UserForVerification>, sqlx::Error> {
         let result = sqlx::query_as!(
             UserForVerification,
-            r#"SELECT id, email FROM users WHERE email = $1"#,
+            r#"SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)"#,
             email
         )
         .fetch_optional(pool)

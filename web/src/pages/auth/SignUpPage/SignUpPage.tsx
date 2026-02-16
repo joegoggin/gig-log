@@ -52,10 +52,12 @@ const SignUpPage: React.FC = () => {
 
     const signUpMutation = useFormMutation({
         mutationFn: async () => {
+            const normalizedEmail = data.email.trim().toLowerCase();
+
             const response = await api.post<SignUpResponse>("/auth/sign-up", {
                 first_name: data.first_name,
                 last_name: data.last_name,
-                email: data.email,
+                email: normalizedEmail,
                 password: data.password,
                 confirm: data.confirm,
             });
@@ -69,7 +71,7 @@ const SignUpPage: React.FC = () => {
             });
             navigate({
                 to: "/auth/confirm-email",
-                search: { email: data.email },
+                search: { email: data.email.trim().toLowerCase() },
             });
         },
         onError: setErrors,
@@ -106,6 +108,10 @@ const SignUpPage: React.FC = () => {
                     <TextInput
                         name="email"
                         placeholder="Email"
+                        type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data={data}
                         setData={setData}
                         errors={errors}

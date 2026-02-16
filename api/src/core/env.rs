@@ -37,8 +37,8 @@ pub struct Env {
     pub resend_from_email: String,
     /// Authentication code lifetime in seconds.
     pub auth_code_expiry_seconds: u64,
-    /// Cookie domain used when setting auth cookies.
-    pub cookie_domain: String,
+    /// Optional cookie domain used when setting auth cookies.
+    pub cookie_domain: Option<String>,
     /// Whether auth cookies are marked as `Secure`.
     pub cookie_secure: bool,
     /// Global log level for the custom logger.
@@ -128,10 +128,7 @@ impl Env {
         };
 
         // Cookie Configuration
-        let cookie_domain = match Self::get_optional_var("COOKIE_DOMAIN") {
-            Some(val) => val,
-            None => "localhost".to_string(),
-        };
+        let cookie_domain = Self::get_optional_var("COOKIE_DOMAIN");
 
         let cookie_secure = match Self::get_optional_var("COOKIE_SECURE") {
             Some(val) => val.trim().to_lowercase() == "true",

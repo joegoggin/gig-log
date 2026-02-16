@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styles from "./TextInput.module.scss";
 import type { SetData } from "@/types/SetData";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, HTMLInputTypeAttribute } from "react";
 
 type TextInputProps<T> = {
     className?: string;
@@ -11,6 +11,10 @@ type TextInputProps<T> = {
     data: T;
     setData: SetData<T>;
     password?: boolean;
+    type?: HTMLInputTypeAttribute;
+    autoCapitalize?: "none" | "sentences" | "words" | "characters";
+    autoCorrect?: "on" | "off";
+    spellCheck?: boolean;
     errors?: Record<string, string>;
 };
 
@@ -22,6 +26,10 @@ const TextInput = <T,>({
     data,
     setData,
     password,
+    type = "text",
+    autoCapitalize,
+    autoCorrect,
+    spellCheck,
     errors,
 }: TextInputProps<T>) => {
     const [classes, setClasses] = useState<string>(styles["text-input"]);
@@ -60,10 +68,13 @@ const TextInput = <T,>({
         <div className={classes}>
             {label && <label>{label}</label>}
             <input
-                type={password ? "password" : "text"}
+                type={password ? "password" : type}
                 placeholder={placeholder}
                 onChange={handleChange}
                 value={data[name] as string}
+                autoCapitalize={autoCapitalize}
+                autoCorrect={autoCorrect}
+                spellCheck={spellCheck}
             />
             {error && !userEditing && <p>{error}</p>}
         </div>

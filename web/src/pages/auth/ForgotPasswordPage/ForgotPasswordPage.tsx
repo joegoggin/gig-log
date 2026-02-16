@@ -44,9 +44,11 @@ function ForgotPasswordPage() {
 
     const forgotPasswordMutation = useFormMutation({
         mutationFn: async () => {
+            const normalizedEmail = data.email.trim().toLowerCase();
+
             const response = await api.post<ForgotPasswordResponse>(
                 "/auth/forgot-password",
-                { email: data.email },
+                { email: normalizedEmail },
             );
             return response.data;
         },
@@ -58,7 +60,7 @@ function ForgotPasswordPage() {
             });
             navigate({
                 to: "/auth/verify-reset-code",
-                search: { email: data.email },
+                search: { email: data.email.trim().toLowerCase() },
             });
         },
         onError: setErrors,
@@ -81,6 +83,10 @@ function ForgotPasswordPage() {
                     <TextInput
                         name="email"
                         placeholder="Email"
+                        type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data={data}
                         setData={setData}
                         errors={errors}

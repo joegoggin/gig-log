@@ -59,6 +59,9 @@ api-release:
 web *args:
 	cd web && pnpm dev {{args}}
 
+web-tailscale:
+	cd web && pnpm dev:tailscale
+
 web-add *args:
 	cd web && pnpm add {{args}} 
 
