@@ -91,7 +91,8 @@ export const ShowsCompanyDetailsAndPayments: Story = {
         await expect(canvas.getByText("Acme Studio")).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Add Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Add Payment" })).toBeVisible();
-        await expect(canvas.getByText("Tax Withholding Rate: 30.00 %")).toBeVisible();
+        await expect(canvas.getByText("Tax withholding")).toBeVisible();
+        await expect(canvas.getByText(/30\.00\s*%/)).toBeVisible();
         await expect(canvas.getByText("$250.00")).toBeVisible();
         await expect(canvas.getByText("4h 30m")).toBeVisible();
         await expect(canvas.getByText("Website Redesign")).toBeVisible();
