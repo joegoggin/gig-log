@@ -348,10 +348,10 @@
 
     &__content {
         flex: 1;
-        padding: 48px;
+        padding: 40px;
 
         @include media.tablet {
-            padding: 100px 20px 20px;
+            padding: 80px 16px 16px;
         }
     }
 }

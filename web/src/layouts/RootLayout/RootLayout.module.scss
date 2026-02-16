@@ -2,12 +2,13 @@
     position: relative;
 
     &__notifications {
-        position: absolute;
-        top: 40px;
+        position: fixed;
+        top: 20px;
         right: 20px;
+        z-index: 1100;
 
         & > div {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
     }
 }

@@ -11,6 +11,7 @@ import AddIcon from "@/components/icons/AddIcon";
 import DeleteIcon from "@/components/icons/DeleteIcon";
 import EditIcon from "@/components/icons/EditIcon";
 import InfoIcon from "@/components/icons/InfoIcon";
+import BackButton from "@/components/core/BackButton/BackButton";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import { useNotification } from "@/contexts/NotificationContext";
@@ -36,6 +37,7 @@ type CompanyPageProps = {
  *
  * ## Related Components
  *
+ * - `BackButton` - Navigates back to the companies list.
  * - `Button` - Handles list pagination actions.
  */
 function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
@@ -173,16 +175,7 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
                 <>
                     <div className={styles["company-page__title-bar"]}>
                         <h1>{companyDetail.company.name}</h1>
-                        <button
-                            className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--add"]}`}
-                            onClick={() => {
-                                navigate({ to: "/companies/create" });
-                            }}
-                            type="button"
-                        >
-                            <AddIcon />
-                            <p>Add Company</p>
-                        </button>
+                        <BackButton href="/companies">Back to Companies</BackButton>
                     </div>
                     {companyDetail.company.requires_tax_withholdings && (
                         <h3>Tax Withholding Rate: {companyDetail.company.tax_withholding_rate} %</h3>

@@ -14,13 +14,14 @@
         align-items: center;
         justify-content: center;
         appearance: none;
-        width: 20px;
-        height: 20px;
-        margin-right: 10px;
-        background: var(--background-color);
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        background: var(--bg-color);
         border: 2px solid colors.$cyan-100;
         border-radius: 5px;
         cursor: pointer;
+        transition: all ease-in-out 0.15s;
 
         &:checked::after {
             background: colors.$cyan-100;

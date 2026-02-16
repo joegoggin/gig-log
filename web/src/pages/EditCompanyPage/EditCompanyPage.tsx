@@ -5,7 +5,8 @@ import styles from "./EditCompanyPage.module.scss";
 import type { Company, CompanyDetailResponse } from "@/types/models/Company";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import BackButton from "@/components/core/BackButton/BackButton";
+import Button from "@/components/core/Button/Button";
 import CheckBox from "@/components/core/CheckBox/CheckBox";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -43,7 +44,8 @@ type CompanyResponse = {
  * - `Form` - Handles update submission lifecycle.
  * - `TextInput` - Captures company name and optional tax rate.
  * - `CheckBox` - Toggles tax-withholding behavior.
- * - `Button` - Submits the update and navigates back.
+ * - `BackButton` - Navigates back to the company detail page.
+ * - `Button` - Submits company updates.
  */
 function EditCompanyPage({ companyId }: EditCompanyPageProps) {
     const navigate = useNavigate();
@@ -127,9 +129,7 @@ function EditCompanyPage({ companyId }: EditCompanyPageProps) {
         <section className={styles["edit-company-page"]}>
             <header className={styles["edit-company-page__header"]}>
                 <h1>Edit Company</h1>
-                <Button href={`/companies/${companyId}`} variant={ButtonVariant.SECONDARY}>
-                    Back to Company
-                </Button>
+                <BackButton href={`/companies/${companyId}`}>Back to Company</BackButton>
             </header>
 
             {isLoading && <p>Loading company...</p>}

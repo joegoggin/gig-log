@@ -64,13 +64,13 @@ h1 {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Rubik;
-    font-size: 60px;
+    font-size: 48px;
     font-style: normal;
     font-weight: 900;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 48px;
+        font-size: 40px;
     }
 }
 
@@ -78,14 +78,14 @@ h2 {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Rubik;
-    font-size: 48px;
+    font-size: 36px;
     font-style: normal;
     font-weight: 800;
     line-height: 125%;
-    letter-spacing: -1.92px;
+    letter-spacing: -0.72px;
 
     @include media.tablet {
-        font-size: 40px;
+        font-size: 30px;
     }
 }
 
@@ -93,13 +93,13 @@ h3 {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Rubik;
-    font-size: 36px;
+    font-size: 28px;
     font-style: normal;
     font-weight: 800;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 32px;
+        font-size: 24px;
     }
 }
 
@@ -107,7 +107,7 @@ h4 {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Rubik;
-    font-size: 30px;
+    font-size: 22px;
     font-style: normal;
     font-weight: 700;
     line-height: 125%;
@@ -121,13 +121,13 @@ h5 {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Rubik;
-    font-size: 24px;
+    font-size: 18px;
     font-style: normal;
     font-weight: 600;
     line-height: 125%;
 
     @include media.tablet {
-        font-size: 14px;
+        font-size: 16px;
     }
 }
 
@@ -136,12 +136,12 @@ p {
     color: var(--text-color);
     font-feature-settings: "liga" off;
     font-family: Roboto;
-    font-size: 18px;
+    font-size: 16px;
     font-style: normal;
     font-weight: 400;
     line-height: 150%;
 
     @include media.tablet {
-        font-size: 16px;
+        font-size: 14px;
     }
 }

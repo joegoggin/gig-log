@@ -2,7 +2,8 @@ import { useNavigate } from "@tanstack/react-router";
 import styles from "./CreateCompanyPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
-import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import BackButton from "@/components/core/BackButton/BackButton";
+import Button from "@/components/core/Button/Button";
 import CheckBox from "@/components/core/CheckBox/CheckBox";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -31,7 +32,8 @@ type CreateCompanyFormData = {
  * - `Form` - Handles create-company submission.
  * - `TextInput` - Captures company name and optional tax rate.
  * - `CheckBox` - Toggles tax-withholding behavior.
- * - `Button` - Submits the form and navigates back.
+ * - `BackButton` - Navigates back to the companies list.
+ * - `Button` - Submits the create-company form.
  */
 function CreateCompanyPage() {
     const navigate = useNavigate();
@@ -75,9 +77,7 @@ function CreateCompanyPage() {
         <section className={styles["create-company-page"]}>
             <header className={styles["create-company-page__header"]}>
                 <h1>Create Company</h1>
-                <Button href="/companies" variant={ButtonVariant.SECONDARY}>
-                    Back to Companies
-                </Button>
+                <BackButton href="/companies">Back to Companies</BackButton>
             </header>
 
             <Form onSubmit={handleSubmit}>

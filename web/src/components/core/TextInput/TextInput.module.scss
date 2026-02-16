@@ -5,13 +5,13 @@
     flex-direction: column;
 
     &:not(:last-child) {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     input {
         font-family: Roboto;
-        font-size: 20px;
-        padding: 10px 5px;
+        font-size: 16px;
+        padding: 8px 8px;
         background: none;
         border: none;
         border-bottom: 1px solid var(--text-color);
@@ -22,17 +22,12 @@
         &::placeholder {
             font-family: inherit;
             color: var(--text-color);
-            opacity: 0.6;
+            opacity: 0.5;
         }
 
         &:focus {
-            transform: scaleX(1.01);
             border-bottom: 1px solid colors.$cyan-100;
-            color: colors.$cyan-100;
-
-            &::placeholder {
-                color: colors.$cyan-100;
-            }
+            box-shadow: 0 1px 0 0 colors.$cyan-100;
         }
     }
 
@@ -49,7 +44,7 @@
     }
 
     label {
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         color: var(--text-color);
         font-family: Roboto;
     }

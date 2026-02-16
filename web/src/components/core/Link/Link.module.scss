@@ -9,4 +9,9 @@
         text-decoration: underline;
         color: colors.$blue-80;
     }
+
+    &:focus-visible {
+        outline: 2px solid rgba(colors.$blue-100, 0.4);
+        outline-offset: 2px;
+    }
 }
