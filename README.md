@@ -63,7 +63,7 @@ GigLog is still in active development.
 ### ✅ Completed
 
 - [x] User authentication flow (sign up, log in, session-based access)
-- [x] Company management flow (list, view, create, and edit companies)
+- [x] Company management flow (list, view, create, edit, and delete companies)
 - [x] CI quality gates for lint, build, and tests
 - [x] Storybook and Rustdoc documentation workflows
 

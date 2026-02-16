@@ -89,7 +89,17 @@ export const PrefillsAndSubmitsUpdate: Story = {
         });
         const restorePut = mockApiPutHandler(async (url, data) => {
             putCalls.push({ url, data });
-            return createMockApiResponse({ message: "Updated" });
+            return createMockApiResponse({
+                company: {
+                    id: "123",
+                    user_id: "u1",
+                    name: "Acme Studio",
+                    requires_tax_withholdings: false,
+                    tax_withholding_rate: null,
+                    created_at: "2026-01-01T00:00:00Z",
+                    updated_at: "2026-01-02T00:00:00Z",
+                },
+            });
         });
 
         addNotificationSpy.mockClear();

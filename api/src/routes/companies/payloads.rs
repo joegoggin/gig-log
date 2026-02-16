@@ -51,6 +51,9 @@ pub struct CompanyResponse {
 /// Company details payload for the company detail page.
 ///
 /// Includes aggregate metrics used by client-side summary cards.
+///
+/// See [`get_company`](super::handlers::get_company) for the handler that
+/// includes this payload.
 #[derive(Debug, Serialize)]
 pub struct CompanyDetails {
     /// Unique identifier for the company.

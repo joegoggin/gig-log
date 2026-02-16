@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import styles from "./EditCompanyPage.module.scss";
-import type { Company } from "@/types/models/Company";
+import type { Company, CompanyDetailResponse } from "@/types/models/Company";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
@@ -93,7 +93,21 @@ function EditCompanyPage({ companyId }: EditCompanyPageProps) {
             return response.data;
         },
         onSuccess: (response) => {
-            queryClient.setQueryData(["company", companyId], response.company);
+            queryClient.setQueryData(["company", companyId], (current) => {
+                if (!current || typeof current !== "object" || !("company" in current)) {
+                    return current;
+                }
+
+                const detail = current as CompanyDetailResponse;
+
+                return {
+                    ...detail,
+                    company: {
+                        ...detail.company,
+                        ...response.company,
+                    },
+                };
+            });
             addNotification({
                 type: NotificationType.SUCCESS,
                 title: "Company Updated",

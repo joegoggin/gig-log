@@ -5,6 +5,7 @@
  * - Company summary, jobs, and payments render from detail payloads.
  * - Non-functional CRUD icon clusters render for each list item.
  * - Jobs pagination appends additional records when loading more.
+ * - Payments pagination appends additional records when loading more.
  * - Not-found responses render the fallback state.
  */
 import { expect, userEvent, waitFor, within } from "storybook/test";
@@ -156,6 +157,85 @@ export const LoadsMoreJobsWhenAvailable: Story = {
 
             await waitFor(() => {
                 expect(canvas.getByText("Marketing Retainer")).toBeVisible();
+            });
+        } finally {
+            restoreGet();
+        }
+    },
+};
+
+export const LoadsMorePaymentsWhenAvailable: Story = {
+    args: {
+        companyId: "123",
+        initialCompanyDetail: {
+            company: {
+                id: "123",
+                user_id: "u1",
+                name: "Acme Studio",
+                requires_tax_withholdings: false,
+                tax_withholding_rate: null,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-02T00:00:00Z",
+                payment_total: "250.00",
+                hours: "4h 30m",
+            },
+            paginated_jobs: [],
+            jobs_has_more: false,
+            paginated_payments: [
+                {
+                    id: "p1",
+                    total: "100.00",
+                    payout_type: "paypal",
+                    payment_received: true,
+                    transfer_received: true,
+                },
+            ],
+            payments_has_more: true,
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const restoreGet = mockApiGetHandler((url) => {
+            if (url === "/companies/123?payments_page=2") {
+                return Promise.resolve(
+                    createMockApiResponse({
+                        company: {
+                            id: "123",
+                            user_id: "u1",
+                            name: "Acme Studio",
+                            requires_tax_withholdings: false,
+                            tax_withholding_rate: null,
+                            created_at: "2026-01-01T00:00:00Z",
+                            updated_at: "2026-01-02T00:00:00Z",
+                            payment_total: "250.00",
+                            hours: "4h 30m",
+                        },
+                        paginated_jobs: [],
+                        jobs_has_more: false,
+                        paginated_payments: [
+                            {
+                                id: "p2",
+                                total: "150.00",
+                                payout_type: "cash",
+                                payment_received: true,
+                                transfer_received: false,
+                            },
+                        ],
+                        payments_has_more: false,
+                    }),
+                );
+            }
+
+            return Promise.resolve(createMockApiResponse({}));
+        });
+
+        try {
+            const canvas = within(canvasElement);
+            await expect(canvas.getByText("Total: $100.00")).toBeVisible();
+
+            await userEvent.click(canvas.getByRole("button", { name: "Load More Payments" }));
+
+            await waitFor(() => {
+                expect(canvas.getByText("Total: $150.00")).toBeVisible();
             });
         } finally {
             restoreGet();
