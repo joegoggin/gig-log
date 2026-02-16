@@ -75,18 +75,24 @@ function VerifyResetCodePage({ email }: VerifyResetCodePageProps) {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["verify-reset-code-page"]}>
-            <h1>Verify Reset Code</h1>
-            <Form onSubmit={onSubmit}>
-                <TextInput
-                    name="auth_code"
-                    placeholder="Enter reset code"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <Button type="submit">Verify Code</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["verify-reset-code-page"]}>
+                <p className={styles["verify-reset-code-page__eyebrow"]}>Step 2 of 3</p>
+                <h1>Verify Reset Code</h1>
+                <p className={styles["verify-reset-code-page__lead"]}>
+                    Enter the code we sent to your email to continue.
+                </p>
+                <Form onSubmit={onSubmit}>
+                    <TextInput
+                        name="auth_code"
+                        placeholder="Enter reset code"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <Button type="submit">Verify Code</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 }

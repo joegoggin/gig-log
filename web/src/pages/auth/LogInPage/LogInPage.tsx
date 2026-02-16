@@ -72,33 +72,39 @@ const LogInPage = () => {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["log-in-page"]}>
-            <h1>Log In</h1>
-            <Form onSubmit={handleSubmit}>
-                <TextInput
-                    name="email"
-                    placeholder="Email"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <TextInput
-                    name="password"
-                    placeholder="Password"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                    password
-                />
-                <Link href="/auth/forgot-password">Forgot Password?</Link>
-                <Checkbox
-                    name="remember_me"
-                    label="Remember me"
-                    data={data}
-                    setData={setData}
-                />
-                <Button type="submit">Log In</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["log-in-page"]}>
+                <p className={styles["log-in-page__eyebrow"]}>Welcome back</p>
+                <h1>Log In</h1>
+                <p className={styles["log-in-page__lead"]}>
+                    Pick up where you left off and keep your freelance workflow moving.
+                </p>
+                <Form onSubmit={handleSubmit}>
+                    <TextInput
+                        name="email"
+                        placeholder="Email"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <TextInput
+                        name="password"
+                        placeholder="Password"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        password
+                    />
+                    <Link href="/auth/forgot-password">Forgot Password?</Link>
+                    <Checkbox
+                        name="remember_me"
+                        label="Remember me"
+                        data={data}
+                        setData={setData}
+                    />
+                    <Button type="submit">Log In</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 };

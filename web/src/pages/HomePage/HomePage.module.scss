@@ -1,24 +1,414 @@
+@use "@sass/variables/colors" as colors;
+@use "@sass/mixins/media" as media;
+
+[data-theme="light"] .home-page {
+    --home-surface: rgba(255, 255, 255, 0.62);
+    --home-border: rgba(26, 27, 38, 0.14);
+    --home-muted-text: rgba(26, 27, 38, 0.78);
+}
+
+[data-theme="dark"] .home-page {
+    --home-surface: rgba(169, 177, 214, 0.1);
+    --home-border: rgba(169, 177, 214, 0.2);
+    --home-muted-text: rgba(169, 177, 214, 0.88);
+}
+
 .home-page {
+    position: relative;
+    padding: clamp(28px, 5vw, 68px) clamp(20px, 6vw, 96px) 72px;
+    min-height: 100dvh;
+    overflow: hidden;
+
+    &__ambient {
+        position: absolute !important;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0 !important;
+    }
+
+    &__orb {
+        position: absolute;
+        width: var(--orb-size, clamp(180px, 28vw, 360px));
+        aspect-ratio: 1;
+        border-radius: 50%;
+        filter: blur(12px);
+
+        &:nth-child(1) {
+            top: 8%;
+            left: 4%;
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-100, 0.65), rgba(colors.$green-100, 0));
+            animation: home-orb-drift-a 28s ease-in-out infinite;
+        }
+
+        &:nth-child(2) {
+            top: 20%;
+            right: 10%;
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-100, 0.6), rgba(colors.$cyan-100, 0));
+            animation: home-orb-drift-b 32s ease-in-out infinite;
+            animation-delay: -6s;
+        }
+
+        &:nth-child(3) {
+            bottom: 8%;
+            left: 36%;
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-100, 0.58), rgba(colors.$yellow-100, 0));
+            animation: home-orb-drift-c 30s ease-in-out infinite;
+            animation-delay: -12s;
+        }
+
+        &:nth-child(4) {
+            top: 6%;
+            right: 30%;
+            --orb-size: clamp(140px, 20vw, 260px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-100, 0.56), rgba(colors.$blue-100, 0));
+            animation: home-orb-drift-c 34s ease-in-out infinite;
+            animation-delay: -18s;
+        }
+
+        &:nth-child(5) {
+            bottom: 18%;
+            left: 8%;
+            --orb-size: clamp(130px, 18vw, 240px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-100, 0.54), rgba(colors.$magenta-100, 0));
+            animation: home-orb-drift-b 36s ease-in-out infinite;
+            animation-delay: -9s;
+        }
+
+        &:nth-child(6) {
+            bottom: 5%;
+            right: 6%;
+            --orb-size: clamp(120px, 16vw, 220px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-100, 0.52), rgba(colors.$red-100, 0));
+            animation: home-orb-drift-a 33s ease-in-out infinite;
+            animation-delay: -15s;
+        }
+
+        &:nth-child(7) {
+            top: 38%;
+            left: 2%;
+            --orb-size: clamp(110px, 15vw, 210px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-80, 0.48), rgba(colors.$green-80, 0));
+            animation: home-orb-drift-b 29s ease-in-out infinite;
+            animation-delay: -20s;
+        }
+
+        &:nth-child(8) {
+            top: 12%;
+            right: 2%;
+            --orb-size: clamp(105px, 14vw, 200px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-80, 0.46), rgba(colors.$cyan-80, 0));
+            animation: home-orb-drift-c 31s ease-in-out infinite;
+            animation-delay: -24s;
+        }
+
+        &:nth-child(9) {
+            bottom: 34%;
+            left: 26%;
+            --orb-size: clamp(115px, 16vw, 215px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-80, 0.46), rgba(colors.$yellow-80, 0));
+            animation: home-orb-drift-a 35s ease-in-out infinite;
+            animation-delay: -28s;
+        }
+
+        &:nth-child(10) {
+            top: 46%;
+            right: 28%;
+            --orb-size: clamp(100px, 13vw, 190px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-80, 0.44), rgba(colors.$blue-80, 0));
+            animation: home-orb-drift-b 30s ease-in-out infinite;
+            animation-delay: -11s;
+        }
+
+        &:nth-child(11) {
+            bottom: 2%;
+            left: 52%;
+            --orb-size: clamp(95px, 12vw, 180px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-80, 0.44), rgba(colors.$magenta-80, 0));
+            animation: home-orb-drift-c 37s ease-in-out infinite;
+            animation-delay: -17s;
+        }
+
+        &:nth-child(12) {
+            top: 58%;
+            right: 12%;
+            --orb-size: clamp(90px, 11vw, 170px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-80, 0.42), rgba(colors.$red-80, 0));
+            animation: home-orb-drift-a 34s ease-in-out infinite;
+            animation-delay: -26s;
+        }
+    }
+
+    &__content {
+        position: relative;
+        z-index: 1;
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: clamp(36px, 5vw, 60px);
+    }
+
+    &__hero {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: clamp(24px, 4vw, 44px);
+        align-items: stretch;
+    }
+
+    &__hero-copy,
+    &__hero-panel,
+    &__feature-card,
+    &__steps li {
+        background: var(--home-surface);
+        border: 1px solid var(--home-border);
+        border-radius: 20px;
+        backdrop-filter: blur(8px);
+    }
+
+    &__hero-copy {
+        padding: clamp(26px, 4.8vw, 46px);
+    }
+
+    &__eyebrow {
+        display: inline-flex;
+        padding: 6px 12px;
+        border-radius: 999px;
+        margin-bottom: 18px;
+        background: rgba(colors.$blue-100, 0.18);
+        color: var(--home-muted-text);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
     &__logo {
-        margin-bottom: 32px;
+        margin-bottom: clamp(20px, 4vw, 32px);
+        color: var(--text-color);
 
         svg {
-            width: clamp(320px, 56vw, 620px);
+            width: clamp(220px, 42vw, 430px);
             height: auto;
         }
     }
 
-    &__text {
-        width: 100%;
-        max-width: 560px;
-        text-align: center;
+    h1 {
+        max-width: 16ch;
+    }
+
+    &__lead {
+        margin-top: 16px;
+        max-width: 58ch;
+        color: var(--home-muted-text);
+        font-size: 18px;
     }
 
     &__buttons {
         display: flex;
-        justify-content: space-evenly;
-        width: auto;
-        margin-top: 48px;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: clamp(22px, 4vw, 34px);
+    }
+
+    &__hero-panel {
+        padding: clamp(24px, 4vw, 34px);
+        display: grid;
+        align-content: start;
+        gap: 18px;
+    }
+
+    &__panel-label {
+        color: var(--home-muted-text);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    &__panel-points {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 12px;
+
+        li {
+            display: grid;
+            gap: 4px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(colors.$black, 0.14);
+            border: 1px solid rgba(colors.$white, 0.12);
+        }
+
+        h3 {
+            color: var(--text-color);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        p {
+            color: var(--home-muted-text);
+            font-size: 14px;
+        }
+    }
+
+    &__section {
+        display: grid;
+        gap: 18px;
+    }
+
+    &__feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 16px;
+    }
+
+    &__feature-card {
+        padding: 20px;
+
+        h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: var(--home-muted-text);
+        }
+    }
+
+    &__steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 12px;
+
+        li {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 14px;
+            align-items: start;
+            padding: 16px;
+        }
+
+        span {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(colors.$green-100, 0.22);
+            color: var(--text-color);
+            font-family: Rubik, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        p {
+            color: var(--home-muted-text);
+        }
+    }
+
+    @include media.tablet {
+        &__hero {
+            grid-template-columns: 1fr;
+        }
+
+        &__feature-grid {
+            grid-template-columns: 1fr;
+        }
+
+        &__hero-panel {
+            order: -1;
+        }
+
+        &__lead {
+            font-size: 16px;
+        }
+    }
+
+    @include media.phone {
+        padding: 20px 14px 42px;
+
+        &__buttons {
+            width: 100%;
+
+            :global(button) {
+                flex: 1;
+                min-width: 0;
+            }
+        }
+
+        &__panel-points li {
+            padding: 12px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__orb {
+            animation: none;
+        }
+    }
+}
+
+@keyframes home-orb-drift-a {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(38vw, 10vh, 0) scale(1.06);
+    }
+
+    50% {
+        transform: translate3d(16vw, 48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-8vw, 28vh, 0) scale(1.04);
+    }
+}
+
+@keyframes home-orb-drift-b {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(-34vw, 16vh, 0) scale(1.05);
+    }
+
+    50% {
+        transform: translate3d(-10vw, 54vh, 0) scale(0.94);
+    }
+
+    75% {
+        transform: translate3d(6vw, 26vh, 0) scale(1.03);
+    }
+}
+
+@keyframes home-orb-drift-c {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(24vw, -30vh, 0) scale(1.04);
+    }
+
+    50% {
+        transform: translate3d(-20vw, -48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-32vw, -8vh, 0) scale(1.05);
     }
 }

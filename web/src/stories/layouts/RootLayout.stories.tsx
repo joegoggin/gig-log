@@ -46,6 +46,21 @@ export const WithClassName: Story = {
     },
 };
 
+export const WithoutAmbientBackground: Story = {
+    args: {
+        showAmbient: false,
+        children: (
+            <div style={{ padding: "2rem" }}>
+                <h1>Ambient Disabled</h1>
+                <p>
+                    This story verifies RootLayout rendering when decorative ambient shapes are
+                    turned off.
+                </p>
+            </div>
+        ),
+    },
+};
+
 function NotificationTrigger() {
     const { addNotification } = useNotification();
 

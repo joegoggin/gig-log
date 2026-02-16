@@ -76,35 +76,43 @@ function CreateCompanyPage() {
     return (
         <section className={styles["create-company-page"]}>
             <header className={styles["create-company-page__header"]}>
-                <h1>Create Company</h1>
+                <div>
+                    <p className={styles["create-company-page__eyebrow"]}>Client setup</p>
+                    <h1>Create Company</h1>
+                    <p className={styles["create-company-page__lead"]}>
+                        Add a client profile so jobs and payouts stay organized from day one.
+                    </p>
+                </div>
                 <BackButton href="/companies">Back to Companies</BackButton>
             </header>
 
-            <Form onSubmit={handleSubmit}>
-                <TextInput
-                    name="name"
-                    placeholder="Company Name"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <CheckBox
-                    name="requires_tax_withholdings"
-                    label="Requires Tax Withholdings"
-                    data={data}
-                    setData={setData}
-                />
-                {data.requires_tax_withholdings && (
+            <div className={styles["create-company-page__panel"]}>
+                <Form onSubmit={handleSubmit}>
                     <TextInput
-                        name="tax_withholding_rate"
-                        placeholder="Tax Withholding Rate"
+                        name="name"
+                        placeholder="Company Name"
                         data={data}
                         setData={setData}
                         errors={errors}
                     />
-                )}
-                <Button type="submit">Create Company</Button>
-            </Form>
+                    <CheckBox
+                        name="requires_tax_withholdings"
+                        label="Requires Tax Withholdings"
+                        data={data}
+                        setData={setData}
+                    />
+                    {data.requires_tax_withholdings && (
+                        <TextInput
+                            name="tax_withholding_rate"
+                            placeholder="Tax Withholding Rate"
+                            data={data}
+                            setData={setData}
+                            errors={errors}
+                        />
+                    )}
+                    <Button type="submit">Create Company</Button>
+                </Form>
+            </div>
         </section>
     );
 }

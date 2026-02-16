@@ -79,18 +79,24 @@ function ConfirmEmailPage({ email }: ConfirmEmailPageProps) {
     };
 
     return (
-        <FullscreenCenteredLayout className={styles["confirm-email"]}>
-            <h1>Confirm Email</h1>
-            <Form onSubmit={onSubmit}>
-                <TextInput
-                    name="auth_code"
-                    placeholder="Enter confirmation code"
-                    data={data}
-                    setData={setData}
-                    errors={errors}
-                />
-                <Button type="submit">Confirm Email</Button>
-            </Form>
+        <FullscreenCenteredLayout>
+            <section className={styles["confirm-email"]}>
+                <p className={styles["confirm-email__eyebrow"]}>Verify your account</p>
+                <h1>Confirm Email</h1>
+                <p className={styles["confirm-email__lead"]}>
+                    Enter the code from your inbox to finish setting up your account.
+                </p>
+                <Form onSubmit={onSubmit}>
+                    <TextInput
+                        name="auth_code"
+                        placeholder="Enter confirmation code"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                    />
+                    <Button type="submit">Confirm Email</Button>
+                </Form>
+            </section>
         </FullscreenCenteredLayout>
     );
 }

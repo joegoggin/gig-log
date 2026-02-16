@@ -1,9 +1,22 @@
 @use "@sass/variables/colors" as colors;
 @use "@sass/mixins/media" as media;
 
+[data-theme="light"] .main-layout {
+    --layout-sidebar-surface: rgba(70, 115, 176, 0.82);
+    --layout-sidebar-border: rgba(255, 255, 255, 0.24);
+    --layout-nav-item-color: rgba(201, 221, 247, 0.88);
+}
+
+[data-theme="dark"] .main-layout {
+    --layout-sidebar-surface: rgba(35, 60, 94, 0.82);
+    --layout-sidebar-border: rgba(169, 177, 214, 0.24);
+    --layout-nav-item-color: rgba(173, 197, 229, 0.86);
+}
+
 .main-layout {
     display: flex;
     min-height: 100dvh;
+    position: relative;
 
     svg {
         width: 36px;
@@ -22,7 +35,10 @@
         width: 164px;
         height: 100dvh;
         padding: 20px 12px;
-        background: colors.$blue-100;
+        background: var(--layout-sidebar-surface);
+        border-right: 1px solid var(--layout-sidebar-border);
+        backdrop-filter: blur(8px);
+        animation: sidebar-reveal 0.45s ease-out;
         transition: width ease-in-out 0.25s;
         overflow: hidden;
 
@@ -64,6 +80,8 @@
             height: auto;
             padding: 10px 14px;
             gap: 10px;
+            border-right: none;
+            border-bottom: 1px solid var(--layout-sidebar-border);
 
             &:hover {
                 width: 100%;
@@ -264,12 +282,12 @@
         p {
             display: none;
             white-space: nowrap;
-            color: colors.$black;
+            color: var(--layout-nav-item-color);
         }
 
         svg {
-            color: colors.$black;
-            fill: colors.$black;
+            color: var(--layout-nav-item-color);
+            fill: var(--layout-nav-item-color);
         }
 
         &--active {
@@ -312,6 +330,11 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+        &__sidebar,
+        &__content {
+            animation: none;
+        }
+
         &__brand {
             transition: none;
         }
@@ -348,10 +371,40 @@
 
     &__content {
         flex: 1;
-        padding: 40px;
+        padding: clamp(22px, 3.5vw, 44px);
+        animation: content-reveal 0.5s ease-out;
+
+        > * {
+            width: min(1120px, 100%);
+            margin: 0 auto;
+        }
 
         @include media.tablet {
-            padding: 80px 16px 16px;
+            padding: 86px 14px 16px;
         }
+    }
+}
+
+@keyframes sidebar-reveal {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes content-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

@@ -1,14 +1,216 @@
+@use "@sass/variables/colors" as colors;
+
+[data-theme="light"] .root-layout {
+    --root-ambient-surface: linear-gradient(180deg, rgba(252, 252, 255, 0.98), rgba(240, 247, 255, 0.95));
+    --root-ambient-border: rgba(26, 27, 38, 0.14);
+}
+
+[data-theme="dark"] .root-layout {
+    --root-ambient-surface: linear-gradient(180deg, rgba(17, 22, 34, 0.96), rgba(14, 19, 30, 0.95));
+    --root-ambient-border: rgba(169, 177, 214, 0.24);
+}
+
 .root-layout {
     position: relative;
+    min-height: 100dvh;
+    background: var(--root-ambient-surface);
+    overflow: hidden;
+
+    &__ambient {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    &__orb {
+        position: absolute;
+        width: var(--orb-size, clamp(160px, 24vw, 340px));
+        aspect-ratio: 1;
+        border-radius: 50%;
+        filter: blur(14px);
+
+        &:nth-child(1) {
+            top: 8%;
+            left: 4%;
+            background: radial-gradient(circle at 30% 35%, rgba(colors.$green-100, 0.42), rgba(colors.$green-100, 0));
+            animation: root-orb-drift-a 28s ease-in-out infinite;
+        }
+
+        &:nth-child(2) {
+            top: 20%;
+            right: 10%;
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-100, 0.4), rgba(colors.$cyan-100, 0));
+            animation: root-orb-drift-b 32s ease-in-out infinite;
+            animation-delay: -6s;
+        }
+
+        &:nth-child(3) {
+            bottom: 8%;
+            left: 36%;
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-100, 0.38), rgba(colors.$yellow-100, 0));
+            animation: root-orb-drift-c 30s ease-in-out infinite;
+            animation-delay: -12s;
+        }
+
+        &:nth-child(4) {
+            top: 6%;
+            right: 30%;
+            --orb-size: clamp(130px, 20vw, 250px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-100, 0.36), rgba(colors.$blue-100, 0));
+            animation: root-orb-drift-c 34s ease-in-out infinite;
+            animation-delay: -18s;
+        }
+
+        &:nth-child(5) {
+            bottom: 18%;
+            left: 8%;
+            --orb-size: clamp(120px, 18vw, 230px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-100, 0.34), rgba(colors.$magenta-100, 0));
+            animation: root-orb-drift-b 36s ease-in-out infinite;
+            animation-delay: -9s;
+        }
+
+        &:nth-child(6) {
+            bottom: 5%;
+            right: 6%;
+            --orb-size: clamp(115px, 16vw, 210px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-100, 0.33), rgba(colors.$red-100, 0));
+            animation: root-orb-drift-a 33s ease-in-out infinite;
+            animation-delay: -15s;
+        }
+
+        &:nth-child(7) {
+            top: 38%;
+            left: 2%;
+            --orb-size: clamp(105px, 15vw, 200px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-80, 0.3), rgba(colors.$green-80, 0));
+            animation: root-orb-drift-b 29s ease-in-out infinite;
+            animation-delay: -20s;
+        }
+
+        &:nth-child(8) {
+            top: 12%;
+            right: 2%;
+            --orb-size: clamp(100px, 14vw, 190px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-80, 0.29), rgba(colors.$cyan-80, 0));
+            animation: root-orb-drift-c 31s ease-in-out infinite;
+            animation-delay: -24s;
+        }
+
+        &:nth-child(9) {
+            bottom: 34%;
+            left: 26%;
+            --orb-size: clamp(108px, 16vw, 205px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-80, 0.29), rgba(colors.$yellow-80, 0));
+            animation: root-orb-drift-a 35s ease-in-out infinite;
+            animation-delay: -28s;
+        }
+
+        &:nth-child(10) {
+            top: 46%;
+            right: 28%;
+            --orb-size: clamp(95px, 13vw, 180px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-80, 0.28), rgba(colors.$blue-80, 0));
+            animation: root-orb-drift-b 30s ease-in-out infinite;
+            animation-delay: -11s;
+        }
+
+        &:nth-child(11) {
+            bottom: 2%;
+            left: 52%;
+            --orb-size: clamp(90px, 12vw, 170px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-80, 0.28), rgba(colors.$magenta-80, 0));
+            animation: root-orb-drift-c 37s ease-in-out infinite;
+            animation-delay: -17s;
+        }
+
+        &:nth-child(12) {
+            top: 58%;
+            right: 12%;
+            --orb-size: clamp(86px, 11vw, 160px);
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-80, 0.27), rgba(colors.$red-80, 0));
+            animation: root-orb-drift-a 34s ease-in-out infinite;
+            animation-delay: -26s;
+        }
+    }
 
     &__notifications {
         position: fixed;
         top: 20px;
         right: 20px;
-        z-index: 1100;
+        z-index: 1200;
 
         & > div {
             margin-bottom: 12px;
         }
+    }
+
+    > :not(.root-layout__ambient):not(.root-layout__notifications) {
+        position: relative;
+        z-index: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__orb {
+            animation: none;
+        }
+    }
+}
+
+@keyframes root-orb-drift-a {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(38vw, 10vh, 0) scale(1.06);
+    }
+
+    50% {
+        transform: translate3d(16vw, 48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-8vw, 28vh, 0) scale(1.04);
+    }
+}
+
+@keyframes root-orb-drift-b {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(-34vw, 16vh, 0) scale(1.05);
+    }
+
+    50% {
+        transform: translate3d(-10vw, 54vh, 0) scale(0.94);
+    }
+
+    75% {
+        transform: translate3d(6vw, 26vh, 0) scale(1.03);
+    }
+}
+
+@keyframes root-orb-drift-c {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate3d(24vw, -30vh, 0) scale(1.04);
+    }
+
+    50% {
+        transform: translate3d(-20vw, -48vh, 0) scale(0.95);
+    }
+
+    75% {
+        transform: translate3d(-32vw, -8vh, 0) scale(1.05);
     }
 }
