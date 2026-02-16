@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import styles from "./MainLayout.module.scss";
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import CompanyIcon from "@/components/icons/CompanyIcon";

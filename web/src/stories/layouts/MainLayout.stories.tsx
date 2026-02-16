@@ -94,8 +94,8 @@ export const NavigatesToDashboardFromBrand: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        },
-    } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
+    },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await userEvent.click(
@@ -123,8 +123,8 @@ export const LogsOutOnSuccess: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        },
-    } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
+    },
     play: async ({ canvasElement }) => {
         const restorePost = mockApiPostHandler(async () => {
             return createMockApiResponse({ message: "Logged out" });
@@ -220,7 +220,7 @@ export const MobileMenuToggleFlow: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
     },
     play: async ({ canvasElement }) => {
         const rootElement = canvasElement.ownerDocument.documentElement;
@@ -287,7 +287,7 @@ export const MobileDrawerNavigation: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
     },
     play: async ({ canvasElement }) => {
         const rootElement = canvasElement.ownerDocument.documentElement;
