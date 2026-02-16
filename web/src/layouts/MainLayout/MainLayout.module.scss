@@ -251,6 +251,7 @@
             position: static;
             flex: 0 0 auto;
             width: 100%;
+            min-height: 0;
             max-width: none;
             max-height: 0;
             padding: 0;
@@ -274,6 +275,7 @@
         &--open {
             @include mobile-nav {
                 max-height: calc(100dvh - env(safe-area-inset-top) - var(--layout-top-bar-height));
+                min-height: calc(100dvh - env(safe-area-inset-top) - var(--layout-top-bar-height));
                 padding: 0 14px calc(env(safe-area-inset-bottom) + 14px);
                 transform: translateY(0) scaleY(1);
                 opacity: 1;
