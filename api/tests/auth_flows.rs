@@ -666,6 +666,25 @@ async fn refresh_session_rotates_refresh_token_state() {
 }
 
 #[actix_web::test]
+// Verifies refresh endpoint rejects requests without refresh cookie.
+async fn refresh_session_requires_refresh_cookie() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, _mock_email) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let refresh = test::TestRequest::post().uri("/auth/refresh").to_request();
+    let refresh_response = test::call_service(&app, refresh).await;
+
+    assert_eq!(refresh_response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[actix_web::test]
 // Verifies auth endpoints normalize email case across sign-up, confirm, and login.
 async fn auth_flow_normalizes_email_case_across_auth_steps() {
     let _guard = test_guard();

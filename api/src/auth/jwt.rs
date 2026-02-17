@@ -40,6 +40,10 @@ pub struct RefreshTokenClaims {
     /// Unique token identifier used for rotation/revocation.
     pub jti: String,
     /// Whether the session should persist across browser restarts.
+    ///
+    /// Defaults to `false` when decoding older tokens that predate
+    /// the remember-me claim.
+    #[serde(default)]
     pub remember_me: bool,
 }
 
