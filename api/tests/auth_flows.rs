@@ -515,6 +515,154 @@ async fn log_in_sets_auth_cookies_and_persists_refresh_token() {
     let user_id = user_id_for_email(&pool, &email).await;
     let refresh_count = active_refresh_token_count(&pool, user_id).await;
     assert_eq!(refresh_count, 1);
+
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .expect("refresh cookie should be present");
+    assert_eq!(refresh_cookie.max_age(), None);
+}
+
+#[actix_web::test]
+// Verifies remember-me login sets a persistent refresh cookie.
+async fn log_in_with_remember_me_sets_persistent_refresh_cookie() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("login-remember-me");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123",
+            "remember_me": true
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .expect("refresh cookie should be present");
+
+    assert!(refresh_cookie.max_age().is_some());
+}
+
+#[actix_web::test]
+// Verifies refresh endpoint rotates tokens and keeps one active refresh session.
+async fn refresh_session_rotates_refresh_token_state() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("refresh-session");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123",
+            "remember_me": true
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
+
+    let refresh = test::TestRequest::post()
+        .uri("/auth/refresh")
+        .cookie(refresh_cookie)
+        .to_request();
+    let refresh_response = test::call_service(&app, refresh).await;
+    assert_eq!(refresh_response.status(), StatusCode::OK);
+
+    let user_id = user_id_for_email(&pool, &email).await;
+    let active_count = active_refresh_token_count(&pool, user_id).await;
+    let revoked_count = revoked_refresh_token_count(&pool, user_id).await;
+
+    assert_eq!(active_count, 1);
+    assert!(revoked_count >= 1);
 }
 
 #[actix_web::test]

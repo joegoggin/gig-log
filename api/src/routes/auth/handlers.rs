@@ -24,9 +24,9 @@ use crate::repository::auth::AuthRepo;
 
 use super::payloads::{
     ConfirmEmailRequest, ConfirmEmailResponse, CurrentUserResponse, ForgotPasswordRequest,
-    ForgotPasswordResponse, LogInRequest, LogInResponse, LogOutResponse, SetPasswordRequest,
-    SetPasswordResponse, SignUpRequest, SignUpResponse, VerifyForgotPasswordRequest,
-    VerifyForgotPasswordResponse,
+    ForgotPasswordResponse, LogInRequest, LogInResponse, LogOutResponse, RefreshSessionResponse,
+    SetPasswordRequest, SetPasswordResponse, SignUpRequest, SignUpResponse,
+    VerifyForgotPasswordRequest, VerifyForgotPasswordResponse,
 };
 
 /// Registers a new user account.
@@ -186,6 +186,7 @@ pub async fn confirm_email(
 ///
 /// - `email` - User's email address
 /// - `password` - User's password
+/// - `remember_me` - Whether refresh-session cookies should persist across browser restarts
 ///
 /// # Response Body ([`LogInResponse`])
 ///
@@ -232,6 +233,7 @@ pub async fn log_in(
         user.id,
         &state.env.jwt_secret,
         state.env.jwt_refresh_token_expiry_seconds,
+        body.remember_me,
     )?;
 
     // Hash and store refresh token
@@ -256,7 +258,7 @@ pub async fn log_in(
         &refresh_token,
         state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
-        state.env.jwt_refresh_token_expiry_seconds,
+        body.remember_me.then_some(state.env.jwt_refresh_token_expiry_seconds),
     );
 
     Ok(HttpResponse::Ok()
@@ -308,6 +310,97 @@ pub async fn log_out(
         .cookie(clear_refresh)
         .json(LogOutResponse {
             message: "Logged out successfully.".to_string(),
+        }))
+}
+
+/// Rotates a refresh session and issues fresh authentication cookies.
+///
+/// Validates the refresh token cookie, atomically revokes the current token,
+/// creates a new refresh token record, and issues a new access token.
+///
+/// # Route
+///
+/// `POST /auth/refresh`
+///
+/// # Response Body ([`RefreshSessionResponse`])
+///
+/// - `message` - Success message
+///
+/// # Errors
+///
+/// - `Unauthorized` - If no active refresh session exists
+/// - `TokenInvalid` - If the refresh token is malformed or has an invalid token type
+/// - `TokenExpired` - If the refresh token is expired
+#[post("/auth/refresh")]
+pub async fn refresh_session(
+    state: web::Data<AppState>,
+    req: actix_web::HttpRequest,
+) -> ApiResult<HttpResponse> {
+    let refresh_cookie = req.cookie("refresh_token").ok_or(ApiError::Unauthorized)?;
+    let refresh_claims = decode_refresh_token(refresh_cookie.value(), &state.env.jwt_secret)?;
+
+    let user_id = uuid::Uuid::parse_str(&refresh_claims.sub).map_err(|_| ApiError::TokenInvalid)?;
+    let refresh_token_hash = {
+        let mut hasher = Sha256::new();
+        hasher.update(refresh_claims.jti.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+
+    let user = AuthRepo::find_user_for_token_refresh(&state.pool, user_id)
+        .await?
+        .ok_or(ApiError::Unauthorized)?;
+
+    let mut tx = state.pool.begin().await?;
+
+    if !AuthRepo::consume_active_refresh_token(&mut tx, user_id, &refresh_token_hash).await? {
+        return Err(ApiError::Unauthorized);
+    }
+
+    let access_token = create_access_token(
+        user.id,
+        &user.email,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
+    )?;
+
+    let (next_refresh_token, next_jti) = create_refresh_token(
+        user.id,
+        &state.env.jwt_secret,
+        state.env.jwt_refresh_token_expiry_seconds,
+        refresh_claims.remember_me,
+    )?;
+
+    let token_hash = {
+        let mut hasher = Sha256::new();
+        hasher.update(next_jti.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+    let expires_at =
+        Utc::now() + Duration::seconds(state.env.jwt_refresh_token_expiry_seconds as i64);
+
+    AuthRepo::create_refresh_token_in_tx(&mut tx, user.id, &token_hash, expires_at).await?;
+    tx.commit().await?;
+
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        state.env.cookie_domain.as_deref(),
+        state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
+    );
+    let refresh_cookie = create_refresh_token_cookie(
+        &next_refresh_token,
+        state.env.cookie_domain.as_deref(),
+        state.env.cookie_secure,
+        refresh_claims
+            .remember_me
+            .then_some(state.env.jwt_refresh_token_expiry_seconds),
+    );
+
+    Ok(HttpResponse::Ok()
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .json(RefreshSessionResponse {
+            message: "Session refreshed successfully.".to_string(),
         }))
 }
 
@@ -470,6 +563,7 @@ pub async fn verify_forgot_password(
         user.id,
         &state.env.jwt_secret,
         state.env.jwt_refresh_token_expiry_seconds,
+        true,
     )?;
 
     // Store refresh token
@@ -494,7 +588,7 @@ pub async fn verify_forgot_password(
         &refresh_token,
         state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
-        state.env.jwt_refresh_token_expiry_seconds,
+        Some(state.env.jwt_refresh_token_expiry_seconds),
     );
 
     Ok(HttpResponse::Ok()
@@ -592,6 +686,7 @@ pub async fn set_password(
         user.user_id,
         &state.env.jwt_secret,
         state.env.jwt_refresh_token_expiry_seconds,
+        true,
     )?;
 
     // Store new refresh token
@@ -616,7 +711,7 @@ pub async fn set_password(
         &refresh_token,
         state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
-        state.env.jwt_refresh_token_expiry_seconds,
+        Some(state.env.jwt_refresh_token_expiry_seconds),
     );
 
     Ok(HttpResponse::Ok()

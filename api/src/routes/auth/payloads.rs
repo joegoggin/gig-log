@@ -87,6 +87,10 @@ pub struct LogInRequest {
     /// User's password.
     #[validate(length(min = 1, message = "Password is required"))]
     pub password: String,
+
+    /// Whether the login session should persist across browser restarts.
+    #[serde(default)]
+    pub remember_me: bool,
 }
 
 /// Response body for successful login.
@@ -105,6 +109,15 @@ pub struct LogInResponse {
 /// See [`log_out`](super::handlers::log_out) for the handler that produces this response.
 #[derive(Debug, Serialize)]
 pub struct LogOutResponse {
+    /// Success message.
+    pub message: String,
+}
+
+/// Response body for successful token refresh.
+///
+/// See [`refresh_session`](super::handlers::refresh_session) for the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct RefreshSessionResponse {
     /// Success message.
     pub message: String,
 }

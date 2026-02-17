@@ -58,6 +58,7 @@ const LogInPage = () => {
             const response = await api.post<LogInResponse>("/auth/log-in", {
                 email: normalizedEmail,
                 password: data.password,
+                remember_me: data.remember_me,
             });
             return response.data;
         },

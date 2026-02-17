@@ -118,6 +118,7 @@ describe("LogInPage", () => {
             data: {
                 email: "demo@example.com",
                 password: "password123",
+                remember_me: false,
             },
         });
 
@@ -153,6 +154,43 @@ describe("LogInPage", () => {
             expect(refreshUser).toHaveBeenCalledTimes(1);
         });
         expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it("sends remember_me=true when remember-me is checked", async () => {
+        const refreshUser = vi.fn(async () => {});
+        const postCalls: Array<{ url: string; data: unknown }> = [];
+
+        restorePost = mockApiPostHandler(async (url, data) => {
+            postCalls.push({ url, data });
+            return createMockApiResponse({
+                message: "Logged in",
+                user_id: "user-1",
+            });
+        });
+
+        renderPage(refreshUser);
+
+        fireEvent.change(screen.getByPlaceholderText("Email"), {
+            target: { value: "demo@example.com" },
+        });
+        fireEvent.change(screen.getByPlaceholderText("Password"), {
+            target: { value: "password123" },
+        });
+        fireEvent.click(screen.getByRole("checkbox"));
+        fireEvent.click(screen.getByRole("button", { name: "Log In" }));
+
+        await waitFor(() => {
+            expect(postCalls).toHaveLength(1);
+        });
+
+        expect(postCalls[0]).toEqual({
+            url: "/auth/log-in",
+            data: {
+                email: "demo@example.com",
+                password: "password123",
+                remember_me: true,
+            },
+        });
     });
 
     it("renders field errors from validation response", async () => {
