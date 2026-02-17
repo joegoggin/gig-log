@@ -54,7 +54,7 @@ describe("DashboardPage", () => {
 
         expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy();
         expect(
-            screen.getByText("Welcome back. Use the sidebar to navigate across the app."),
+            screen.getByText("Welcome back. Use the navigation menu to move across the app."),
         ).toBeTruthy();
     });
 });

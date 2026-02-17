@@ -40,7 +40,7 @@ function DashboardPage() {
                 <p className={styles["dashboard-page__eyebrow"]}>Control center</p>
                 <h1>Dashboard</h1>
                 <p className={styles["dashboard-page__lead"]}>
-                    Welcome back. Use the sidebar to navigate across the app.
+                    Welcome back. Use the navigation menu to move across the app.
                 </p>
             </header>
 

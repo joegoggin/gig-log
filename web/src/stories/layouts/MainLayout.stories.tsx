@@ -5,6 +5,7 @@
  * - Active route state is shown for the current destination.
  * - Menu navigation transitions to selected placeholder routes.
  * - Log-out action clears auth on success and shows notification on failure.
+ * - Mobile menu toggle and drawer interactions work as expected.
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -93,8 +94,8 @@ export const NavigatesToDashboardFromBrand: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        },
-    } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
+    },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await userEvent.click(
@@ -122,8 +123,8 @@ export const LogsOutOnSuccess: Story = {
             spies: {
                 addNotification: addNotificationSpy,
             },
-        },
-    } satisfies StoryTestParameters,
+        } satisfies StoryTestParameters["storyTest"],
+    },
     play: async ({ canvasElement }) => {
         const restorePost = mockApiPostHandler(async () => {
             return createMockApiResponse({ message: "Logged out" });
@@ -194,6 +195,113 @@ export const ShowsErrorWhenLogoutFails: Story = {
             await expect(canvas.getByText("Session expired")).toBeVisible();
         } finally {
             restorePost();
+        }
+    },
+};
+
+export const MobileMenuToggleFlow: Story = {
+    args: {
+        children: <h1>Dashboard</h1>,
+    },
+    parameters: {
+        chromatic: {
+            viewports: [390],
+        },
+        storyTest: {
+            router: {
+                storyPath: "/dashboard",
+                initialEntries: ["/dashboard"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+                setUser: setUserSpy,
+            },
+            spies: {
+                addNotification: addNotificationSpy,
+            },
+        } satisfies StoryTestParameters["storyTest"],
+    },
+    play: async ({ canvasElement }) => {
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        rootElement.setAttribute("data-force-mobile-nav", "true");
+
+        try {
+            const canvas = within(canvasElement);
+
+            await userEvent.click(
+                canvas.getByRole("button", { name: "Open navigation menu" }),
+            );
+            await expect(
+                canvas.getByRole("button", { name: "Close navigation menu" }),
+            ).toBeVisible();
+
+            const drawer = canvasElement.ownerDocument.getElementById(
+                "main-layout-mobile-drawer",
+            );
+            expect(drawer).toBeTruthy();
+
+            const viewportWidth =
+                canvasElement.ownerDocument.defaultView?.innerWidth ?? 0;
+            const drawerBounds = drawer?.getBoundingClientRect();
+
+            expect(drawerBounds).toBeTruthy();
+            if (!drawerBounds) {
+                throw new Error("Mobile drawer bounds were not available");
+            }
+
+            expect(drawerBounds.width).toBeGreaterThan(0);
+            expect(drawerBounds.left).toBeGreaterThanOrEqual(0);
+            expect(drawerBounds.right).toBeLessThanOrEqual(viewportWidth + 1);
+
+            await userEvent.click(
+                canvas.getByRole("button", { name: "Dismiss navigation overlay" }),
+            );
+            await expect(
+                canvas.getByRole("button", { name: "Open navigation menu" }),
+            ).toBeVisible();
+        } finally {
+            rootElement.removeAttribute("data-force-mobile-nav");
+        }
+    },
+};
+
+export const MobileDrawerNavigation: Story = {
+    args: {
+        children: <h1>Dashboard</h1>,
+    },
+    parameters: {
+        chromatic: {
+            viewports: [390],
+        },
+        storyTest: {
+            router: {
+                storyPath: "/dashboard",
+                initialEntries: ["/dashboard"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+                setUser: setUserSpy,
+            },
+            spies: {
+                addNotification: addNotificationSpy,
+            },
+        } satisfies StoryTestParameters["storyTest"],
+    },
+    play: async ({ canvasElement }) => {
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        rootElement.setAttribute("data-force-mobile-nav", "true");
+
+        try {
+            const canvas = within(canvasElement);
+            await userEvent.click(
+                canvas.getByRole("button", { name: "Open navigation menu" }),
+            );
+            await userEvent.click(canvas.getByRole("button", { name: "Jobs" }));
+            await expect(canvas.getByText("Jobs Route")).toBeVisible();
+        } finally {
+            rootElement.removeAttribute("data-force-mobile-nav");
         }
     },
 };

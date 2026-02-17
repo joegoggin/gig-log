@@ -48,7 +48,7 @@ export const Default: Story = {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole("heading", { name: "Dashboard" })).toBeVisible();
         await expect(
-            canvas.getByText("Welcome back. Use the sidebar to navigate across the app."),
+            canvas.getByText("Welcome back. Use the navigation menu to move across the app."),
         ).toBeVisible();
     },
 };
