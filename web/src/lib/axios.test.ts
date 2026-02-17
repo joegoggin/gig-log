@@ -9,9 +9,9 @@
  * unexpected logouts instead of recovering through refresh-session rotation.
  */
 import axios, { AxiosError } from "axios";
-import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import api from "./axios";
+import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 const originalAdapter = api.defaults.adapter;
 
