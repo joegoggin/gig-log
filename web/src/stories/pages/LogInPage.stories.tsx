@@ -73,6 +73,7 @@ export const SubmitsCredentialsAndNavigates: Story = {
                 data: {
                     email: "demo@example.com",
                     password: "password123",
+                    remember_me: false,
                 },
             });
             await expect(refreshUserSpy).toHaveBeenCalledTimes(1);

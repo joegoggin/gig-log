@@ -45,14 +45,17 @@ pub fn create_refresh_token_cookie<'a>(
     token: &'a str,
     domain: Option<&'a str>,
     secure: bool,
-    max_age_seconds: u64,
+    max_age_seconds: Option<u64>,
 ) -> Cookie<'a> {
     let mut cookie = Cookie::build("refresh_token", token)
         .path("/auth")
         .http_only(true)
         .secure(secure)
-        .same_site(SameSite::Strict)
-        .max_age(Duration::seconds(max_age_seconds as i64));
+        .same_site(SameSite::Strict);
+
+    if let Some(max_age_seconds) = max_age_seconds {
+        cookie = cookie.max_age(Duration::seconds(max_age_seconds as i64));
+    }
 
     if let Some(domain) = domain.filter(|domain| !domain.trim().is_empty()) {
         cookie = cookie.domain(domain.to_string());
@@ -125,7 +128,8 @@ mod tests {
     #[test]
     // Verifies refresh-token cookies include expected security and path attributes.
     fn create_refresh_token_cookie_sets_expected_attributes() {
-        let cookie = create_refresh_token_cookie("refresh", Some("example.com"), false, 604_800);
+        let cookie =
+            create_refresh_token_cookie("refresh", Some("example.com"), false, Some(604_800));
 
         assert_eq!(cookie.name(), "refresh_token");
         assert_eq!(cookie.value(), "refresh");
@@ -154,7 +158,7 @@ mod tests {
     // Verifies cookies can be host-only when no domain is configured.
     fn cookie_helpers_support_host_only_mode() {
         let access = create_access_token_cookie("token", None, false, 900);
-        let refresh = create_refresh_token_cookie("refresh", None, false, 604_800);
+        let refresh = create_refresh_token_cookie("refresh", None, false, Some(604_800));
         let clear_access = clear_access_token_cookie(None);
         let clear_refresh = clear_refresh_token_cookie(None);
 
@@ -162,5 +166,13 @@ mod tests {
         assert_eq!(refresh.domain(), None);
         assert_eq!(clear_access.domain(), None);
         assert_eq!(clear_refresh.domain(), None);
+    }
+
+    #[test]
+    // Verifies refresh cookies can be session-scoped when no max age is provided.
+    fn create_refresh_token_cookie_supports_session_cookie() {
+        let cookie = create_refresh_token_cookie("refresh", Some("localhost"), false, None);
+
+        assert_eq!(cookie.max_age(), None);
     }
 }

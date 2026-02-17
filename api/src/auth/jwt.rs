@@ -5,7 +5,7 @@
 //! a unique token identifier (`jti`) for rotation and revocation workflows.
 
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -39,6 +39,12 @@ pub struct RefreshTokenClaims {
     pub token_type: String,
     /// Unique token identifier used for rotation/revocation.
     pub jti: String,
+    /// Whether the session should persist across browser restarts.
+    ///
+    /// Defaults to `false` when decoding older tokens that predate
+    /// the remember-me claim.
+    #[serde(default)]
+    pub remember_me: bool,
 }
 
 /// Creates and signs an access token for a user.
@@ -97,6 +103,7 @@ pub fn create_refresh_token(
     user_id: Uuid,
     secret: &str,
     expiry_seconds: u64,
+    remember_me: bool,
 ) -> Result<(String, String), ApiError> {
     let now = Utc::now();
     let exp = (now + Duration::seconds(expiry_seconds as i64)).timestamp() as usize;
@@ -109,6 +116,7 @@ pub fn create_refresh_token(
         iat,
         token_type: "refresh".to_string(),
         jti: jti.clone(),
+        remember_me,
     };
 
     let token = encode(
@@ -203,21 +211,22 @@ mod tests {
     fn refresh_token_round_trip_succeeds() {
         let user_id = Uuid::new_v4();
 
-        let (token, jti) =
-            create_refresh_token(user_id, TEST_SECRET, 60 * 60).expect("refresh token created");
+        let (token, jti) = create_refresh_token(user_id, TEST_SECRET, 60 * 60, true)
+            .expect("refresh token created");
         let claims = decode_refresh_token(&token, TEST_SECRET).expect("token should decode");
 
         assert_eq!(claims.sub, user_id.to_string());
         assert_eq!(claims.jti, jti);
         assert_eq!(claims.token_type, "refresh");
+        assert!(claims.remember_me);
     }
 
     #[test]
     // Verifies the access decoder rejects refresh-token payloads.
     fn decode_access_token_rejects_refresh_token_type() {
         let user_id = Uuid::new_v4();
-        let (refresh_token, _) =
-            create_refresh_token(user_id, TEST_SECRET, 60 * 60).expect("refresh token created");
+        let (refresh_token, _) = create_refresh_token(user_id, TEST_SECRET, 60 * 60, false)
+            .expect("refresh token created");
 
         let result = decode_access_token(&refresh_token, TEST_SECRET);
 

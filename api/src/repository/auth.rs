@@ -47,6 +47,14 @@ pub struct UserForVerification {
     pub email: String,
 }
 
+/// User fields required for refresh-token rotation.
+pub struct UserForTokenRefresh {
+    /// Unique user identifier.
+    pub id: Uuid,
+    /// User email address.
+    pub email: String,
+}
+
 /// Public user profile returned for authenticated sessions.
 #[derive(Debug, Serialize)]
 pub struct CurrentUser {
@@ -193,6 +201,31 @@ impl AuthRepo {
             UserForVerification,
             r#"SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)"#,
             email
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    /// Finds user data needed to rotate refresh/access tokens.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - User identifier to look up
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the query fails.
+    pub async fn find_user_for_token_refresh(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+    ) -> Result<Option<UserForTokenRefresh>, sqlx::Error> {
+        let result = sqlx::query_as!(
+            UserForTokenRefresh,
+            r#"SELECT id, email FROM users WHERE id = $1"#,
+            user_id
         )
         .fetch_optional(pool)
         .await?;
@@ -494,6 +527,39 @@ impl AuthRepo {
             expires_at
         )
         .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Creates a refresh token record for a user session within a transaction.
+    ///
+    /// # Arguments
+    ///
+    /// - `tx` - Active database transaction
+    /// - `user_id` - User that owns the refresh token
+    /// - `token_hash` - Hashed refresh token value
+    /// - `expires_at` - Expiration timestamp for the token
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the insert fails.
+    pub async fn create_refresh_token_in_tx(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        user_id: Uuid,
+        token_hash: &str,
+        expires_at: DateTime<Utc>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+        INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+        VALUES ($1, $2, $3)
+        "#,
+            user_id,
+            token_hash,
+            expires_at
+        )
+        .execute(&mut **tx)
         .await?;
 
         Ok(())
