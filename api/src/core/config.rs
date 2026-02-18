@@ -12,6 +12,7 @@ use crate::routes::companies::{
     create_company, delete_company, get_company, list_companies, update_company,
 };
 use crate::routes::health::health_check;
+use crate::routes::jobs::{create_job, delete_job, get_job, list_jobs, update_job};
 
 /// Registers all API routes with the Actix service configuration.
 ///
@@ -37,5 +38,11 @@ pub fn configure_routes(config: &mut ServiceConfig) {
         .service(get_company)
         .service(create_company)
         .service(update_company)
-        .service(delete_company);
+        .service(delete_company)
+        // Job routes
+        .service(list_jobs)
+        .service(get_job)
+        .service(create_job)
+        .service(update_job)
+        .service(delete_job);
 }

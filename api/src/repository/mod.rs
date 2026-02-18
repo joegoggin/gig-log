@@ -7,6 +7,8 @@
 //!
 //! - [`auth`] - User, authentication code, and refresh token queries
 //! - [`companies`] - Company CRUD queries scoped to authenticated users
+//! - [`jobs`] - Job CRUD queries scoped to authenticated users
 
 pub mod auth;
 pub mod companies;
+pub mod jobs;
