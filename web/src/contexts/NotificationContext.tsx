@@ -21,7 +21,7 @@ type NotificationProviderProps = {
 };
 
 const createNotificationId = () => {
-    if (typeof globalThis.crypto.randomUUID === "function") {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
         try {
             return globalThis.crypto.randomUUID();
         } catch {

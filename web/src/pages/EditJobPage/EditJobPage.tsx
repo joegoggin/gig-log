@@ -55,8 +55,11 @@ const mapSchemaErrorsToFields = (
     };
 
     applySchemaError("hourly_rate_required", ["hourly_rate"]);
+    applySchemaError("hourly_rate_range", ["hourly_rate"]);
     applySchemaError("hourly_payout_fields_forbidden", ["number_of_payouts", "payout_amount"]);
     applySchemaError("payout_fields_required", ["number_of_payouts", "payout_amount"]);
+    applySchemaError("number_of_payouts_range", ["number_of_payouts"]);
+    applySchemaError("payout_amount_range", ["payout_amount"]);
     applySchemaError("payouts_hourly_rate_forbidden", ["hourly_rate"]);
 
     return mappedErrors;
@@ -180,8 +183,16 @@ function EditJobPage({ jobId }: EditJobPageProps) {
             nextErrors.company_id = "Company is required";
         }
 
-        if (data.payment_type === "hourly" && !data.hourly_rate.trim()) {
-            nextErrors.hourly_rate = "Hourly rate is required";
+        if (data.payment_type === "hourly") {
+            if (!data.hourly_rate.trim()) {
+                nextErrors.hourly_rate = "Hourly rate is required";
+            } else {
+                const parsedHourlyRate = Number(data.hourly_rate);
+
+                if (Number.isNaN(parsedHourlyRate) || parsedHourlyRate <= 0) {
+                    nextErrors.hourly_rate = "Hourly rate must be greater than 0";
+                }
+            }
         }
 
         if (data.payment_type === "payouts") {
@@ -192,11 +203,19 @@ function EditJobPage({ jobId }: EditJobPageProps) {
 
                 if (!Number.isInteger(parsedPayoutCount)) {
                     nextErrors.number_of_payouts = "Number of payouts must be a whole number";
+                } else if (parsedPayoutCount <= 0) {
+                    nextErrors.number_of_payouts = "Number of payouts must be greater than 0";
                 }
             }
 
             if (!data.payout_amount.trim()) {
                 nextErrors.payout_amount = "Payout amount is required";
+            } else {
+                const parsedPayoutAmount = Number(data.payout_amount);
+
+                if (Number.isNaN(parsedPayoutAmount) || parsedPayoutAmount <= 0) {
+                    nextErrors.payout_amount = "Payout amount must be greater than 0";
+                }
             }
         }
 

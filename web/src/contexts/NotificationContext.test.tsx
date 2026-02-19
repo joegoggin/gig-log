@@ -65,4 +65,32 @@ describe("NotificationContext", () => {
         expect(result.current.notifications).toHaveLength(1);
         expect(result.current.notifications[0]?.id).toMatch(/^notification-\d+-[a-z0-9]+$/);
     });
+
+    it("falls back to generated IDs when crypto is unavailable", () => {
+        const originalCryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+
+        Object.defineProperty(globalThis, "crypto", {
+            value: undefined,
+            configurable: true,
+        });
+
+        try {
+            const { result } = renderHook(() => useNotification(), { wrapper });
+
+            act(() => {
+                result.current.addNotification({
+                    type: NotificationType.SUCCESS,
+                    title: "Job Created",
+                    message: "Your job has been created successfully.",
+                });
+            });
+
+            expect(result.current.notifications).toHaveLength(1);
+            expect(result.current.notifications[0]?.id).toMatch(/^notification-\d+-[a-z0-9]+$/);
+        } finally {
+            if (originalCryptoDescriptor) {
+                Object.defineProperty(globalThis, "crypto", originalCryptoDescriptor);
+            }
+        }
+    });
 });

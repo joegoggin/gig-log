@@ -3,6 +3,8 @@
 //! This module validates cross-field constraints for job create and update
 //! payloads so payment-type-specific fields remain consistent.
 
+use rust_decimal::Decimal;
+
 use crate::models::job::PaymentType;
 use crate::routes::jobs::{CreateJobRequest, UpdateJobRequest};
 
@@ -22,20 +24,33 @@ use crate::routes::jobs::{CreateJobRequest, UpdateJobRequest};
 ///
 /// Returns a `ValidationError` when:
 /// - `hourly` is selected without `hourly_rate`
+/// - `hourly_rate` is not greater than 0 for `hourly` jobs
 /// - `hourly` is selected with payout fields present
 /// - `payouts` is selected without both payout fields
+/// - `number_of_payouts` is not greater than 0 for `payouts` jobs
+/// - `payout_amount` is not greater than 0 for `payouts` jobs
 /// - `payouts` is selected with `hourly_rate` present
 fn validate_payment_configuration(
     payment_type: PaymentType,
     number_of_payouts: Option<i32>,
-    payout_amount: Option<rust_decimal::Decimal>,
-    hourly_rate: Option<rust_decimal::Decimal>,
+    payout_amount: Option<Decimal>,
+    hourly_rate: Option<Decimal>,
 ) -> Result<(), validator::ValidationError> {
     match payment_type {
         PaymentType::Hourly => {
-            if hourly_rate.is_none() {
-                let mut error = validator::ValidationError::new("hourly_rate_required");
-                error.message = Some("Hourly rate is required when payment type is hourly".into());
+            let rate = match hourly_rate {
+                Some(rate) => rate,
+                None => {
+                    let mut error = validator::ValidationError::new("hourly_rate_required");
+                    error.message =
+                        Some("Hourly rate is required when payment type is hourly".into());
+                    return Err(error);
+                }
+            };
+
+            if rate <= Decimal::ZERO {
+                let mut error = validator::ValidationError::new("hourly_rate_range");
+                error.message = Some("Hourly rate must be greater than 0".into());
                 return Err(error);
             }
 
@@ -47,12 +62,27 @@ fn validate_payment_configuration(
             }
         }
         PaymentType::Payouts => {
-            if number_of_payouts.is_none() || payout_amount.is_none() {
-                let mut error = validator::ValidationError::new("payout_fields_required");
-                error.message = Some(
-                    "Number of payouts and payout amount are required when payment type is payouts"
-                        .into(),
-                );
+            let (payouts, amount) = match (number_of_payouts, payout_amount) {
+                (Some(payouts), Some(amount)) => (payouts, amount),
+                _ => {
+                    let mut error = validator::ValidationError::new("payout_fields_required");
+                    error.message = Some(
+                        "Number of payouts and payout amount are required when payment type is payouts"
+                            .into(),
+                    );
+                    return Err(error);
+                }
+            };
+
+            if payouts <= 0 {
+                let mut error = validator::ValidationError::new("number_of_payouts_range");
+                error.message = Some("Number of payouts must be greater than 0".into());
+                return Err(error);
+            }
+
+            if amount <= Decimal::ZERO {
+                let mut error = validator::ValidationError::new("payout_amount_range");
+                error.message = Some("Payout amount must be greater than 0".into());
                 return Err(error);
             }
 
@@ -150,6 +180,24 @@ mod tests {
     }
 
     #[test]
+    // Verifies hourly jobs reject non-positive hourly rates.
+    fn create_job_validator_rejects_non_positive_hourly_rate() {
+        let request = CreateJobRequest {
+            company_id: Uuid::new_v4(),
+            title: "Hourly Job".to_string(),
+            payment_type: PaymentType::Hourly,
+            number_of_payouts: None,
+            payout_amount: None,
+            hourly_rate: Some(Decimal::ZERO),
+        };
+
+        let result = validate_create_job_payment_configuration(&request);
+        let error = result.expect_err("validator should reject non-positive hourly rate");
+
+        assert_eq!(error.code.as_ref(), "hourly_rate_range");
+    }
+
+    #[test]
     // Verifies payout jobs require both payout fields.
     fn update_job_validator_rejects_missing_payout_fields() {
         let request = UpdateJobRequest {
@@ -165,6 +213,42 @@ mod tests {
         let error = result.expect_err("validator should reject missing payout fields");
 
         assert_eq!(error.code.as_ref(), "payout_fields_required");
+    }
+
+    #[test]
+    // Verifies payout jobs reject non-positive payout counts.
+    fn update_job_validator_rejects_non_positive_number_of_payouts() {
+        let request = UpdateJobRequest {
+            company_id: Uuid::new_v4(),
+            title: "Payout Job".to_string(),
+            payment_type: PaymentType::Payouts,
+            number_of_payouts: Some(0),
+            payout_amount: Some(Decimal::new(5000, 2)),
+            hourly_rate: None,
+        };
+
+        let result = validate_update_job_payment_configuration(&request);
+        let error = result.expect_err("validator should reject non-positive payout counts");
+
+        assert_eq!(error.code.as_ref(), "number_of_payouts_range");
+    }
+
+    #[test]
+    // Verifies payout jobs reject non-positive payout amounts.
+    fn update_job_validator_rejects_non_positive_payout_amount() {
+        let request = UpdateJobRequest {
+            company_id: Uuid::new_v4(),
+            title: "Payout Job".to_string(),
+            payment_type: PaymentType::Payouts,
+            number_of_payouts: Some(2),
+            payout_amount: Some(Decimal::ZERO),
+            hourly_rate: None,
+        };
+
+        let result = validate_update_job_payment_configuration(&request);
+        let error = result.expect_err("validator should reject non-positive payout amounts");
+
+        assert_eq!(error.code.as_ref(), "payout_amount_range");
     }
 
     #[test]
