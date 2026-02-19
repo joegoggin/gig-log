@@ -244,6 +244,7 @@ function CreatePaymentPage({ preselectedCompanyId }: CreatePaymentPageProps) {
         }
 
         if (
+            supportsTransferStatus &&
             data.expected_payout_date &&
             data.expected_transfer_date &&
             data.expected_transfer_date < data.expected_payout_date

@@ -89,7 +89,7 @@ export const RendersPaymentCardsAndActions: Story = {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole("heading", { name: "Payments" })).toBeVisible();
         await expect(canvas.getByText("Total: $500.00")).toBeVisible();
-        await expect(canvas.getByText("Payout type: Paypal")).toBeVisible();
+        await expect(canvas.getByText("Payout type: PayPal")).toBeVisible();
         await expect(canvas.getByText("Payment received: Yes")).toBeVisible();
         await expect(canvas.getByText("Transfer received: Yes")).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Create Payment" })).toBeVisible();

@@ -98,7 +98,7 @@ export const ShowsPaymentDetailsAndRoutesBack: Story = {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole("heading", { name: "Payment: $500.00" })).toBeVisible();
         await expect(canvas.getByText("Payout type")).toBeVisible();
-        await expect(canvas.getByText("Paypal")).toBeVisible();
+        await expect(canvas.getByText("PayPal")).toBeVisible();
         await expect(canvas.getByText("Expected payout")).toBeVisible();
         await expect(canvas.getByText("Expected transfer")).toBeVisible();
         await expect(canvas.getByText("Payment received")).toBeVisible();

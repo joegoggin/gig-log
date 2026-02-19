@@ -87,7 +87,7 @@ function JobsPage({ initialJobs }: JobsPageProps) {
 
     const handleDeleteJob = async (job: Job) => {
         const shouldDelete = window.confirm(
-            `Delete "${job.title}"? This also removes related work sessions and payments.`,
+            `Delete "${job.title}"? This also removes related work sessions.`,
         );
 
         if (!shouldDelete || deletingJobId) {

@@ -76,6 +76,10 @@ function PaymentsPage({ initialPayments }: PaymentsPageProps) {
             return "Direct Deposit";
         }
 
+        if (payoutType === "paypal") {
+            return "PayPal";
+        }
+
         return `${payoutType.charAt(0).toUpperCase()}${payoutType.slice(1)}`;
     };
 

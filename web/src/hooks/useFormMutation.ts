@@ -3,10 +3,7 @@ import type { AxiosError } from "axios";
 import type {ValidationErrorResponse} from "@/lib/errors";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import { useNotification } from "@/contexts/NotificationContext";
-import {
-    
-    parseValidationErrors
-} from "@/lib/errors";
+import { parseValidationErrors } from "@/lib/errors";
 
 type UseFormMutationOptions<TData, TVariables> = {
     mutationFn: (variables: TVariables) => Promise<TData>;
