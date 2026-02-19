@@ -3,6 +3,7 @@
  *
  * Covered scenarios:
  * - Unauthenticated users are redirected to the log-in route.
+ * - Unauthenticated users are redirected from payment-create paths.
  * - Unauthenticated users are redirected from payment-detail paths.
  * - Authenticated users can access the protected app shell.
  * - Loading auth state shows a loading indicator.
@@ -58,6 +59,25 @@ export const RedirectsPaymentDetailWhenUnauthenticated: Story = {
             router: {
                 storyPath: "/payments/p1",
                 initialEntries: ["/payments/p1"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In Route")).toBeVisible();
+    },
+};
+
+export const RedirectsPaymentCreateWhenUnauthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/payments/create",
+                initialEntries: ["/payments/create"],
             },
             auth: {
                 isLoading: false,

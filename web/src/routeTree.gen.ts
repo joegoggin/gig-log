@@ -22,6 +22,7 @@ import { Route as AuthenticatedPaymentsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedCompaniesIndexRouteImport } from './routes/_authenticated/companies/index'
+import { Route as AuthenticatedPaymentsCreateRouteImport } from './routes/_authenticated/payments/create'
 import { Route as AuthenticatedJobsCreateRouteImport } from './routes/_authenticated/jobs/create'
 import { Route as AuthenticatedCompaniesCreateRouteImport } from './routes/_authenticated/companies/create'
 import { Route as AuthenticatedPaymentsPaymentIdIndexRouteImport } from './routes/_authenticated/payments/$paymentId/index'
@@ -99,6 +100,12 @@ const AuthenticatedCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPaymentsCreateRoute =
+  AuthenticatedPaymentsCreateRouteImport.update({
+    id: '/payments/create',
+    path: '/payments/create',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedJobsCreateRoute = AuthenticatedJobsCreateRouteImport.update({
   id: '/jobs/create',
   path: '/jobs/create',
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/jobs/create': typeof AuthenticatedJobsCreateRoute
+  '/payments/create': typeof AuthenticatedPaymentsCreateRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/jobs/create': typeof AuthenticatedJobsCreateRoute
+  '/payments/create': typeof AuthenticatedPaymentsCreateRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -189,6 +198,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/_authenticated/jobs/create': typeof AuthenticatedJobsCreateRoute
+  '/_authenticated/payments/create': typeof AuthenticatedPaymentsCreateRoute
   '/_authenticated/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/jobs/': typeof AuthenticatedJobsIndexRoute
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/companies/create'
     | '/jobs/create'
+    | '/payments/create'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/'
     | '/companies/create'
     | '/jobs/create'
+    | '/payments/create'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -255,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_authenticated/companies/create'
     | '/_authenticated/jobs/create'
+    | '/_authenticated/payments/create'
     | '/_authenticated/companies/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/jobs/'
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompaniesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/payments/create': {
+      id: '/_authenticated/payments/create'
+      path: '/payments/create'
+      fullPath: '/payments/create'
+      preLoaderRoute: typeof AuthenticatedPaymentsCreateRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/jobs/create': {
       id: '/_authenticated/jobs/create'
       path: '/jobs/create'
@@ -432,6 +452,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedCompaniesCreateRoute: typeof AuthenticatedCompaniesCreateRoute
   AuthenticatedJobsCreateRoute: typeof AuthenticatedJobsCreateRoute
+  AuthenticatedPaymentsCreateRoute: typeof AuthenticatedPaymentsCreateRoute
   AuthenticatedCompaniesIndexRoute: typeof AuthenticatedCompaniesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedJobsIndexRoute: typeof AuthenticatedJobsIndexRoute
@@ -447,6 +468,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCompaniesCreateRoute: AuthenticatedCompaniesCreateRoute,
   AuthenticatedJobsCreateRoute: AuthenticatedJobsCreateRoute,
+  AuthenticatedPaymentsCreateRoute: AuthenticatedPaymentsCreateRoute,
   AuthenticatedCompaniesIndexRoute: AuthenticatedCompaniesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedJobsIndexRoute: AuthenticatedJobsIndexRoute,
