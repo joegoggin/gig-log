@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import styles from "./JobsPage.module.scss";
 import type { Job, JobsListResponse } from "@/types/models/Job";
 import AddIcon from "@/components/icons/AddIcon";
@@ -17,7 +18,7 @@ type JobsPageProps = {
 /**
  * The authenticated jobs index page.
  * Displays all jobs owned by the current user and provides actions
- * for upcoming create/view/edit flows plus immediate delete support.
+ * for create/view/delete workflows plus upcoming edit support.
  *
  * Route: `/jobs`
  *
@@ -31,6 +32,7 @@ type JobsPageProps = {
  * - `Notification` - Displays feedback for fetch/delete operations.
  */
 function JobsPage({ initialJobs }: JobsPageProps) {
+    const navigate = useNavigate();
     const { addNotification } = useNotification();
     const hasInitialJobs = initialJobs !== undefined;
     const [jobs, setJobs] = useState<Array<Job>>(initialJobs || []);
@@ -170,9 +172,10 @@ function JobsPage({ initialJobs }: JobsPageProps) {
                             </div>
                             <div className={styles["jobs-page__actions"]}>
                                 <button
-                                    aria-disabled="true"
-                                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__view-action"]} ${styles["jobs-page__icon-button--disabled"]}`}
-                                    tabIndex={-1}
+                                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__view-action"]}`}
+                                    onClick={() => {
+                                        navigate({ to: `/jobs/${job.id}` });
+                                    }}
                                     type="button"
                                 >
                                     <InfoIcon />

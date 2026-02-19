@@ -16,3 +16,7 @@ export type Job = {
 export type JobsListResponse = {
     jobs: Array<Job>;
 };
+
+export type JobResponse = {
+    job: Job;
+};

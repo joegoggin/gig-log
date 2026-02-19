@@ -3,6 +3,7 @@
  *
  * Covered scenarios:
  * - Unauthenticated users are redirected to the log-in route.
+ * - Unauthenticated users are redirected from job-detail paths.
  * - Authenticated users can access the protected app shell.
  * - Loading auth state shows a loading indicator.
  */
@@ -38,6 +39,25 @@ export const RedirectsWhenUnauthenticated: Story = {
             router: {
                 storyPath: "/jobs",
                 initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In Route")).toBeVisible();
+    },
+};
+
+export const RedirectsJobDetailWhenUnauthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs/123",
+                initialEntries: ["/jobs/123"],
             },
             auth: {
                 isLoading: false,

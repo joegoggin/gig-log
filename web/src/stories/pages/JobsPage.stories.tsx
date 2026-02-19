@@ -3,6 +3,7 @@
  *
  * Covered scenarios:
  * - Job cards render with action controls and payment details.
+ * - View actions navigate to the job detail route.
  * - Delete success removes the card and dispatches a success notification.
  * - Delete failures preserve the card and dispatch an error notification.
  */
@@ -85,6 +86,29 @@ export const RendersJobCardsAndActions: Story = {
         await expect(canvas.getByRole("button", { name: "View Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Edit Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Delete Job" })).toBeVisible();
+    },
+};
+
+export const RoutesViewJobToDetailPage: Story = {
+    args: {
+        initialJobs: jobsFixture,
+    },
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "View Job" }));
+        await expect(canvas.getByText("Job Route")).toBeVisible();
     },
 };
 
