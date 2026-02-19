@@ -20,11 +20,23 @@ type NotificationProviderProps = {
     children: ReactNode;
 };
 
+const createNotificationId = () => {
+    if (typeof globalThis.crypto.randomUUID === "function") {
+        try {
+            return globalThis.crypto.randomUUID();
+        } catch {
+            // Fall through to a non-crypto fallback.
+        }
+    }
+
+    return `notification-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 export function NotificationProvider({ children }: NotificationProviderProps) {
     const [notifications, setNotifications] = useState<Array<Notification>>([]);
 
     const addNotification = useCallback((notification: Omit<Notification, "id">) => {
-        const id = crypto.randomUUID();
+        const id = createNotificationId();
         setNotifications((prev) => [...prev, { ...notification, id }]);
     }, []);
 

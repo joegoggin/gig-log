@@ -126,13 +126,14 @@ function JobsPage({ initialJobs }: JobsPageProps) {
                     </p>
                 </div>
                 <button
-                    aria-disabled="true"
-                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__create-action"]} ${styles["jobs-page__icon-button--disabled"]}`}
-                    tabIndex={-1}
+                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__create-action"]}`}
+                    onClick={() => {
+                        navigate({ to: "/jobs/create" });
+                    }}
                     type="button"
                 >
                     <AddIcon />
-                    <p>Create Job (coming soon)</p>
+                    <p>Create Job</p>
                 </button>
             </header>
 

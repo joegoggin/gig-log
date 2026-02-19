@@ -3,7 +3,7 @@
  *
  * Covered scenarios:
  * - Company cards expose CRUD-adjacent actions used in day-to-day workflows.
- * - Navigation actions route to jobs, payments, and company detail/edit paths.
+ * - Navigation actions route to job creation, payments, and company detail/edit paths.
  * - Delete requests remove cards on success and surface notifications on failure.
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
@@ -84,7 +84,7 @@ export const RendersCompanyCardsAndActions: Story = {
     },
 };
 
-export const RoutesActionButtonsToExpectedPages: Story = {
+export const RoutesAddJobToCreateJobPage: Story = {
     args: {
         initialCompanies: companiesFixture,
     },
@@ -103,7 +103,7 @@ export const RoutesActionButtonsToExpectedPages: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await userEvent.click(canvas.getByRole("button", { name: "Add Job" }));
-        await expect(canvas.getByText("Jobs Route")).toBeVisible();
+        await expect(canvas.getByText("Create Job Route")).toBeVisible();
     },
 };
 

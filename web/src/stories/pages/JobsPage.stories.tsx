@@ -3,6 +3,7 @@
  *
  * Covered scenarios:
  * - Job cards render with action controls and payment details.
+ * - Create action navigates to the job-create route.
  * - View actions navigate to the job detail route.
  * - Delete success removes the card and dispatches a success notification.
  * - Delete failures preserve the card and dispatch an error notification.
@@ -82,10 +83,33 @@ export const RendersJobCardsAndActions: Story = {
         await expect(canvas.getByText("Website Maintenance")).toBeVisible();
         await expect(canvas.getByText("Payment type: Hourly")).toBeVisible();
         await expect(canvas.getByText("Rate: $55.50/hour")).toBeVisible();
-        await expect(canvas.getByRole("button", { name: "Create Job (coming soon)" })).toBeVisible();
+        await expect(canvas.getByRole("button", { name: "Create Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "View Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Edit Job" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Delete Job" })).toBeVisible();
+    },
+};
+
+export const RoutesCreateJobToCreatePage: Story = {
+    args: {
+        initialJobs: jobsFixture,
+    },
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "Create Job" }));
+        await expect(canvas.getByText("Create Job Route")).toBeVisible();
     },
 };
 

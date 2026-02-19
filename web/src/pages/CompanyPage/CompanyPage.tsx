@@ -205,7 +205,7 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
                                 <button
                                     className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--add"]}`}
                                     onClick={() => {
-                                        navigate({ to: "/jobs" });
+                                        navigate({ to: `/jobs/create?companyId=${companyId}` });
                                     }}
                                     type="button"
                                 >

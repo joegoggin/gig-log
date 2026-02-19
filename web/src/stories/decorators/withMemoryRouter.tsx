@@ -29,6 +29,7 @@ const routeStubs: Array<RouteStubDefinition> = [
     { path: "/companies/123", label: "Company Route" },
     { path: "/companies/123/edit", label: "Edit Company Route" },
     { path: "/jobs", label: "Jobs Route" },
+    { path: "/jobs/create", label: "Create Job Route" },
     { path: "/jobs/123", label: "Job Route" },
     { path: "/jobs/j1", label: "Job Route" },
     { path: "/payments", label: "Payments Route" },
