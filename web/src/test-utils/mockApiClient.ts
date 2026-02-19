@@ -112,8 +112,12 @@ export function mockApiPostHandler(
         config?: unknown,
     ) => Promise<AxiosResponse<unknown>>,
 ): () => void {
-    return mockApiPost(((url, data, config) =>
-        handler(url, data, config)) as typeof api.post);
+    return mockApiPost(((url, data, config) => {
+        if (url === "/auth/refresh") {
+            return Promise.resolve(createMockApiResponse({}));
+        }
+        return handler(url, data, config);
+    }) as typeof api.post);
 }
 
 export function mockApiGetHandler(

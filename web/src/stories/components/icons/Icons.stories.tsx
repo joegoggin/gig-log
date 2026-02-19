@@ -13,8 +13,11 @@ import HomeIcon from "@/components/icons/HomeIcon";
 import InfoIcon from "@/components/icons/InfoIcon";
 import JobsIcon from "@/components/icons/JobsIcon";
 import LogOutIcon from "@/components/icons/LogOutIcon";
+import PauseIcon from "@/components/icons/PauseIcon";
 import PaymentIcon from "@/components/icons/PaymentIcon";
+import PlayIcon from "@/components/icons/PlayIcon";
 import SettingsIcon from "@/components/icons/SettingsIcon";
+import StopIcon from "@/components/icons/StopIcon";
 import WarningIcon from "@/components/icons/WarningIcon";
 
 const IconGallery = () => {
@@ -33,8 +36,11 @@ const IconGallery = () => {
         { name: "InfoIcon", component: InfoIcon },
         { name: "JobsIcon", component: JobsIcon },
         { name: "LogOutIcon", component: LogOutIcon },
+        { name: "PauseIcon", component: PauseIcon },
         { name: "PaymentIcon", component: PaymentIcon },
+        { name: "PlayIcon", component: PlayIcon },
         { name: "SettingsIcon", component: SettingsIcon },
+        { name: "StopIcon", component: StopIcon },
         { name: "WarningIcon", component: WarningIcon },
     ];
 
@@ -200,6 +206,14 @@ export const LogOut: StoryObj<typeof LogOutIcon> = {
     ),
 };
 
+export const Pause: StoryObj<typeof PauseIcon> = {
+    render: () => (
+        <IconWrapper>
+            <PauseIcon />
+        </IconWrapper>
+    ),
+};
+
 export const Payment: StoryObj<typeof PaymentIcon> = {
     render: () => (
         <IconWrapper>
@@ -208,10 +222,26 @@ export const Payment: StoryObj<typeof PaymentIcon> = {
     ),
 };
 
+export const Play: StoryObj<typeof PlayIcon> = {
+    render: () => (
+        <IconWrapper>
+            <PlayIcon />
+        </IconWrapper>
+    ),
+};
+
 export const Settings: StoryObj<typeof SettingsIcon> = {
     render: () => (
         <IconWrapper>
             <SettingsIcon />
+        </IconWrapper>
+    ),
+};
+
+export const Stop: StoryObj<typeof StopIcon> = {
+    render: () => (
+        <IconWrapper>
+            <StopIcon />
         </IconWrapper>
     ),
 };

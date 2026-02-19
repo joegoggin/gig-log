@@ -9,8 +9,10 @@
 //! - [`companies`] - Company CRUD queries scoped to authenticated users
 //! - [`jobs`] - Job CRUD queries scoped to authenticated users
 //! - [`payments`] - Payment CRUD queries scoped to authenticated users
+//! - [`work_sessions`] - Work session CRUD queries scoped to authenticated users
 
 pub mod auth;
 pub mod companies;
 pub mod jobs;
 pub mod payments;
+pub mod work_sessions;

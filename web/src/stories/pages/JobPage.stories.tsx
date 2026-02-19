@@ -282,3 +282,90 @@ export const ShowsNotFoundFromApiResponse: Story = {
         }
     },
 };
+
+export const ShowsWorkSessionsAndTimer: Story = {
+    args: {
+        jobId: "123",
+        initialJob: {
+            id: "123",
+            company_id: "c1",
+            user_id: "u1",
+            title: "Job with Sessions",
+            payment_type: "hourly",
+            number_of_payouts: null,
+            payout_amount: null,
+            hourly_rate: "50.00",
+            created_at: "2026-01-02T00:00:00Z",
+            updated_at: "2026-01-03T00:00:00Z",
+        },
+        initialWorkSessions: [
+            {
+                id: "ws1",
+                job_id: "123",
+                user_id: "u1",
+                start_time: "2026-01-02T10:00:00Z",
+                end_time: "2026-01-02T12:00:00Z",
+                is_running: false,
+                accumulated_paused_duration: 1800, // 30 mins paused
+                paused_at: null,
+                time_reported: false,
+                created_at: "2026-01-02T10:00:00Z",
+                updated_at: "2026-01-02T12:00:00Z",
+            },
+        ],
+    },
+    loaders: [
+        () => {
+            return {
+                restoreGet: mockApiGetHandler((url) => {
+                    if (url === "/work-sessions/active") {
+                        return Promise.reject(
+                            createAxiosErrorResponse({
+                                error: {
+                                    code: "not_found",
+                                    message: "No active session found",
+                                },
+                            }, 404, "Not Found")
+                        );
+                    }
+                    return Promise.resolve(createMockApiResponse({}));
+                }),
+            };
+        },
+    ],
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs/123",
+                initialEntries: ["/jobs/123"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement, loaded }) => {
+        const { restoreGet } = loaded as StoryLoadedContext;
+
+        try {
+            const canvas = within(canvasElement);
+
+            await waitFor(() => {
+                expect(canvas.getByText("Time Tracking")).toBeVisible();
+            });
+
+            await expect(canvas.getByText("Work History")).toBeVisible();
+            
+            // Start button should be visible (idle state)
+            await expect(canvas.getByRole("button", { name: "Start" })).toBeVisible();
+
+            // The session was from 10:00 to 12:00 (2 hours = 7200 seconds)
+            // Minus 30 mins paused (1800 seconds)
+            // Total worked = 5400 seconds = 1.5 hours
+            await expect(canvas.getByText("1.50 hrs")).toBeVisible();
+        } finally {
+            restoreGet();
+        }
+    },
+};

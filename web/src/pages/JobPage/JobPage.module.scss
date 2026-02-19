@@ -22,7 +22,8 @@
     &__header,
     &__state,
     &__summary-card,
-    &__details {
+    &__details,
+    &__sessions-section {
         border-radius: 20px;
         border: 1px solid var(--page-border);
         background: var(--page-surface);
@@ -133,11 +134,91 @@
         }
     }
 
+    &__sessions-section {
+        padding: clamp(22px, 3.4vw, 34px);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        animation: job-fade-up 0.45s ease-out;
+    }
+
+    &__sessions-header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__sessions-warning {
+        color: colors.$red-100;
+        font-weight: 500;
+    }
+
+    &__timer-wrapper {
+        display: flex;
+        justify-content: center;
+        padding: 24px 0;
+        border-top: 1px solid var(--page-border);
+        border-bottom: 1px solid var(--page-border);
+    }
+
+    &__historical-sessions {
+        h3 {
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+    }
+
+    &__empty-sessions {
+        font-style: italic;
+    }
+
+    &__sessions-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    &__session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-radius: 12px;
+        background: rgba(169, 177, 214, 0.05);
+        border: 1px solid var(--page-border);
+
+        div {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        strong {
+            font-weight: 600;
+        }
+
+        span {
+            font-size: 0.9em;
+            color: var(--page-muted);
+        }
+    }
+
+    &__session-hours {
+        font-weight: 700;
+        font-size: 1.1em;
+        color: colors.$blue-100 !important;
+        align-items: flex-end;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         &__header,
         &__state,
         &__summary-card,
-        &__details {
+        &__details,
+        &__sessions-section {
             animation: none;
         }
 

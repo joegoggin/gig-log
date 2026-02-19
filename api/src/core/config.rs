@@ -16,6 +16,10 @@ use crate::routes::jobs::{create_job, delete_job, get_job, list_jobs, update_job
 use crate::routes::payments::{
     create_payment, delete_payment, get_payment, list_payments, update_payment,
 };
+use crate::routes::work_sessions::{
+    complete_work_session, get_active_work_session, list_work_sessions_for_job, pause_work_session,
+    resume_work_session, start_work_session,
+};
 
 /// Registers all API routes with the Actix service configuration.
 ///
@@ -53,5 +57,12 @@ pub fn configure_routes(config: &mut ServiceConfig) {
         .service(get_payment)
         .service(create_payment)
         .service(update_payment)
-        .service(delete_payment);
+        .service(delete_payment)
+        // Work session routes
+        .service(start_work_session)
+        .service(pause_work_session)
+        .service(resume_work_session)
+        .service(complete_work_session)
+        .service(get_active_work_session)
+        .service(list_work_sessions_for_job);
 }

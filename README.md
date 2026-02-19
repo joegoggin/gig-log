@@ -71,7 +71,7 @@ GigLog is still in active development.
 
 ### 🛣️ In Progress / Planned
 
-- [ ] Work session tracking and time-based earnings
+- [ ] Work session tracking and time-based earnings (API routes complete, frontend pending)
 
 ## 🛠️ Tech Stack
 
