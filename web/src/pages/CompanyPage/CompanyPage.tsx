@@ -205,7 +205,7 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
                                 <button
                                     className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--add"]}`}
                                     onClick={() => {
-                                        navigate({ to: "/jobs" });
+                                        navigate({ to: `/jobs/create?companyId=${companyId}` });
                                     }}
                                     type="button"
                                 >
@@ -222,10 +222,11 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
                                         </div>
                                         <div className={styles["company-page__list-actions"]}>
                                             <button
-                                                aria-disabled="true"
-                                                aria-label="View job action (coming soon)"
-                                                className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--view"]} ${styles["company-page__icon-button--disabled"]}`}
-                                                tabIndex={-1}
+                                                aria-label={`View ${job.title}`}
+                                                className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--view"]}`}
+                                                onClick={() => {
+                                                    navigate({ to: `/jobs/${job.id}` });
+                                                }}
                                                 type="button"
                                             >
                                                 <InfoIcon />

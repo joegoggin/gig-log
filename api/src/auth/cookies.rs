@@ -3,7 +3,7 @@
 //! This module centralizes secure cookie configuration for access and refresh
 //! tokens so handlers can set and clear auth cookies consistently.
 
-use actix_web::cookie::{time::Duration, Cookie, SameSite};
+use actix_web::cookie::{Cookie, SameSite, time::Duration};
 
 /// Builds the `access_token` cookie for authenticated requests.
 ///
@@ -108,7 +108,7 @@ mod tests {
         clear_access_token_cookie, clear_refresh_token_cookie, create_access_token_cookie,
         create_refresh_token_cookie,
     };
-    use actix_web::cookie::{time::Duration, SameSite};
+    use actix_web::cookie::{SameSite, time::Duration};
 
     #[test]
     // Verifies access-token cookies include expected security and scope attributes.

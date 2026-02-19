@@ -258,7 +258,8 @@ pub async fn log_in(
         &refresh_token,
         state.env.cookie_domain.as_deref(),
         state.env.cookie_secure,
-        body.remember_me.then_some(state.env.jwt_refresh_token_expiry_seconds),
+        body.remember_me
+            .then_some(state.env.jwt_refresh_token_expiry_seconds),
     );
 
     Ok(HttpResponse::Ok()

@@ -22,8 +22,11 @@ import { Route as AuthenticatedPaymentsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedCompaniesIndexRouteImport } from './routes/_authenticated/companies/index'
+import { Route as AuthenticatedJobsCreateRouteImport } from './routes/_authenticated/jobs/create'
 import { Route as AuthenticatedCompaniesCreateRouteImport } from './routes/_authenticated/companies/create'
+import { Route as AuthenticatedJobsJobIdIndexRouteImport } from './routes/_authenticated/jobs/$jobId/index'
 import { Route as AuthenticatedCompaniesCompanyIdIndexRouteImport } from './routes/_authenticated/companies/$companyId/index'
+import { Route as AuthenticatedJobsJobIdEditRouteImport } from './routes/_authenticated/jobs/$jobId/edit'
 import { Route as AuthenticatedCompaniesCompanyIdEditRouteImport } from './routes/_authenticated/companies/$companyId/edit'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -95,16 +98,33 @@ const AuthenticatedCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedJobsCreateRoute = AuthenticatedJobsCreateRouteImport.update({
+  id: '/jobs/create',
+  path: '/jobs/create',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCompaniesCreateRoute =
   AuthenticatedCompaniesCreateRouteImport.update({
     id: '/companies/create',
     path: '/companies/create',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedJobsJobIdIndexRoute =
+  AuthenticatedJobsJobIdIndexRouteImport.update({
+    id: '/jobs/$jobId/',
+    path: '/jobs/$jobId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCompaniesCompanyIdIndexRoute =
   AuthenticatedCompaniesCompanyIdIndexRouteImport.update({
     id: '/companies/$companyId/',
     path: '/companies/$companyId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedJobsJobIdEditRoute =
+  AuthenticatedJobsJobIdEditRouteImport.update({
+    id: '/jobs/$jobId/edit',
+    path: '/jobs/$jobId/edit',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCompaniesCompanyIdEditRoute =
@@ -117,6 +137,7 @@ const AuthenticatedCompaniesCompanyIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
+  '/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -129,11 +150,14 @@ export interface FileRoutesByFullPath {
   '/auth/sign-up': typeof AuthSignUpIndexRoute
   '/auth/verify-reset-code': typeof AuthVerifyResetCodeIndexRoute
   '/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
+  '/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
   '/companies/$companyId': typeof AuthenticatedCompaniesCompanyIdIndexRoute
+  '/jobs/$jobId': typeof AuthenticatedJobsJobIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
+  '/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -146,13 +170,16 @@ export interface FileRoutesByTo {
   '/auth/sign-up': typeof AuthSignUpIndexRoute
   '/auth/verify-reset-code': typeof AuthVerifyResetCodeIndexRoute
   '/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
+  '/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
   '/companies/$companyId': typeof AuthenticatedCompaniesCompanyIdIndexRoute
+  '/jobs/$jobId': typeof AuthenticatedJobsJobIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/companies/create': typeof AuthenticatedCompaniesCreateRoute
+  '/_authenticated/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/_authenticated/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/jobs/': typeof AuthenticatedJobsIndexRoute
@@ -165,13 +192,16 @@ export interface FileRoutesById {
   '/auth/sign-up/': typeof AuthSignUpIndexRoute
   '/auth/verify-reset-code/': typeof AuthVerifyResetCodeIndexRoute
   '/_authenticated/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
+  '/_authenticated/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
   '/_authenticated/companies/$companyId/': typeof AuthenticatedCompaniesCompanyIdIndexRoute
+  '/_authenticated/jobs/$jobId/': typeof AuthenticatedJobsJobIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/companies/create'
+    | '/jobs/create'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -184,11 +214,14 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/auth/verify-reset-code'
     | '/companies/$companyId/edit'
+    | '/jobs/$jobId/edit'
     | '/companies/$companyId'
+    | '/jobs/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/companies/create'
+    | '/jobs/create'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -201,12 +234,15 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/auth/verify-reset-code'
     | '/companies/$companyId/edit'
+    | '/jobs/$jobId/edit'
     | '/companies/$companyId'
+    | '/jobs/$jobId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/_authenticated/companies/create'
+    | '/_authenticated/jobs/create'
     | '/_authenticated/companies/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/jobs/'
@@ -219,7 +255,9 @@ export interface FileRouteTypes {
     | '/auth/sign-up/'
     | '/auth/verify-reset-code/'
     | '/_authenticated/companies/$companyId/edit'
+    | '/_authenticated/jobs/$jobId/edit'
     | '/_authenticated/companies/$companyId/'
+    | '/_authenticated/jobs/$jobId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -326,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompaniesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/jobs/create': {
+      id: '/_authenticated/jobs/create'
+      path: '/jobs/create'
+      fullPath: '/jobs/create'
+      preLoaderRoute: typeof AuthenticatedJobsCreateRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/companies/create': {
       id: '/_authenticated/companies/create'
       path: '/companies/create'
@@ -333,11 +378,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompaniesCreateRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/jobs/$jobId/': {
+      id: '/_authenticated/jobs/$jobId/'
+      path: '/jobs/$jobId'
+      fullPath: '/jobs/$jobId'
+      preLoaderRoute: typeof AuthenticatedJobsJobIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/companies/$companyId/': {
       id: '/_authenticated/companies/$companyId/'
       path: '/companies/$companyId'
       fullPath: '/companies/$companyId'
       preLoaderRoute: typeof AuthenticatedCompaniesCompanyIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/jobs/$jobId/edit': {
+      id: '/_authenticated/jobs/$jobId/edit'
+      path: '/jobs/$jobId/edit'
+      fullPath: '/jobs/$jobId/edit'
+      preLoaderRoute: typeof AuthenticatedJobsJobIdEditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/companies/$companyId/edit': {
@@ -352,17 +411,21 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCompaniesCreateRoute: typeof AuthenticatedCompaniesCreateRoute
+  AuthenticatedJobsCreateRoute: typeof AuthenticatedJobsCreateRoute
   AuthenticatedCompaniesIndexRoute: typeof AuthenticatedCompaniesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedJobsIndexRoute: typeof AuthenticatedJobsIndexRoute
   AuthenticatedPaymentsIndexRoute: typeof AuthenticatedPaymentsIndexRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedCompaniesCompanyIdEditRoute: typeof AuthenticatedCompaniesCompanyIdEditRoute
+  AuthenticatedJobsJobIdEditRoute: typeof AuthenticatedJobsJobIdEditRoute
   AuthenticatedCompaniesCompanyIdIndexRoute: typeof AuthenticatedCompaniesCompanyIdIndexRoute
+  AuthenticatedJobsJobIdIndexRoute: typeof AuthenticatedJobsJobIdIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCompaniesCreateRoute: AuthenticatedCompaniesCreateRoute,
+  AuthenticatedJobsCreateRoute: AuthenticatedJobsCreateRoute,
   AuthenticatedCompaniesIndexRoute: AuthenticatedCompaniesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedJobsIndexRoute: AuthenticatedJobsIndexRoute,
@@ -370,8 +433,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedCompaniesCompanyIdEditRoute:
     AuthenticatedCompaniesCompanyIdEditRoute,
+  AuthenticatedJobsJobIdEditRoute: AuthenticatedJobsJobIdEditRoute,
   AuthenticatedCompaniesCompanyIdIndexRoute:
     AuthenticatedCompaniesCompanyIdIndexRoute,
+  AuthenticatedJobsJobIdIndexRoute: AuthenticatedJobsJobIdIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

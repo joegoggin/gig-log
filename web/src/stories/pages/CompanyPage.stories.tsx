@@ -3,7 +3,9 @@
  *
  * Covered scenarios:
  * - Company summary, jobs, and payments render from detail payloads.
- * - Non-functional CRUD icon clusters render for each list item.
+ * - Add Job action routes to job creation with company context.
+ * - Job view actions navigate to the job-detail route.
+ * - Non-functional edit/delete icon actions still render for each list item.
  * - Jobs pagination appends additional records when loading more.
  * - Payments pagination appends additional records when loading more.
  * - Not-found responses render the fallback state.
@@ -97,9 +99,67 @@ export const ShowsCompanyDetailsAndPayments: Story = {
         await expect(canvas.getByText("4h 30m")).toBeVisible();
         await expect(canvas.getByText("Website Redesign")).toBeVisible();
         await expect(canvas.getByText("Payout Type: paypal")).toBeVisible();
-        await expect(canvas.getAllByLabelText(/view .* action \(coming soon\)/i).length).toBe(3);
+        await expect(canvas.getByRole("button", { name: "View Website Redesign" })).toBeVisible();
+        await expect(canvas.getByRole("button", { name: "View Landing Page Copy" })).toBeVisible();
+        await expect(canvas.getAllByLabelText(/view .* action \(coming soon\)/i).length).toBe(1);
         await expect(canvas.getAllByLabelText(/edit .* action \(coming soon\)/i).length).toBe(3);
         await expect(canvas.getAllByLabelText(/delete .* action \(coming soon\)/i).length).toBe(3);
+    },
+};
+
+export const RoutesJobViewActionToJobDetail: Story = {
+    args: {
+        companyId: "123",
+        initialCompanyDetail: {
+            company: {
+                id: "123",
+                user_id: "u1",
+                name: "Acme Studio",
+                requires_tax_withholdings: false,
+                tax_withholding_rate: null,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-02T00:00:00Z",
+                payment_total: "250.00",
+                hours: "4h 30m",
+            },
+            paginated_jobs: [{ id: "j1", title: "Website Redesign" }],
+            jobs_has_more: false,
+            paginated_payments: [],
+            payments_has_more: false,
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "View Website Redesign" }));
+        await expect(canvas.getByText("Job Route")).toBeVisible();
+    },
+};
+
+export const RoutesAddJobToCreateJobPage: Story = {
+    args: {
+        companyId: "123",
+        initialCompanyDetail: {
+            company: {
+                id: "123",
+                user_id: "u1",
+                name: "Acme Studio",
+                requires_tax_withholdings: false,
+                tax_withholding_rate: null,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-02T00:00:00Z",
+                payment_total: "250.00",
+                hours: "4h 30m",
+            },
+            paginated_jobs: [{ id: "j1", title: "Website Redesign" }],
+            jobs_has_more: false,
+            paginated_payments: [],
+            payments_has_more: false,
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "Add Job" }));
+        await expect(canvas.getByText("Create Job Route")).toBeVisible();
     },
 };
 

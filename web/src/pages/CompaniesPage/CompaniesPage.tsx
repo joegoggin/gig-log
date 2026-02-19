@@ -149,7 +149,7 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                                 <button
                                     className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
                                     onClick={() => {
-                                        navigateTo("/jobs");
+                                        navigateTo(`/jobs/create?companyId=${company.id}`);
                                     }}
                                     type="button"
                                 >

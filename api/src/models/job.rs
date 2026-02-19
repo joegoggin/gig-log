@@ -7,7 +7,8 @@ use sqlx::{FromRow, Type};
 use uuid::Uuid;
 
 /// Defines how a job compensates the worker.
-#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "payment_type_enum", rename_all = "lowercase")]
 #[allow(dead_code)]
 pub enum PaymentType {
