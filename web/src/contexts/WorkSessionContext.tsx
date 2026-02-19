@@ -5,26 +5,11 @@ import {
     useEffect,
     useState,
 } from "react";
+import { useAuth } from "./AuthContext";
 import type { ReactNode } from "react";
+import type { WorkSession, WorkSessionResponse } from "@/types/models/WorkSession";
 import api from "@/lib/axios";
 
-export type WorkSession = {
-    id: string;
-    user_id: string;
-    job_id: string;
-    start_time: string | null;
-    end_time: string | null;
-    is_running: boolean;
-    accumulated_paused_duration: number;
-    paused_at: string | null;
-    time_reported: boolean;
-    created_at: string;
-    updated_at: string;
-};
-
-type WorkSessionResponse = {
-    work_session: WorkSession;
-};
 
 export type WorkSessionContextValue = {
     activeSession: WorkSession | null;
@@ -76,6 +61,7 @@ type WorkSessionProviderProps = {
 };
 
 export function WorkSessionProvider({ children }: WorkSessionProviderProps) {
+    const { isLoggedIn } = useAuth();
     const [activeSession, setActiveSession] = useState<WorkSession | null>(
         null,
     );
@@ -83,6 +69,11 @@ export function WorkSessionProvider({ children }: WorkSessionProviderProps) {
     const [timerValue, setTimerValue] = useState(0);
 
     const refreshSession = useCallback(async () => {
+        if (!isLoggedIn) {
+            setActiveSession(null);
+            return;
+        }
+        
         try {
             const response = await api.get<WorkSessionResponse>(
                 "/work-sessions/active",
@@ -95,7 +86,7 @@ export function WorkSessionProvider({ children }: WorkSessionProviderProps) {
                 throw error;
             }
         }
-    }, []);
+    }, [isLoggedIn]);
 
     const startSession = useCallback(async (jobId: string) => {
         const response = await api.post<WorkSessionResponse>(

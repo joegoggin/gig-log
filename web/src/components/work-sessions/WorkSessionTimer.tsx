@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
+import styles from "./WorkSessionTimer.module.scss";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
 import PlayIcon from "@/components/icons/PlayIcon";
 import PauseIcon from "@/components/icons/PauseIcon";
 import StopIcon from "@/components/icons/StopIcon";
-import styles from "./WorkSessionTimer.module.scss";
 
 export type TimerStatus = "idle" | "running" | "paused" | "completed";
 

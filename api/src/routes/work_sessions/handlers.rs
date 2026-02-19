@@ -13,7 +13,37 @@ use crate::core::error::{ApiError, ApiResult};
 use crate::extractors::ValidatedJson;
 use crate::repository::work_sessions::{WorkSessionWriteInput, WorkSessionsRepo};
 
-use super::payloads::{StartWorkSessionRequest, WorkSessionResponse};
+use super::payloads::{StartWorkSessionRequest, WorkSessionListResponse, WorkSessionResponse};
+
+/// Retrieves all work sessions for a specific job.
+///
+/// Returns a list of work sessions ordered by `updated_at` descending.
+///
+/// # Route
+///
+/// `GET /jobs/{id}/work-sessions`
+///
+/// # Response Body ([`WorkSessionListResponse`])
+///
+/// - `work_sessions` - List of work sessions for the job
+///
+/// # Errors
+///
+/// - `Unauthorized` - If the request does not include a valid access token
+/// - `DatabaseError` - If the database operation fails
+#[get("/jobs/{id}/work-sessions")]
+pub async fn list_work_sessions_for_job(
+    state: web::Data<AppState>,
+    auth_user: AuthenticatedUser,
+    path: web::Path<Uuid>,
+) -> ApiResult<HttpResponse> {
+    let job_id = path.into_inner();
+
+    let work_sessions =
+        WorkSessionsRepo::list_for_job_for_user(&state.pool, auth_user.user_id, job_id).await?;
+
+    Ok(HttpResponse::Ok().json(WorkSessionListResponse { work_sessions }))
+}
 
 /// Starts a new work session for a job.
 ///
@@ -327,7 +357,7 @@ mod tests {
     use crate::core::error::ApiError;
     use crate::services::email::EmailSender;
 
-    use super::{get_active_work_session, pause_work_session, start_work_session};
+    use super::{get_active_work_session, list_work_sessions_for_job, pause_work_session, start_work_session};
 
     #[derive(Debug, Default)]
     struct NoopEmailSender;
@@ -415,6 +445,24 @@ mod tests {
 
         let request = test::TestRequest::get()
             .uri("/work-sessions/active")
+            .to_request();
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies unauthenticated list requests are rejected by the auth extractor.
+    async fn list_work_sessions_for_job_without_access_cookie_returns_unauthorized() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .service(list_work_sessions_for_job),
+        )
+        .await;
+
+        let request = test::TestRequest::get()
+            .uri("/jobs/123e4567-e89b-12d3-a456-426614174000/work-sessions")
             .to_request();
         let response = test::call_service(&app, request).await;
 

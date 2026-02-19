@@ -32,3 +32,13 @@ pub struct WorkSessionResponse {
     /// Work session resource payload.
     pub work_session: WorkSession,
 }
+
+/// Response body wrapping a list of work sessions.
+///
+/// See [`list_work_sessions_for_job`](super::handlers::list_work_sessions_for_job) for
+/// the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct WorkSessionListResponse {
+    /// List of work session resources.
+    pub work_sessions: Vec<WorkSession>,
+}

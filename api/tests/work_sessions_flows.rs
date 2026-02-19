@@ -601,3 +601,89 @@ async fn complete_while_paused_accumulates_pause_duration() {
         Some(false)
     );
 }
+
+#[actix_web::test]
+// Verifies listing work sessions for a job returns the correct scoped list.
+async fn list_work_sessions_returns_scoped_list() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, _) = app_state_with_mock_email(pool.clone());
+    let jwt_secret = state.env.jwt_secret.clone();
+    let access_expiry = state.env.jwt_access_token_expiry_seconds;
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("ws-list");
+    let user_id = insert_user(&pool, &email).await;
+    let company_id = insert_company(&pool, user_id, "WS List Co").await;
+    let job_id = insert_job(&pool, user_id, company_id, "List Job 1").await;
+    let other_job_id = insert_job(&pool, user_id, company_id, "List Job 2").await;
+    let token = create_access_token(user_id, &email, &jwt_secret, access_expiry)
+        .expect("access token should be created");
+
+    // Start a session for job 1 and complete it
+    let start_1 = test::TestRequest::post()
+        .uri("/work-sessions/start")
+        .insert_header(("Cookie", access_cookie(&token)))
+        .set_json(json!({ "job_id": job_id }))
+        .to_request();
+    let start_1_res = test::call_service(&app, start_1).await;
+    let start_1_body: serde_json::Value = test::read_body_json(start_1_res).await;
+    let session_1_id = start_1_body
+        .get("work_session")
+        .and_then(|ws| ws.get("id"))
+        .and_then(|v| v.as_str())
+        .expect("session 1 id should exist");
+
+    let comp_1 = test::TestRequest::post()
+        .uri(&format!("/work-sessions/{session_1_id}/complete"))
+        .insert_header(("Cookie", access_cookie(&token)))
+        .to_request();
+    test::call_service(&app, comp_1).await;
+
+    // Start a session for job 2 and complete it
+    let start_2 = test::TestRequest::post()
+        .uri("/work-sessions/start")
+        .insert_header(("Cookie", access_cookie(&token)))
+        .set_json(json!({ "job_id": other_job_id }))
+        .to_request();
+    let start_2_res = test::call_service(&app, start_2).await;
+    let start_2_body: serde_json::Value = test::read_body_json(start_2_res).await;
+    let session_2_id = start_2_body
+        .get("work_session")
+        .and_then(|ws| ws.get("id"))
+        .and_then(|v| v.as_str())
+        .expect("session 2 id should exist");
+
+    let comp_2 = test::TestRequest::post()
+        .uri(&format!("/work-sessions/{session_2_id}/complete"))
+        .insert_header(("Cookie", access_cookie(&token)))
+        .to_request();
+    test::call_service(&app, comp_2).await;
+
+    // List sessions for job 1
+    let list_req = test::TestRequest::get()
+        .uri(&format!("/jobs/{job_id}/work-sessions"))
+        .insert_header(("Cookie", access_cookie(&token)))
+        .to_request();
+    let list_res = test::call_service(&app, list_req).await;
+    assert_eq!(list_res.status(), StatusCode::OK);
+
+    let list_body: serde_json::Value = test::read_body_json(list_res).await;
+    let sessions = list_body
+        .get("work_sessions")
+        .and_then(|v| v.as_array())
+        .expect("work_sessions array should exist");
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(
+        sessions[0]
+            .get("id")
+            .and_then(|v| v.as_str()),
+        Some(session_1_id)
+    );
+}

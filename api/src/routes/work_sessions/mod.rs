@@ -14,6 +14,6 @@ pub mod payloads;
 
 // Re-export handlers at module level for easy route registration.
 pub use handlers::{
-    complete_work_session, get_active_work_session, pause_work_session, resume_work_session,
-    start_work_session,
+    complete_work_session, get_active_work_session, list_work_sessions_for_job,
+    pause_work_session, resume_work_session, start_work_session,
 };

@@ -1,11 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkSessionProvider, useWorkSession } from "./WorkSessionContext";
-import type { WorkSession } from "./WorkSessionContext";
+import type { ReactNode } from "react";
+import type { WorkSession } from "@/types/models/WorkSession";
 import api from "@/lib/axios";
 
 vi.mock("@/lib/axios");
+vi.mock("./AuthContext", () => ({
+    useAuth: () => ({ isLoggedIn: true }),
+}));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
     <WorkSessionProvider>{children}</WorkSessionProvider>

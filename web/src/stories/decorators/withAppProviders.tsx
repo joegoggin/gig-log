@@ -25,6 +25,7 @@ import type {
 } from "@/stories/testing/storyTestContext";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
+import { WorkSessionProvider } from "@/contexts/WorkSessionContext";
 
 type StoryProvidersProps = {
     children: ReactNode;
@@ -92,7 +93,9 @@ function StoryProviders({ children, config }: StoryProvidersProps) {
                 <NotificationContext.Provider
                     value={{ notifications, addNotification, removeNotification }}
                 >
-                    {children}
+                    <WorkSessionProvider>
+                        {children}
+                    </WorkSessionProvider>
                 </NotificationContext.Provider>
             </AuthContext.Provider>
         </QueryClientProvider>
