@@ -28,6 +28,7 @@ import { Route as AuthenticatedCompaniesCreateRouteImport } from './routes/_auth
 import { Route as AuthenticatedPaymentsPaymentIdIndexRouteImport } from './routes/_authenticated/payments/$paymentId/index'
 import { Route as AuthenticatedJobsJobIdIndexRouteImport } from './routes/_authenticated/jobs/$jobId/index'
 import { Route as AuthenticatedCompaniesCompanyIdIndexRouteImport } from './routes/_authenticated/companies/$companyId/index'
+import { Route as AuthenticatedPaymentsPaymentIdEditRouteImport } from './routes/_authenticated/payments/$paymentId/edit'
 import { Route as AuthenticatedJobsJobIdEditRouteImport } from './routes/_authenticated/jobs/$jobId/edit'
 import { Route as AuthenticatedCompaniesCompanyIdEditRouteImport } from './routes/_authenticated/companies/$companyId/edit'
 
@@ -135,6 +136,12 @@ const AuthenticatedCompaniesCompanyIdIndexRoute =
     path: '/companies/$companyId/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPaymentsPaymentIdEditRoute =
+  AuthenticatedPaymentsPaymentIdEditRouteImport.update({
+    id: '/payments/$paymentId/edit',
+    path: '/payments/$paymentId/edit',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedJobsJobIdEditRoute =
   AuthenticatedJobsJobIdEditRouteImport.update({
     id: '/jobs/$jobId/edit',
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/auth/verify-reset-code': typeof AuthVerifyResetCodeIndexRoute
   '/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
   '/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
+  '/payments/$paymentId/edit': typeof AuthenticatedPaymentsPaymentIdEditRoute
   '/companies/$companyId': typeof AuthenticatedCompaniesCompanyIdIndexRoute
   '/jobs/$jobId': typeof AuthenticatedJobsJobIdIndexRoute
   '/payments/$paymentId': typeof AuthenticatedPaymentsPaymentIdIndexRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
   '/auth/verify-reset-code': typeof AuthVerifyResetCodeIndexRoute
   '/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
   '/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
+  '/payments/$paymentId/edit': typeof AuthenticatedPaymentsPaymentIdEditRoute
   '/companies/$companyId': typeof AuthenticatedCompaniesCompanyIdIndexRoute
   '/jobs/$jobId': typeof AuthenticatedJobsJobIdIndexRoute
   '/payments/$paymentId': typeof AuthenticatedPaymentsPaymentIdIndexRoute
@@ -212,6 +221,7 @@ export interface FileRoutesById {
   '/auth/verify-reset-code/': typeof AuthVerifyResetCodeIndexRoute
   '/_authenticated/companies/$companyId/edit': typeof AuthenticatedCompaniesCompanyIdEditRoute
   '/_authenticated/jobs/$jobId/edit': typeof AuthenticatedJobsJobIdEditRoute
+  '/_authenticated/payments/$paymentId/edit': typeof AuthenticatedPaymentsPaymentIdEditRoute
   '/_authenticated/companies/$companyId/': typeof AuthenticatedCompaniesCompanyIdIndexRoute
   '/_authenticated/jobs/$jobId/': typeof AuthenticatedJobsJobIdIndexRoute
   '/_authenticated/payments/$paymentId/': typeof AuthenticatedPaymentsPaymentIdIndexRoute
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/auth/verify-reset-code'
     | '/companies/$companyId/edit'
     | '/jobs/$jobId/edit'
+    | '/payments/$paymentId/edit'
     | '/companies/$companyId'
     | '/jobs/$jobId'
     | '/payments/$paymentId'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/auth/verify-reset-code'
     | '/companies/$companyId/edit'
     | '/jobs/$jobId/edit'
+    | '/payments/$paymentId/edit'
     | '/companies/$companyId'
     | '/jobs/$jobId'
     | '/payments/$paymentId'
@@ -281,6 +293,7 @@ export interface FileRouteTypes {
     | '/auth/verify-reset-code/'
     | '/_authenticated/companies/$companyId/edit'
     | '/_authenticated/jobs/$jobId/edit'
+    | '/_authenticated/payments/$paymentId/edit'
     | '/_authenticated/companies/$companyId/'
     | '/_authenticated/jobs/$jobId/'
     | '/_authenticated/payments/$paymentId/'
@@ -432,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompaniesCompanyIdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/payments/$paymentId/edit': {
+      id: '/_authenticated/payments/$paymentId/edit'
+      path: '/payments/$paymentId/edit'
+      fullPath: '/payments/$paymentId/edit'
+      preLoaderRoute: typeof AuthenticatedPaymentsPaymentIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/jobs/$jobId/edit': {
       id: '/_authenticated/jobs/$jobId/edit'
       path: '/jobs/$jobId/edit'
@@ -460,6 +480,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedCompaniesCompanyIdEditRoute: typeof AuthenticatedCompaniesCompanyIdEditRoute
   AuthenticatedJobsJobIdEditRoute: typeof AuthenticatedJobsJobIdEditRoute
+  AuthenticatedPaymentsPaymentIdEditRoute: typeof AuthenticatedPaymentsPaymentIdEditRoute
   AuthenticatedCompaniesCompanyIdIndexRoute: typeof AuthenticatedCompaniesCompanyIdIndexRoute
   AuthenticatedJobsJobIdIndexRoute: typeof AuthenticatedJobsJobIdIndexRoute
   AuthenticatedPaymentsPaymentIdIndexRoute: typeof AuthenticatedPaymentsPaymentIdIndexRoute
@@ -477,6 +498,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCompaniesCompanyIdEditRoute:
     AuthenticatedCompaniesCompanyIdEditRoute,
   AuthenticatedJobsJobIdEditRoute: AuthenticatedJobsJobIdEditRoute,
+  AuthenticatedPaymentsPaymentIdEditRoute:
+    AuthenticatedPaymentsPaymentIdEditRoute,
   AuthenticatedCompaniesCompanyIdIndexRoute:
     AuthenticatedCompaniesCompanyIdIndexRoute,
   AuthenticatedJobsJobIdIndexRoute: AuthenticatedJobsJobIdIndexRoute,
