@@ -8,6 +8,7 @@
  * - Edit actions navigate to the job-edit route.
  * - Delete success removes the card and dispatches a success notification.
  * - Delete failures preserve the card and dispatch an error notification.
+ * - Initial load failures render retry UI and recover on retry.
  */
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -20,6 +21,7 @@ import {
     createAxiosErrorResponse,
     createMockApiResponse,
     mockApiDeleteHandler,
+    mockApiGetHandler,
 } from "@/test-utils/mockApiClient";
 
 const addNotificationSpy = fn();
@@ -38,6 +40,10 @@ const jobsFixture = [
         updated_at: "2026-01-02T00:00:00Z",
     },
 ];
+
+type StoryLoadedContext = {
+    restoreGet: () => void;
+};
 
 const meta: Meta<typeof JobsPage> = {
     title: "Pages/JobsPage",
@@ -249,6 +255,73 @@ export const ShowsErrorWhenDeleteFails: Story = {
         } finally {
             restoreDelete();
             window.confirm = originalConfirm;
+        }
+    },
+};
+
+export const RetriesAfterInitialLoadFailure: Story = {
+    loaders: [
+        () => {
+            addNotificationSpy.mockClear();
+            let requestCount = 0;
+
+            return {
+                restoreGet: mockApiGetHandler((url) => {
+                    if (url === "/jobs") {
+                        requestCount += 1;
+
+                        if (requestCount === 1) {
+                            return Promise.reject(
+                                createAxiosErrorResponse({ message: "Unable to load jobs" }),
+                            );
+                        }
+
+                        return Promise.resolve(createMockApiResponse({ jobs: jobsFixture }));
+                    }
+
+                    return Promise.resolve(createMockApiResponse({}));
+                }),
+            };
+        },
+    ],
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+            spies: {
+                addNotification: addNotificationSpy,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement, loaded }) => {
+        const { restoreGet } = loaded as StoryLoadedContext;
+
+        try {
+            const canvas = within(canvasElement);
+
+            await waitFor(() => {
+                expect(canvas.getByText("Unable to load jobs right now.")).toBeVisible();
+            });
+
+            await expect(addNotificationSpy).toHaveBeenCalledWith({
+                type: NotificationType.ERROR,
+                title: "Jobs Unavailable",
+                message: "Failed to load jobs.",
+            });
+
+            await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
+
+            await waitFor(() => {
+                expect(canvas.getByText("Website Maintenance")).toBeVisible();
+            });
+        } finally {
+            restoreGet();
         }
     },
 };
