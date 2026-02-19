@@ -303,10 +303,11 @@ function CompanyPage({ companyId, initialCompanyDetail }: CompanyPageProps) {
                                         </div>
                                         <div className={styles["company-page__list-actions"]}>
                                             <button
-                                                aria-disabled="true"
-                                                aria-label="View payment action (coming soon)"
-                                                className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--view"]} ${styles["company-page__icon-button--disabled"]}`}
-                                                tabIndex={-1}
+                                                aria-label={`View payment ${payment.id}`}
+                                                className={`${styles["company-page__icon-button"]} ${styles["company-page__icon-button--view"]}`}
+                                                onClick={() => {
+                                                    navigate({ to: `/payments/${payment.id}` });
+                                                }}
                                                 type="button"
                                             >
                                                 <InfoIcon />

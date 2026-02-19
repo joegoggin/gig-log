@@ -30,7 +30,7 @@ const paymentsFixture: Array<Payment> = [
         user_id: "u1",
         company_id: "c1",
         total: "500.00",
-        payout_type: "direct_deposit",
+        payout_type: "paypal",
         expected_payout_date: "2026-03-10",
         expected_transfer_date: "2026-03-12",
         transfer_initiated: true,
@@ -89,7 +89,7 @@ export const RendersPaymentCardsAndActions: Story = {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole("heading", { name: "Payments" })).toBeVisible();
         await expect(canvas.getByText("Total: $500.00")).toBeVisible();
-        await expect(canvas.getByText("Payout type: Direct Deposit")).toBeVisible();
+        await expect(canvas.getByText("Payout type: Paypal")).toBeVisible();
         await expect(canvas.getByText("Payment received: Yes")).toBeVisible();
         await expect(canvas.getByText("Transfer received: Yes")).toBeVisible();
         await expect(canvas.getByRole("button", { name: "Create Payment" })).toBeVisible();

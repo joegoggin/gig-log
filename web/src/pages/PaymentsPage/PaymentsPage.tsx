@@ -80,7 +80,7 @@ function PaymentsPage({ initialPayments }: PaymentsPageProps) {
     };
 
     const payoutTypeUsesTransferStatus = (payoutType: Payment["payout_type"]) => {
-        return ["paypal", "venmo", "zelle", "direct_deposit"].includes(payoutType);
+        return ["paypal", "venmo", "zelle"].includes(payoutType);
     };
 
     const getDateLabel = (dateValue: string | null) => {
