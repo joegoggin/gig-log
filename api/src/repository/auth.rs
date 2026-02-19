@@ -100,10 +100,12 @@ impl AuthRepo {
         pool: &Pool<Postgres>,
         email: &str,
     ) -> Result<bool, sqlx::Error> {
-        let result =
-            sqlx::query_scalar!(r#"SELECT id FROM users WHERE LOWER(email) = LOWER($1)"#, email)
-            .fetch_optional(pool)
-            .await?;
+        let result = sqlx::query_scalar!(
+            r#"SELECT id FROM users WHERE LOWER(email) = LOWER($1)"#,
+            email
+        )
+        .fetch_optional(pool)
+        .await?;
 
         Ok(result.is_some())
     }

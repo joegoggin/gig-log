@@ -12,7 +12,7 @@ use crate::core::app_state::AppState;
 use crate::core::error::{ApiError, ApiResult};
 use crate::extractors::ValidatedJson;
 use crate::models::job::PaymentType;
-use crate::repository::jobs::JobsRepo;
+use crate::repository::jobs::{JobWriteInput, JobsRepo};
 
 use super::payloads::{
     CreateJobRequest, DeleteJobResponse, JobResponse, JobsListResponse, UpdateJobRequest,
@@ -129,17 +129,16 @@ pub async fn create_job(
         body.hourly_rate,
     );
 
-    let job = JobsRepo::create_for_user(
-        &state.pool,
-        auth_user.user_id,
-        body.company_id,
-        &body.title,
-        body.payment_type,
+    let input = JobWriteInput {
+        company_id: body.company_id,
+        title: body.title,
+        payment_type: body.payment_type,
         number_of_payouts,
         payout_amount,
         hourly_rate,
-    )
-    .await?;
+    };
+
+    let job = JobsRepo::create_for_user(&state.pool, auth_user.user_id, &input).await?;
 
     Ok(HttpResponse::Created().json(JobResponse { job }))
 }
@@ -192,19 +191,18 @@ pub async fn update_job(
         body.hourly_rate,
     );
 
-    let job = JobsRepo::update_for_user(
-        &state.pool,
-        auth_user.user_id,
-        *job_id,
-        body.company_id,
-        &body.title,
-        body.payment_type,
+    let input = JobWriteInput {
+        company_id: body.company_id,
+        title: body.title,
+        payment_type: body.payment_type,
         number_of_payouts,
         payout_amount,
         hourly_rate,
-    )
-    .await?
-    .ok_or(ApiError::NotFound("Job not found".to_string()))?;
+    };
+
+    let job = JobsRepo::update_for_user(&state.pool, auth_user.user_id, *job_id, &input)
+        .await?
+        .ok_or(ApiError::NotFound("Job not found".to_string()))?;
 
     Ok(HttpResponse::Ok().json(JobResponse { job }))
 }

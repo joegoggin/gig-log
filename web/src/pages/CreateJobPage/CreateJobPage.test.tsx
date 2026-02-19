@@ -118,7 +118,7 @@ describe("CreateJobPage", () => {
             screen.getByRole("option", { name: "Acme Studio" });
         });
 
-        expect((screen.getByLabelText("Company") as HTMLSelectElement).value).toBe(
+        expect(screen.getByLabelText<HTMLSelectElement>("Company").value).toBe(
             "11111111-1111-1111-1111-111111111111",
         );
 
@@ -157,11 +157,11 @@ describe("CreateJobPage", () => {
             title: "Job Created",
             message: "Your job has been created successfully.",
         });
-        expect((screen.getByPlaceholderText("Job Title") as HTMLInputElement).value).toBe("");
-        expect((screen.getByLabelText("Company") as HTMLSelectElement).value).toBe(
+        expect(screen.getByPlaceholderText<HTMLInputElement>("Job Title").value).toBe("");
+        expect(screen.getByLabelText<HTMLSelectElement>("Company").value).toBe(
             "11111111-1111-1111-1111-111111111111",
         );
-        expect((screen.getByLabelText("Payment Type") as HTMLSelectElement).value).toBe(
+        expect(screen.getByLabelText<HTMLSelectElement>("Payment Type").value).toBe(
             "hourly",
         );
         expect(screen.queryByPlaceholderText("Number of Payouts")).toBeNull();

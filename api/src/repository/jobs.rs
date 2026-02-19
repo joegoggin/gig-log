@@ -9,6 +9,23 @@ use uuid::Uuid;
 
 use crate::models::job::{Job, PaymentType};
 
+/// Input payload used by job create and update repository operations.
+#[derive(Debug, Clone)]
+pub struct JobWriteInput {
+    /// Company this job belongs to.
+    pub company_id: Uuid,
+    /// Job display title.
+    pub title: String,
+    /// Compensation model for the job.
+    pub payment_type: PaymentType,
+    /// Optional payout count for fixed payout jobs.
+    pub number_of_payouts: Option<i32>,
+    /// Optional payout amount for fixed payout jobs.
+    pub payout_amount: Option<Decimal>,
+    /// Optional hourly rate for hourly jobs.
+    pub hourly_rate: Option<Decimal>,
+}
+
 /// Repository methods for job-related persistence.
 pub struct JobsRepo;
 
@@ -106,12 +123,7 @@ impl JobsRepo {
     ///
     /// - `pool` - Database connection pool
     /// - `user_id` - Owner user identifier
-    /// - `company_id` - Company this job belongs to
-    /// - `title` - Job display title
-    /// - `payment_type` - Compensation model for the job
-    /// - `number_of_payouts` - Optional payout count for fixed payout jobs
-    /// - `payout_amount` - Optional payout amount for fixed payout jobs
-    /// - `hourly_rate` - Optional hourly rate for hourly jobs
+    /// - `input` - Job write fields to persist
     ///
     /// # Errors
     ///
@@ -119,12 +131,7 @@ impl JobsRepo {
     pub async fn create_for_user(
         pool: &Pool<Postgres>,
         user_id: Uuid,
-        company_id: Uuid,
-        title: &str,
-        payment_type: PaymentType,
-        number_of_payouts: Option<i32>,
-        payout_amount: Option<Decimal>,
-        hourly_rate: Option<Decimal>,
+        input: &JobWriteInput,
     ) -> Result<Job, sqlx::Error> {
         sqlx::query_as::<_, Job>(
             r#"
@@ -133,13 +140,13 @@ impl JobsRepo {
             RETURNING id, company_id, user_id, title, payment_type, number_of_payouts, payout_amount, hourly_rate, created_at, updated_at
             "#,
         )
-        .bind(company_id)
+        .bind(input.company_id)
         .bind(user_id)
-        .bind(title)
-        .bind(payment_type)
-        .bind(number_of_payouts)
-        .bind(payout_amount)
-        .bind(hourly_rate)
+        .bind(&input.title)
+        .bind(input.payment_type)
+        .bind(input.number_of_payouts)
+        .bind(input.payout_amount)
+        .bind(input.hourly_rate)
         .fetch_one(pool)
         .await
     }
@@ -151,12 +158,7 @@ impl JobsRepo {
     /// - `pool` - Database connection pool
     /// - `user_id` - Owner user identifier
     /// - `job_id` - Job identifier
-    /// - `company_id` - Company this job belongs to
-    /// - `title` - Job display title
-    /// - `payment_type` - Compensation model for the job
-    /// - `number_of_payouts` - Optional payout count for fixed payout jobs
-    /// - `payout_amount` - Optional payout amount for fixed payout jobs
-    /// - `hourly_rate` - Optional hourly rate for hourly jobs
+    /// - `input` - Job write fields to persist
     ///
     /// # Errors
     ///
@@ -165,12 +167,7 @@ impl JobsRepo {
         pool: &Pool<Postgres>,
         user_id: Uuid,
         job_id: Uuid,
-        company_id: Uuid,
-        title: &str,
-        payment_type: PaymentType,
-        number_of_payouts: Option<i32>,
-        payout_amount: Option<Decimal>,
-        hourly_rate: Option<Decimal>,
+        input: &JobWriteInput,
     ) -> Result<Option<Job>, sqlx::Error> {
         sqlx::query_as::<_, Job>(
             r#"
@@ -186,12 +183,12 @@ impl JobsRepo {
             RETURNING id, company_id, user_id, title, payment_type, number_of_payouts, payout_amount, hourly_rate, created_at, updated_at
             "#,
         )
-        .bind(company_id)
-        .bind(title)
-        .bind(payment_type)
-        .bind(number_of_payouts)
-        .bind(payout_amount)
-        .bind(hourly_rate)
+        .bind(input.company_id)
+        .bind(&input.title)
+        .bind(input.payment_type)
+        .bind(input.number_of_payouts)
+        .bind(input.payout_amount)
+        .bind(input.hourly_rate)
         .bind(job_id)
         .bind(user_id)
         .fetch_optional(pool)
