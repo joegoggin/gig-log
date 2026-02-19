@@ -1,3 +1,4 @@
+@use "@sass/mixins/media" as media;
 @use "@sass/variables/colors" as colors;
 
 [data-theme="light"] .payments-page {
@@ -13,25 +14,35 @@
 }
 
 .payments-page {
-    display: grid;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 
-    &__hero,
-    &__panel {
+    &__header,
+    &__state,
+    &__payment-card {
         border-radius: 20px;
         border: 1px solid var(--page-border);
         background: var(--page-surface);
         backdrop-filter: blur(8px);
     }
 
-    &__hero,
-    &__panel {
-        padding: clamp(22px, 3vw, 30px);
-        animation: page-fade-up 0.45s ease-out;
-    }
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: clamp(22px, 3.4vw, 34px);
+        animation: payments-fade-up 0.45s ease-out;
 
-    &__panel {
-        animation-delay: 0.06s;
+        div {
+            margin-right: auto;
+        }
+
+        @include media.tablet {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
     }
 
     &__eyebrow {
@@ -52,26 +63,146 @@
         color: var(--page-muted);
     }
 
-    ul {
-        margin-top: 14px;
-        padding-left: 20px;
-        display: grid;
-        gap: 8px;
+    &__state {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 22px;
+        animation: payments-fade-up 0.45s ease-out;
+
+        p {
+            color: var(--page-muted);
+        }
+
+        @include media.phone {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
 
-    li {
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+
+        @include media.tablet {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @include media.phone {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__payment-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+        animation: payments-fade-up 0.45s ease-out;
+
+        &:hover {
+            transform: translateY(-2px);
+            border-color: rgba(colors.$cyan-100, 0.4);
+            box-shadow: 0 14px 26px rgba(colors.$black, 0.16);
+        }
+
+        h3 {
+            margin-bottom: 6px;
+        }
+    }
+
+    &__meta {
         color: var(--page-muted);
     }
 
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    &__icon-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        width: max-content;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        border: none;
+        border-radius: 999px;
+        background: rgba(colors.$black, 0.14);
+        padding: 6px 10px;
+
+        &:hover {
+            transform: translateY(-1px);
+        }
+
+        p {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        svg {
+            width: 18px;
+            height: 18px;
+            color: var(--text-color);
+            fill: currentColor;
+        }
+    }
+
+    &__create-action {
+        p,
+        svg {
+            color: colors.$green-100;
+        }
+    }
+
+    &__retry-action {
+        p,
+        svg {
+            color: colors.$blue-100;
+        }
+    }
+
+    &__view-action {
+        p,
+        svg {
+            color: colors.$blue-100;
+        }
+    }
+
+    &__edit-action {
+        p,
+        svg {
+            color: colors.$yellow-100;
+        }
+    }
+
+    &__delete-action {
+        p,
+        svg {
+            color: colors.$red-100;
+        }
+    }
+
     @media (prefers-reduced-motion: reduce) {
-        &__hero,
-        &__panel {
+        &__header,
+        &__state,
+        &__payment-card {
             animation: none;
         }
     }
 }
 
-@keyframes page-fade-up {
+@keyframes payments-fade-up {
     from {
         opacity: 0;
         transform: translateY(10px);

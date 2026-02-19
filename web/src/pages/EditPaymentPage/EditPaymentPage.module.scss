@@ -1,0 +1,208 @@
+@use "@sass/mixins/media" as media;
+@use "@sass/variables/colors" as colors;
+
+[data-theme="light"] .edit-payment-page {
+    --page-surface: rgba(255, 255, 255, 0.62);
+    --page-border: rgba(26, 27, 38, 0.14);
+    --page-muted: rgba(26, 27, 38, 0.78);
+}
+
+[data-theme="dark"] .edit-payment-page {
+    --page-surface: rgba(169, 177, 214, 0.1);
+    --page-border: rgba(169, 177, 214, 0.2);
+    --page-muted: rgba(169, 177, 214, 0.88);
+}
+
+.edit-payment-page {
+    display: grid;
+    gap: 18px;
+
+    &__header,
+    &__panel,
+    &__state {
+        border-radius: 20px;
+        border: 1px solid var(--page-border);
+        background: var(--page-surface);
+        backdrop-filter: blur(8px);
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: clamp(22px, 3.2vw, 34px);
+        animation: edit-payment-form-fade-up 0.45s ease-out;
+
+        @include media.tablet {
+            flex-direction: column;
+        }
+    }
+
+    form {
+        max-width: 720px;
+    }
+
+    &__panel {
+        padding: clamp(22px, 3.2vw, 34px);
+        animation: edit-payment-form-fade-up 0.45s ease-out;
+        animation-delay: 0.06s;
+
+        form :global(button) {
+            margin-top: 26px;
+            min-width: 220px;
+        }
+    }
+
+    &__eyebrow {
+        display: inline-flex;
+        margin-bottom: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(colors.$yellow-100, 0.18);
+        color: var(--page-muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    &__lead {
+        margin-top: 10px;
+        color: var(--page-muted);
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        &:not(:last-child) {
+            margin-bottom: 16px;
+        }
+
+        label {
+            color: var(--text-color);
+            font-family: Roboto;
+        }
+
+        input,
+        select {
+            font-family: Roboto;
+            font-size: 16px;
+            padding: 8px;
+            border: none;
+            border-bottom: 1px solid var(--text-color);
+            outline: none;
+            color: var(--text-color);
+            background: transparent;
+            transition: all ease-in-out 0.3s;
+
+            &:focus {
+                border-bottom: 1px solid colors.$yellow-100;
+                box-shadow: 0 1px 0 0 colors.$yellow-100;
+            }
+        }
+
+        select option {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+    }
+
+    &__field--error {
+        input,
+        select {
+            border-bottom: 1px solid colors.$red-100;
+            color: colors.$red-100;
+        }
+    }
+
+    &__field-error {
+        margin-top: 5px;
+        color: colors.$red-100;
+    }
+
+    &__checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+
+        @include media.phone {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__checkbox-field {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        input {
+            width: 16px;
+            height: 16px;
+            accent-color: colors.$yellow-100;
+            cursor: pointer;
+        }
+
+        label {
+            color: var(--text-color);
+            cursor: pointer;
+            user-select: none;
+        }
+    }
+
+    &__checkbox-field--error {
+        label {
+            color: colors.$red-100;
+        }
+    }
+
+    &__state {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 22px;
+        animation: edit-payment-form-fade-up 0.45s ease-out;
+
+        p {
+            color: var(--page-muted);
+        }
+
+        @include media.phone {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    &__retry-action {
+        border: none;
+        border-radius: 999px;
+        padding: 6px 12px;
+        background: rgba(colors.$blue-100, 0.18);
+        color: colors.$blue-100;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &__header,
+        &__panel,
+        &__state {
+            animation: none;
+        }
+    }
+}
+
+@keyframes edit-payment-form-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

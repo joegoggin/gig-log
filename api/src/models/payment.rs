@@ -7,7 +7,8 @@ use sqlx::{FromRow, Type};
 use uuid::Uuid;
 
 /// The method by which a payment is received.
-#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "payout_type_enum", rename_all = "lowercase")]
 #[allow(dead_code)]
 pub enum PayoutType {
@@ -47,12 +48,15 @@ pub struct Payment {
     /// Expected date when the payout will be issued.
     pub expected_payout_date: Option<NaiveDate>,
     /// Expected date when funds will transfer to the user's account.
+    /// Only applicable when `payout_type` is `Paypal`, `Venmo`, or `Zelle`.
     pub expected_transfer_date: Option<NaiveDate>,
     /// Whether the transfer has been initiated by the payer.
+    /// Only applicable when `payout_type` is `Paypal`, `Venmo`, or `Zelle`.
     pub transfer_initiated: bool,
     /// Whether the payment has been received by the user.
     pub payment_received: bool,
     /// Whether the transferred funds have been received.
+    /// Only applicable when `payout_type` is `Paypal`, `Venmo`, or `Zelle`.
     pub transfer_received: bool,
     /// Whether tax withholdings have been accounted for.
     pub tax_withholdings_covered: bool,

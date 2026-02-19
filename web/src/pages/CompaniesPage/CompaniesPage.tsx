@@ -149,7 +149,10 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                                 <button
                                     className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
                                     onClick={() => {
-                                        navigateTo(`/jobs/create?companyId=${company.id}`);
+                                        navigate({
+                                            to: "/jobs/create",
+                                            search: { companyId: company.id },
+                                        });
                                     }}
                                     type="button"
                                 >
@@ -159,7 +162,10 @@ function CompaniesPage({ initialCompanies }: CompaniesPageProps) {
                                 <button
                                     className={`${styles["companies-page__icon-button"]} ${styles["companies-page__add-action"]}`}
                                     onClick={() => {
-                                        navigateTo("/payments");
+                                        navigate({
+                                            to: "/payments/create",
+                                            search: { companyId: company.id },
+                                        });
                                     }}
                                     type="button"
                                 >

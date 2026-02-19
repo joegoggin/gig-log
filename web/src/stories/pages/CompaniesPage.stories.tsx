@@ -107,7 +107,7 @@ export const RoutesAddJobToCreateJobPage: Story = {
     },
 };
 
-export const RoutesAddPaymentToPaymentsPage: Story = {
+export const RoutesAddPaymentToCreatePaymentPage: Story = {
     args: {
         initialCompanies: companiesFixture,
     },
@@ -126,7 +126,7 @@ export const RoutesAddPaymentToPaymentsPage: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await userEvent.click(canvas.getByRole("button", { name: "Add Payment" }));
-        await expect(canvas.getByText("Payments Route")).toBeVisible();
+        await expect(canvas.getByText("Create Payment Route")).toBeVisible();
     },
 };
 

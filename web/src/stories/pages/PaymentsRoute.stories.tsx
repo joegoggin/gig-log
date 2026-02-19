@@ -3,6 +3,9 @@
  *
  * Covered scenarios:
  * - Unauthenticated users are redirected to the log-in route.
+ * - Unauthenticated users are redirected from payment-create paths.
+ * - Unauthenticated users are redirected from payment-detail paths.
+ * - Unauthenticated users are redirected from payment-edit paths.
  * - Authenticated users can access the protected app shell.
  * - Loading auth state shows a loading indicator.
  */
@@ -38,6 +41,63 @@ export const RedirectsWhenUnauthenticated: Story = {
             router: {
                 storyPath: "/payments",
                 initialEntries: ["/payments"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In Route")).toBeVisible();
+    },
+};
+
+export const RedirectsPaymentDetailWhenUnauthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/payments/p1",
+                initialEntries: ["/payments/p1"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In Route")).toBeVisible();
+    },
+};
+
+export const RedirectsPaymentCreateWhenUnauthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/payments/create",
+                initialEntries: ["/payments/create"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByText("Log In Route")).toBeVisible();
+    },
+};
+
+export const RedirectsPaymentEditWhenUnauthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/payments/p1/edit",
+                initialEntries: ["/payments/p1/edit"],
             },
             auth: {
                 isLoading: false,

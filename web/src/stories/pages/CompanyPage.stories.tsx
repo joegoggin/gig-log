@@ -4,7 +4,9 @@
  * Covered scenarios:
  * - Company summary, jobs, and payments render from detail payloads.
  * - Add Job action routes to job creation with company context.
+ * - Add Payment action routes to payment creation with company context.
  * - Job view actions navigate to the job-detail route.
+ * - Payment view actions navigate to the payment-detail route.
  * - Non-functional edit/delete icon actions still render for each list item.
  * - Jobs pagination appends additional records when loading more.
  * - Payments pagination appends additional records when loading more.
@@ -101,7 +103,7 @@ export const ShowsCompanyDetailsAndPayments: Story = {
         await expect(canvas.getByText("Payout Type: paypal")).toBeVisible();
         await expect(canvas.getByRole("button", { name: "View Website Redesign" })).toBeVisible();
         await expect(canvas.getByRole("button", { name: "View Landing Page Copy" })).toBeVisible();
-        await expect(canvas.getAllByLabelText(/view .* action \(coming soon\)/i).length).toBe(1);
+        await expect(canvas.getByRole("button", { name: "View payment p1" })).toBeVisible();
         await expect(canvas.getAllByLabelText(/edit .* action \(coming soon\)/i).length).toBe(3);
         await expect(canvas.getAllByLabelText(/delete .* action \(coming soon\)/i).length).toBe(3);
     },
@@ -135,6 +137,42 @@ export const RoutesJobViewActionToJobDetail: Story = {
     },
 };
 
+export const RoutesPaymentViewActionToPaymentDetail: Story = {
+    args: {
+        companyId: "123",
+        initialCompanyDetail: {
+            company: {
+                id: "123",
+                user_id: "u1",
+                name: "Acme Studio",
+                requires_tax_withholdings: false,
+                tax_withholding_rate: null,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-02T00:00:00Z",
+                payment_total: "250.00",
+                hours: "4h 30m",
+            },
+            paginated_jobs: [],
+            jobs_has_more: false,
+            paginated_payments: [
+                {
+                    id: "p1",
+                    total: "100.00",
+                    payout_type: "paypal",
+                    payment_received: true,
+                    transfer_received: true,
+                },
+            ],
+            payments_has_more: false,
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "View payment p1" }));
+        await expect(canvas.getByText("Payment Route")).toBeVisible();
+    },
+};
+
 export const RoutesAddJobToCreateJobPage: Story = {
     args: {
         companyId: "123",
@@ -160,6 +198,40 @@ export const RoutesAddJobToCreateJobPage: Story = {
         const canvas = within(canvasElement);
         await userEvent.click(canvas.getByRole("button", { name: "Add Job" }));
         await expect(canvas.getByText("Create Job Route")).toBeVisible();
+    },
+};
+
+export const RoutesAddPaymentToCreatePaymentPage: Story = {
+    args: {
+        companyId: "123",
+        initialCompanyDetail: {
+            company: {
+                id: "123",
+                user_id: "u1",
+                name: "Acme Studio",
+                requires_tax_withholdings: false,
+                tax_withholding_rate: null,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-02T00:00:00Z",
+                payment_total: "250.00",
+                hours: "4h 30m",
+            },
+            paginated_jobs: [],
+            jobs_has_more: false,
+            paginated_payments: [{
+                id: "p1",
+                total: "100.00",
+                payout_type: "paypal",
+                payment_received: true,
+                transfer_received: true,
+            }],
+            payments_has_more: false,
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "Add Payment" }));
+        await expect(canvas.getByText("Create Payment Route")).toBeVisible();
     },
 };
 
