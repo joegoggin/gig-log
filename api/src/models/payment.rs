@@ -7,7 +7,8 @@ use sqlx::{FromRow, Type};
 use uuid::Uuid;
 
 /// The method by which a payment is received.
-#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Type, PartialEq, Eq, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "payout_type_enum", rename_all = "lowercase")]
 #[allow(dead_code)]
 pub enum PayoutType {
