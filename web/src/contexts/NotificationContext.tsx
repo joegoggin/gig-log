@@ -21,12 +21,10 @@ type NotificationProviderProps = {
 };
 
 const createNotificationId = () => {
-    if (typeof globalThis.crypto?.randomUUID === "function") {
-        try {
-            return globalThis.crypto.randomUUID();
-        } catch {
-            // Fall through to a non-crypto fallback.
-        }
+    try {
+        return globalThis.crypto.randomUUID();
+    } catch {
+        // Fall through to a non-crypto fallback.
     }
 
     return `notification-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
