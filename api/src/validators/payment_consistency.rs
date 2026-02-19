@@ -118,14 +118,14 @@ fn validate_payment_configuration(
         }
     }
 
-    if let (Some(payout_date), Some(transfer_date)) = (expected_payout_date, expected_transfer_date)
-    {
-        if transfer_date < payout_date {
-            return Err(validation_error(
-                "expected_transfer_date_order",
-                "Expected transfer date cannot be earlier than expected payout date",
-            ));
-        }
+    if matches!(
+        (expected_payout_date, expected_transfer_date),
+        (Some(payout_date), Some(transfer_date)) if transfer_date < payout_date
+    ) {
+        return Err(validation_error(
+            "expected_transfer_date_order",
+            "Expected transfer date cannot be earlier than expected payout date",
+        ));
     }
 
     Ok(())
