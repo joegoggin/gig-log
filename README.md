@@ -71,7 +71,7 @@ GigLog is still in active development.
 ### 🛣️ In Progress / Planned
 
 - [ ] Work session tracking and time-based earnings
-- [ ] Payout tracking and payment history
+- [ ] Payout tracking and payment history (payments index shipped; detail/create/edit in progress)
 
 ## 🛠️ Tech Stack
 
@@ -109,7 +109,7 @@ Use this flow in a portfolio review:
 2. Open the app at <http://localhost:3000>
 3. Sign up or log in
 4. Complete the auth flow (sign up, email confirmation, log in, and remember-me behavior)
-5. Navigate through dashboard, company management, and job management routes (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`), then preview the remaining placeholder payments route (`/payments`)
+5. Navigate through dashboard, company management, job management, and the payments index route (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`, `/payments`) to review list workflows and payment CRUD entry points
 6. Open Storybook at <http://localhost:6006> for documented UI states
 7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
 
