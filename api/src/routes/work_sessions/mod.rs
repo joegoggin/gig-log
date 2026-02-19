@@ -17,3 +17,6 @@ pub use handlers::{
     complete_work_session, get_active_work_session, list_work_sessions_for_job,
     pause_work_session, resume_work_session, start_work_session,
 };
+
+// Re-export payload types that are used by other modules
+pub use payloads::{StartWorkSessionRequest, WorkSessionListResponse, WorkSessionResponse};

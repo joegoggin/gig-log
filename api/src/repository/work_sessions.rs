@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::models::work_session::WorkSession;
 
-/// Input payload used by work session create and update repository operations.
+/// Data structure for persisting work session changes to the database.
+///
+/// Used by both creation and update operations in the [`WorkSessionsRepo`].
 #[derive(Debug, Clone)]
 pub struct WorkSessionWriteInput {
     /// Job this work session belongs to.
