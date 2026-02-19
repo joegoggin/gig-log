@@ -101,15 +101,15 @@ describe("CreateJobPage", () => {
 
         restoreGet = mockApiGetHandler((url) => {
             if (url === "/companies") {
-                return createMockApiResponse({ companies: companiesFixture });
+                return Promise.resolve(createMockApiResponse({ companies: companiesFixture }));
             }
 
-            return createMockApiResponse({});
+            return Promise.resolve(createMockApiResponse({}));
         });
 
         restorePost = mockApiPostHandler((url, data) => {
             postCalls.push({ url, data });
-            return createMockApiResponse({ job: { id: "j1" } }, 201, "Created");
+            return Promise.resolve(createMockApiResponse({ job: { id: "j1" } }, 201, "Created"));
         });
 
         renderPage(addNotification);
@@ -118,7 +118,7 @@ describe("CreateJobPage", () => {
             screen.getByRole("option", { name: "Acme Studio" });
         });
 
-        expect(screen.getByLabelText("Company").value).toBe(
+        expect((screen.getByLabelText("Company") as HTMLSelectElement).value).toBe(
             "11111111-1111-1111-1111-111111111111",
         );
 
@@ -157,11 +157,11 @@ describe("CreateJobPage", () => {
             title: "Job Created",
             message: "Your job has been created successfully.",
         });
-        expect(screen.getByPlaceholderText("Job Title").value).toBe("");
-        expect(screen.getByLabelText("Company").value).toBe(
+        expect((screen.getByPlaceholderText("Job Title") as HTMLInputElement).value).toBe("");
+        expect((screen.getByLabelText("Company") as HTMLSelectElement).value).toBe(
             "11111111-1111-1111-1111-111111111111",
         );
-        expect(screen.getByLabelText("Payment Type").value).toBe(
+        expect((screen.getByLabelText("Payment Type") as HTMLSelectElement).value).toBe(
             "hourly",
         );
         expect(screen.queryByPlaceholderText("Number of Payouts")).toBeNull();

@@ -5,6 +5,7 @@
  * - Job cards render with action controls and payment details.
  * - Create action navigates to the job-create route.
  * - View actions navigate to the job detail route.
+ * - Edit actions navigate to the job-edit route.
  * - Delete success removes the card and dispatches a success notification.
  * - Delete failures preserve the card and dispatch an error notification.
  */
@@ -133,6 +134,29 @@ export const RoutesViewJobToDetailPage: Story = {
         const canvas = within(canvasElement);
         await userEvent.click(canvas.getByRole("button", { name: "View Job" }));
         await expect(canvas.getByText("Job Route")).toBeVisible();
+    },
+};
+
+export const RoutesEditJobToEditPage: Story = {
+    args: {
+        initialJobs: jobsFixture,
+    },
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/jobs",
+                initialEntries: ["/jobs"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "Edit Job" }));
+        await expect(canvas.getByText("Edit Job Route")).toBeVisible();
     },
 };
 

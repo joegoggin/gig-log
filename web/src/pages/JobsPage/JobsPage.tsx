@@ -18,7 +18,7 @@ type JobsPageProps = {
 /**
  * The authenticated jobs index page.
  * Displays all jobs owned by the current user and provides actions
- * for create/view/delete workflows plus upcoming edit support.
+ * for create/view/edit/delete workflows.
  *
  * Route: `/jobs`
  *
@@ -183,9 +183,10 @@ function JobsPage({ initialJobs }: JobsPageProps) {
                                     <p>View Job</p>
                                 </button>
                                 <button
-                                    aria-disabled="true"
-                                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__edit-action"]} ${styles["jobs-page__icon-button--disabled"]}`}
-                                    tabIndex={-1}
+                                    className={`${styles["jobs-page__icon-button"]} ${styles["jobs-page__edit-action"]}`}
+                                    onClick={() => {
+                                        navigate({ to: `/jobs/${job.id}/edit` });
+                                    }}
                                     type="button"
                                 >
                                     <EditIcon />

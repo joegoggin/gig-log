@@ -30,7 +30,7 @@ describe("NotificationContext", () => {
     it("uses crypto.randomUUID when it succeeds", () => {
         const randomUuidSpy = vi
             .spyOn(globalThis.crypto, "randomUUID")
-            .mockReturnValue("uuid-123");
+            .mockReturnValue("11111111-1111-1111-1111-111111111111");
         const { result } = renderHook(() => useNotification(), { wrapper });
 
         act(() => {
@@ -43,7 +43,9 @@ describe("NotificationContext", () => {
 
         expect(randomUuidSpy).toHaveBeenCalledTimes(1);
         expect(result.current.notifications).toHaveLength(1);
-        expect(result.current.notifications[0]?.id).toBe("uuid-123");
+        expect(result.current.notifications[0]?.id).toBe(
+            "11111111-1111-1111-1111-111111111111",
+        );
     });
 
     it("falls back to generated IDs when randomUUID throws", () => {
