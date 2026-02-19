@@ -121,6 +121,39 @@ impl WorkSessionsRepo {
         .await
     }
 
+    /// Finds the active work session for a user (one with no `end_time`).
+    ///
+    /// An active session is one that is either running or paused but not yet
+    /// completed. Returns the most recently created active session if multiple
+    /// exist.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - Owner user identifier
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the query fails.
+    pub async fn find_active_for_user(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+    ) -> Result<Option<WorkSession>, sqlx::Error> {
+        sqlx::query_as::<_, WorkSession>(
+            r#"
+            SELECT id, user_id, job_id, start_time, end_time, is_running,
+                   accumulated_paused_duration, paused_at, time_reported, created_at, updated_at
+            FROM work_sessions
+            WHERE user_id = $1 AND end_time IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Checks whether a job exists and is owned by the given user.
     ///
     /// # Arguments
