@@ -18,7 +18,7 @@
     border: 1px solid var(--auth-border);
     border-radius: 20px;
     backdrop-filter: blur(8px);
-    box-shadow: 0 20px 40px rgba(colors.$black, 0.16);
+    box-shadow: 0 20px 40px rgba(colors.$black-rgb, 0.16);
     animation: auth-card-reveal 0.45s ease-out;
 
     h1 {
@@ -30,7 +30,7 @@
         margin-bottom: 10px;
         padding: 6px 12px;
         border-radius: 999px;
-        background: rgba(colors.$cyan-100, 0.2);
+        background: rgba(colors.$cyan-100-rgb, 0.2);
         color: var(--auth-muted);
         font-size: 12px;
         font-weight: 600;

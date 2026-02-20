@@ -36,14 +36,14 @@
         &:nth-child(1) {
             top: 8%;
             left: 4%;
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-100, 0.65), rgba(colors.$green-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-100-rgb, 0.65), rgba(colors.$green-100-rgb, 0));
             animation: home-orb-drift-a 28s ease-in-out infinite;
         }
 
         &:nth-child(2) {
             top: 20%;
             right: 10%;
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-100, 0.6), rgba(colors.$cyan-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-100-rgb, 0.6), rgba(colors.$cyan-100-rgb, 0));
             animation: home-orb-drift-b 32s ease-in-out infinite;
             animation-delay: -6s;
         }
@@ -51,7 +51,7 @@
         &:nth-child(3) {
             bottom: 8%;
             left: 36%;
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-100, 0.58), rgba(colors.$yellow-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-100-rgb, 0.58), rgba(colors.$yellow-100-rgb, 0));
             animation: home-orb-drift-c 30s ease-in-out infinite;
             animation-delay: -12s;
         }
@@ -60,7 +60,7 @@
             top: 6%;
             right: 30%;
             --orb-size: clamp(140px, 20vw, 260px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-100, 0.56), rgba(colors.$blue-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-100-rgb, 0.56), rgba(colors.$blue-100-rgb, 0));
             animation: home-orb-drift-c 34s ease-in-out infinite;
             animation-delay: -18s;
         }
@@ -69,7 +69,7 @@
             bottom: 18%;
             left: 8%;
             --orb-size: clamp(130px, 18vw, 240px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-100, 0.54), rgba(colors.$magenta-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-100-rgb, 0.54), rgba(colors.$magenta-100-rgb, 0));
             animation: home-orb-drift-b 36s ease-in-out infinite;
             animation-delay: -9s;
         }
@@ -78,7 +78,7 @@
             bottom: 5%;
             right: 6%;
             --orb-size: clamp(120px, 16vw, 220px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-100, 0.52), rgba(colors.$red-100, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-100-rgb, 0.52), rgba(colors.$red-100-rgb, 0));
             animation: home-orb-drift-a 33s ease-in-out infinite;
             animation-delay: -15s;
         }
@@ -87,7 +87,7 @@
             top: 38%;
             left: 2%;
             --orb-size: clamp(110px, 15vw, 210px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-80, 0.48), rgba(colors.$green-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$green-80-rgb, 0.48), rgba(colors.$green-80-rgb, 0));
             animation: home-orb-drift-b 29s ease-in-out infinite;
             animation-delay: -20s;
         }
@@ -96,7 +96,7 @@
             top: 12%;
             right: 2%;
             --orb-size: clamp(105px, 14vw, 200px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-80, 0.46), rgba(colors.$cyan-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$cyan-80-rgb, 0.46), rgba(colors.$cyan-80-rgb, 0));
             animation: home-orb-drift-c 31s ease-in-out infinite;
             animation-delay: -24s;
         }
@@ -105,7 +105,7 @@
             bottom: 34%;
             left: 26%;
             --orb-size: clamp(115px, 16vw, 215px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-80, 0.46), rgba(colors.$yellow-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$yellow-80-rgb, 0.46), rgba(colors.$yellow-80-rgb, 0));
             animation: home-orb-drift-a 35s ease-in-out infinite;
             animation-delay: -28s;
         }
@@ -114,7 +114,7 @@
             top: 46%;
             right: 28%;
             --orb-size: clamp(100px, 13vw, 190px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-80, 0.44), rgba(colors.$blue-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$blue-80-rgb, 0.44), rgba(colors.$blue-80-rgb, 0));
             animation: home-orb-drift-b 30s ease-in-out infinite;
             animation-delay: -11s;
         }
@@ -123,7 +123,7 @@
             bottom: 2%;
             left: 52%;
             --orb-size: clamp(95px, 12vw, 180px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-80, 0.44), rgba(colors.$magenta-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$magenta-80-rgb, 0.44), rgba(colors.$magenta-80-rgb, 0));
             animation: home-orb-drift-c 37s ease-in-out infinite;
             animation-delay: -17s;
         }
@@ -132,7 +132,7 @@
             top: 58%;
             right: 12%;
             --orb-size: clamp(90px, 11vw, 170px);
-            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-80, 0.42), rgba(colors.$red-80, 0));
+            background: radial-gradient(circle at 35% 35%, rgba(colors.$red-80-rgb, 0.42), rgba(colors.$red-80-rgb, 0));
             animation: home-orb-drift-a 34s ease-in-out infinite;
             animation-delay: -26s;
         }
@@ -173,7 +173,7 @@
         padding: 6px 12px;
         border-radius: 999px;
         margin-bottom: 18px;
-        background: rgba(colors.$blue-100, 0.18);
+        background: rgba(colors.$blue-100-rgb, 0.18);
         color: var(--home-muted-text);
         font-size: 13px;
         font-weight: 600;
@@ -236,8 +236,8 @@
             gap: 4px;
             padding: 14px 16px;
             border-radius: 12px;
-            background: rgba(colors.$black, 0.14);
-            border: 1px solid rgba(colors.$white, 0.12);
+            background: rgba(colors.$black-rgb, 0.14);
+            border: 1px solid rgba(colors.$white-rgb, 0.12);
         }
 
         h3 {
@@ -297,7 +297,7 @@
             display: grid;
             place-items: center;
             border-radius: 10px;
-            background: rgba(colors.$green-100, 0.22);
+            background: rgba(colors.$green-100-rgb, 0.22);
             color: var(--text-color);
             font-family: Rubik, sans-serif;
             font-size: 16px;

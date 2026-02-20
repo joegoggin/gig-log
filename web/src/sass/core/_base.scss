@@ -11,6 +11,8 @@
     margin: 0;
 }
 
+@include colors.register-color-palettes;
+
 [data-theme="light"] {
     --bg-color: #{colors.$white};
     --text-color: #{colors.$black};

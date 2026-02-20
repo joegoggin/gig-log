@@ -1,26 +1,175 @@
-$black: #1a1b26;
-$white: #a9b1d6;
+@use "sass:map";
 
-$green-100: #9ECE6A;
-$green-80: #b1d888;
-$green-60: #c5e2a6; 
+$palette-values: (
+    default: (
+        black: "26, 27, 38",
+        white: "169, 177, 214",
+        green-100: "158, 206, 106",
+        green-80: "177, 216, 136",
+        green-60: "197, 226, 166",
+        red-100: "247, 118, 142",
+        red-80: "249, 145, 165",
+        red-60: "250, 173, 187",
+        yellow-100: "224, 175, 104",
+        yellow-80: "230, 191, 134",
+        yellow-60: "236, 207, 164",
+        blue-100: "122, 162, 247",
+        blue-80: "149, 181, 249",
+        blue-60: "175, 199, 250",
+        magenta-100: "187, 154, 247",
+        magenta-80: "201, 174, 249",
+        magenta-60: "214, 194, 250",
+        cyan-100: "125, 207, 255",
+        cyan-80: "151, 217, 255",
+        cyan-60: "177, 226, 255",
+    ),
+    sunset: (
+        black: "26, 27, 38",
+        white: "169, 177, 214",
+        green-100: "143, 201, 122",
+        green-80: "168, 213, 150",
+        green-60: "193, 225, 179",
+        red-100: "239, 116, 123",
+        red-80: "244, 144, 150",
+        red-60: "248, 172, 177",
+        yellow-100: "242, 170, 92",
+        yellow-80: "246, 189, 125",
+        yellow-60: "249, 208, 158",
+        blue-100: "103, 154, 245",
+        blue-80: "134, 174, 248",
+        blue-60: "165, 194, 250",
+        magenta-100: "214, 132, 172",
+        magenta-80: "224, 157, 189",
+        magenta-60: "234, 182, 206",
+        cyan-100: "99, 192, 215",
+        cyan-80: "130, 205, 224",
+        cyan-60: "161, 218, 233",
+    ),
+    forest: (
+        black: "26, 27, 38",
+        white: "169, 177, 214",
+        green-100: "102, 187, 106",
+        green-80: "132, 202, 136",
+        green-60: "162, 217, 166",
+        red-100: "226, 125, 124",
+        red-80: "234, 151, 150",
+        red-60: "242, 177, 176",
+        yellow-100: "208, 167, 97",
+        yellow-80: "220, 186, 128",
+        yellow-60: "232, 205, 159",
+        blue-100: "92, 147, 205",
+        blue-80: "123, 167, 217",
+        blue-60: "154, 187, 229",
+        magenta-100: "160, 130, 206",
+        magenta-80: "181, 156, 218",
+        magenta-60: "202, 182, 230",
+        cyan-100: "89, 183, 170",
+        cyan-80: "122, 197, 187",
+        cyan-60: "155, 211, 204",
+    ),
+);
 
-$red-100: #F7768E;
-$red-80: #f991a5;
-$red-60: #faadbb; 
+@function palette-value($palette, $token) {
+    $palette-map: map.get($palette-values, $palette);
 
-$yellow-100: #E0AF68;
-$yellow-80: #e6bf86;
-$yellow-60: #eccfa4; 
+    @if $palette-map == null {
+        @error "Unknown color palette `#{$palette}`.";
+    }
 
-$blue-100: #7AA2F7;
-$blue-80: #95b5f9;
-$blue-60: #afc7fa; 
+    $token-value: map.get($palette-map, $token);
 
-$magenta-100: #BB9AF7;
-$magenta-80: #c9aef9;
-$magenta-60: #d6c2fa; 
+    @if $token-value == null {
+        @error "Unknown color token `#{$token}` for palette `#{$palette}`.";
+    }
 
-$cyan-100: #7DCFFF;
-$cyan-80: #97d9ff;
-$cyan-60: #b1e2ff; 
+    @return $token-value;
+}
+
+@mixin palette-css-variables($palette) {
+    --color-black-rgb: #{palette-value($palette, black)};
+    --color-white-rgb: #{palette-value($palette, white)};
+    --color-green-100-rgb: #{palette-value($palette, green-100)};
+    --color-green-80-rgb: #{palette-value($palette, green-80)};
+    --color-green-60-rgb: #{palette-value($palette, green-60)};
+    --color-red-100-rgb: #{palette-value($palette, red-100)};
+    --color-red-80-rgb: #{palette-value($palette, red-80)};
+    --color-red-60-rgb: #{palette-value($palette, red-60)};
+    --color-yellow-100-rgb: #{palette-value($palette, yellow-100)};
+    --color-yellow-80-rgb: #{palette-value($palette, yellow-80)};
+    --color-yellow-60-rgb: #{palette-value($palette, yellow-60)};
+    --color-blue-100-rgb: #{palette-value($palette, blue-100)};
+    --color-blue-80-rgb: #{palette-value($palette, blue-80)};
+    --color-blue-60-rgb: #{palette-value($palette, blue-60)};
+    --color-magenta-100-rgb: #{palette-value($palette, magenta-100)};
+    --color-magenta-80-rgb: #{palette-value($palette, magenta-80)};
+    --color-magenta-60-rgb: #{palette-value($palette, magenta-60)};
+    --color-cyan-100-rgb: #{palette-value($palette, cyan-100)};
+    --color-cyan-80-rgb: #{palette-value($palette, cyan-80)};
+    --color-cyan-60-rgb: #{palette-value($palette, cyan-60)};
+}
+
+@mixin register-color-palettes {
+    :root {
+        @include palette-css-variables(default);
+    }
+
+    @each $palette-name, $_ in $palette-values {
+        [data-palette="#{$palette-name}"] {
+            @include palette-css-variables($palette-name);
+        }
+    }
+}
+
+$black-rgb: var(--color-black-rgb);
+$white-rgb: var(--color-white-rgb);
+
+$green-100-rgb: var(--color-green-100-rgb);
+$green-80-rgb: var(--color-green-80-rgb);
+$green-60-rgb: var(--color-green-60-rgb);
+
+$red-100-rgb: var(--color-red-100-rgb);
+$red-80-rgb: var(--color-red-80-rgb);
+$red-60-rgb: var(--color-red-60-rgb);
+
+$yellow-100-rgb: var(--color-yellow-100-rgb);
+$yellow-80-rgb: var(--color-yellow-80-rgb);
+$yellow-60-rgb: var(--color-yellow-60-rgb);
+
+$blue-100-rgb: var(--color-blue-100-rgb);
+$blue-80-rgb: var(--color-blue-80-rgb);
+$blue-60-rgb: var(--color-blue-60-rgb);
+
+$magenta-100-rgb: var(--color-magenta-100-rgb);
+$magenta-80-rgb: var(--color-magenta-80-rgb);
+$magenta-60-rgb: var(--color-magenta-60-rgb);
+
+$cyan-100-rgb: var(--color-cyan-100-rgb);
+$cyan-80-rgb: var(--color-cyan-80-rgb);
+$cyan-60-rgb: var(--color-cyan-60-rgb);
+
+$black: rgb(var(--color-black-rgb));
+$white: rgb(var(--color-white-rgb));
+
+$green-100: rgb(var(--color-green-100-rgb));
+$green-80: rgb(var(--color-green-80-rgb));
+$green-60: rgb(var(--color-green-60-rgb));
+
+$red-100: rgb(var(--color-red-100-rgb));
+$red-80: rgb(var(--color-red-80-rgb));
+$red-60: rgb(var(--color-red-60-rgb));
+
+$yellow-100: rgb(var(--color-yellow-100-rgb));
+$yellow-80: rgb(var(--color-yellow-80-rgb));
+$yellow-60: rgb(var(--color-yellow-60-rgb));
+
+$blue-100: rgb(var(--color-blue-100-rgb));
+$blue-80: rgb(var(--color-blue-80-rgb));
+$blue-60: rgb(var(--color-blue-60-rgb));
+
+$magenta-100: rgb(var(--color-magenta-100-rgb));
+$magenta-80: rgb(var(--color-magenta-80-rgb));
+$magenta-60: rgb(var(--color-magenta-60-rgb));
+
+$cyan-100: rgb(var(--color-cyan-100-rgb));
+$cyan-80: rgb(var(--color-cyan-80-rgb));
+$cyan-60: rgb(var(--color-cyan-60-rgb));

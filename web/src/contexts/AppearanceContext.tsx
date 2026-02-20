@@ -28,6 +28,7 @@ type AppearanceContextValue = {
     palette: ColorPalette;
     resolvedTheme: ResolvedTheme;
     setMode: (mode: ThemeMode) => void;
+    setPalette: (palette: ColorPalette) => void;
 };
 
 type AppearanceProviderProps = {
@@ -94,14 +95,28 @@ export function AppearanceProvider({
         });
     }, []);
 
+    const setPalette = useCallback((palette: ColorPalette) => {
+        setPreferences((previous) => {
+            if (previous.palette === palette) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                palette,
+            };
+        });
+    }, []);
+
     const value = useMemo(
         () => ({
             mode: preferences.mode,
             palette: preferences.palette,
             resolvedTheme,
             setMode,
+            setPalette,
         }),
-        [preferences.mode, preferences.palette, resolvedTheme, setMode],
+        [preferences.mode, preferences.palette, resolvedTheme, setMode, setPalette],
     );
 
     return (

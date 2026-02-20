@@ -2,7 +2,9 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export type ResolvedTheme = "light" | "dark";
 
-export type ColorPalette = "default";
+export const COLOR_PALETTES = ["default", "sunset", "forest"] as const;
+
+export type ColorPalette = (typeof COLOR_PALETTES)[number];
 
 export type AppearancePreferences = {
     mode: ThemeMode;
@@ -29,7 +31,10 @@ const isThemeMode = (value: unknown): value is ThemeMode => {
 };
 
 const isColorPalette = (value: unknown): value is ColorPalette => {
-    return value === "default";
+    return (
+        typeof value === "string" &&
+        COLOR_PALETTES.includes(value as ColorPalette)
+    );
 };
 
 const getDefaultStorage = (): AppearanceStorage | null => {

@@ -5,7 +5,7 @@
  * - Injects isolated QueryClient for deterministic mutation/query behavior.
  * - Injects auth context overrides from `parameters.storyTest.auth`.
  * - Captures notification calls via `parameters.storyTest.spies.addNotification`.
- * - Applies deterministic appearance defaults via `parameters.storyTest.appearance`.
+ * - Applies deterministic appearance defaults (theme + palette).
  * - Keeps real notification rendering so stories can assert visible messages.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

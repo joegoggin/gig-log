@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styles from "./SettingsPage.module.scss";
-import type { ThemeMode } from "@/lib/appearance";
+import type { ColorPalette, ThemeMode } from "@/lib/appearance";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
 import Button from "@/components/core/Button/Button";
@@ -52,6 +52,15 @@ type ThemeModeOption = {
     description: string;
 };
 
+type ColorPaletteOption = {
+    /** Palette value applied when selected */
+    value: ColorPalette;
+    /** Visible label for the palette option */
+    label: string;
+    /** Supporting copy describing the palette style */
+    description: string;
+};
+
 const themeModeOptions: Array<ThemeModeOption> = [
     {
         value: "system",
@@ -70,10 +79,34 @@ const themeModeOptions: Array<ThemeModeOption> = [
     },
 ];
 
+const colorPaletteOptions: Array<ColorPaletteOption> = [
+    {
+        value: "default",
+        label: "Default",
+        description: "Balanced cool accents inspired by the original GigLog look.",
+    },
+    {
+        value: "sunset",
+        label: "Sunset",
+        description: "Warmer coral and amber accents for a softer contrast profile.",
+    },
+    {
+        value: "forest",
+        label: "Forest",
+        description: "Earthy greens and teals for a grounded, natural feel.",
+    },
+];
+
+const colorPaletteLabels: Record<ColorPalette, string> = {
+    default: "Default",
+    sunset: "Sunset",
+    forest: "Forest",
+};
+
 /**
  * The authenticated account settings page for security and appearance workflows.
  * Lets signed-in users change their password, complete a verified email-change
- * flow, and choose a persisted theme mode preference.
+ * flow, and choose persisted theme mode and color palette preferences.
  *
  * Route: `/settings`
  *
@@ -90,7 +123,7 @@ const themeModeOptions: Array<ThemeModeOption> = [
  */
 function SettingsPage() {
     const { user, refreshUser } = useAuth();
-    const { mode, resolvedTheme, setMode } = useAppearance();
+    const { mode, palette, resolvedTheme, setMode, setPalette } = useAppearance();
     const { addNotification } = useNotification();
     const [pendingEmailChange, setPendingEmailChange] = useState<string | null>(null);
     const {
@@ -339,9 +372,10 @@ function SettingsPage() {
             <article
                 className={`${styles["settings-page__panel"]} ${styles["settings-page__panel--appearance"]}`}
             >
-                <h2>Theme Mode</h2>
+                <h2>Theme and Palette</h2>
                 <p className={styles["settings-page__panel-lead"]}>
-                    Choose how GigLog handles light and dark surfaces across the app.
+                    Choose how GigLog handles light and dark surfaces, then pick an accent
+                    palette that carries across the app.
                 </p>
 
                 <fieldset className={styles["settings-page__theme-fieldset"]}>
@@ -397,6 +431,62 @@ function SettingsPage() {
                 <p className={styles["settings-page__theme-status"]}>
                     Active theme: <strong>{resolvedTheme === "dark" ? "Dark" : "Light"}</strong>
                     {mode === "system" ? " (following your device setting)." : "."}
+                </p>
+
+                <fieldset className={styles["settings-page__palette-fieldset"]}>
+                    <legend className={styles["settings-page__palette-legend"]}>
+                        Color palette
+                    </legend>
+
+                    <div className={styles["settings-page__palette-options"]}>
+                        {colorPaletteOptions.map((option) => {
+                            const inputId = `color-palette-${option.value}`;
+                            const isActive = palette === option.value;
+
+                            return (
+                                <label
+                                    key={option.value}
+                                    htmlFor={inputId}
+                                    className={`${styles["settings-page__palette-option"]} ${
+                                        isActive
+                                            ? styles[
+                                                  "settings-page__palette-option--active"
+                                              ]
+                                            : ""
+                                    }`}
+                                >
+                                    <input
+                                        id={inputId}
+                                        type="radio"
+                                        name="color-palette"
+                                        value={option.value}
+                                        checked={isActive}
+                                        onChange={() => setPalette(option.value)}
+                                    />
+                                    <span
+                                        className={
+                                            styles["settings-page__palette-option-label"]
+                                        }
+                                    >
+                                        {option.label}
+                                    </span>
+                                    <span
+                                        className={
+                                            styles[
+                                                "settings-page__palette-option-description"
+                                            ]
+                                        }
+                                    >
+                                        {option.description}
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </fieldset>
+
+                <p className={styles["settings-page__palette-status"]}>
+                    Active palette: <strong>{colorPaletteLabels[palette]}</strong>.
                 </p>
             </article>
         </section>

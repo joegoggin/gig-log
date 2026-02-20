@@ -1,10 +1,10 @@
 /**
- * Unit tests for appearance preference persistence and boot-time theme setup.
+ * Unit tests for appearance preference persistence and boot-time appearance setup.
  *
  * Covered scenarios:
  * - Default appearance preferences are used when storage is empty or invalid.
- * - Saved preferences are persisted and restored correctly.
- * - App initialization applies the restored preference to `data-theme`.
+ * - Saved theme mode and palette preferences persist and restore correctly.
+ * - App initialization applies the restored preference to `data-theme`/`data-palette`.
  *
  * These tests prevent regressions where a saved theme mode is ignored after
  * reload or malformed storage data breaks appearance initialization.
@@ -93,10 +93,22 @@ describe("appearance helpers", () => {
         );
     });
 
+    it("falls back to default appearance when stored palette is invalid", () => {
+        storage.setItem(
+            APPEARANCE_STORAGE_KEY,
+            JSON.stringify({ mode: "dark", palette: "invalid-palette" }),
+        );
+
+        expect(loadAppearancePreferences(storage)).toEqual({
+            ...DEFAULT_APPEARANCE_PREFERENCES,
+            mode: "dark",
+        });
+    });
+
     it("restores persisted appearance preference", () => {
         const savedPreferences = {
             mode: "dark",
-            palette: "default",
+            palette: "sunset",
         } as const;
 
         persistAppearancePreferences(savedPreferences, storage);
@@ -109,16 +121,14 @@ describe("appearance helpers", () => {
 
         try {
             persistAppearancePreferences(
-                { mode: "dark", palette: "default" },
+                { mode: "dark", palette: "forest" },
                 storage,
             );
 
             initializeAppearance(storage);
 
             expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-            expect(document.documentElement.getAttribute("data-palette")).toBe(
-                "default",
-            );
+            expect(document.documentElement.getAttribute("data-palette")).toBe("forest");
         } finally {
             mediaQueryMock.restore();
         }

@@ -9,7 +9,7 @@
     border: none;
     color: colors.$black;
     letter-spacing: 0.02em;
-    box-shadow: 0 1px 3px rgba(colors.$black, 0.3);
+    box-shadow: 0 1px 3px rgba(colors.$black-rgb, 0.3);
     transition: all ease-in-out 0.3s;
     cursor: pointer;
 
@@ -18,7 +18,7 @@
 
         &:hover {
             background: colors.$green-80;
-            box-shadow: 0 2px 8px rgba(colors.$green-100, 0.35);
+            box-shadow: 0 2px 8px rgba(colors.$green-100-rgb, 0.35);
         }
     }
 
@@ -27,7 +27,7 @@
 
         &:hover {
             background: colors.$blue-80;
-            box-shadow: 0 2px 8px rgba(colors.$blue-100, 0.35);
+            box-shadow: 0 2px 8px rgba(colors.$blue-100-rgb, 0.35);
         }
     }
 }

@@ -31,7 +31,7 @@
     }
 
     &:focus-visible {
-        outline: 2px solid rgba(colors.$blue-100, 0.4);
+        outline: 2px solid rgba(colors.$blue-100-rgb, 0.4);
         outline-offset: 2px;
     }
 
