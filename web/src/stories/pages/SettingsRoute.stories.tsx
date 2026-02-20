@@ -3,7 +3,7 @@
  *
  * Covered scenarios:
  * - Unauthenticated users are redirected to the log-in route.
- * - Authenticated users can access the protected app shell.
+ * - Authenticated users can access the protected app shell for settings routes.
  * - Loading auth state shows a loading indicator.
  */
 import { expect, within } from "storybook/test";
@@ -57,6 +57,26 @@ export const RendersProtectedShellWhenAuthenticated: Story = {
             router: {
                 storyPath: "/settings",
                 initialEntries: ["/settings"],
+            },
+            auth: {
+                isLoading: false,
+                isLoggedIn: true,
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByRole("button", { name: "Dashboard" })).toBeVisible();
+        await expect(canvas.queryByText("Log In Route")).toBeNull();
+    },
+};
+
+export const RendersNestedSettingsRouteWhenAuthenticated: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/settings/password",
+                initialEntries: ["/settings/password"],
             },
             auth: {
                 isLoading: false,

@@ -109,7 +109,7 @@ Use this flow in a portfolio review:
 2. Open the app at <http://localhost:3000>
 3. Sign up or log in
 4. Complete the auth flow (sign up, email confirmation, log in, and remember-me behavior)
-5. Navigate through dashboard, company management, job management, payment routes, and settings (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`, `/payments`, `/payments/create`, `/payments/:id`, `/payments/:id/edit`, `/settings`) to review list/detail workflows, account-security actions (password/email change), and persisted appearance preferences (theme mode + color palette)
+5. Navigate through dashboard, company management, job management, payment routes, and settings (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`, `/payments`, `/payments/create`, `/payments/:id`, `/payments/:id/edit`, `/settings`, `/settings/password`, `/settings/email`, `/settings/appearance`) to review list/detail workflows, dedicated account-security pages, and persisted appearance preferences (theme mode + color palette)
 6. Open Storybook at <http://localhost:6006> for documented UI states
 7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
 

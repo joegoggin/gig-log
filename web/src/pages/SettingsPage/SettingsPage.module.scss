@@ -28,6 +28,9 @@
 }
 
 .settings-page {
+    --settings-enter-duration: 0.26s;
+    --settings-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
     display: grid;
     gap: 18px;
 
@@ -42,15 +45,17 @@
     &__hero,
     &__panel {
         padding: clamp(22px, 3.2vw, 34px);
-        animation: settings-fade-up 0.45s ease-out;
+        animation: settings-fade-up var(--settings-enter-duration)
+            var(--settings-enter-ease) both;
+        will-change: transform, opacity;
     }
 
     &__panel {
-        animation-delay: 0.06s;
+        animation-delay: 0.03s;
     }
 
     &__panel--appearance {
-        animation-delay: 0.12s;
+        animation-delay: 0.055s;
     }
 
     &__grid {
@@ -61,6 +66,66 @@
         @include media.tablet {
             grid-template-columns: 1fr;
         }
+    }
+
+    &__subnav {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        animation: settings-fade-up var(--settings-enter-duration)
+            var(--settings-enter-ease) both;
+        animation-delay: 0.015s;
+
+        @include media.tablet {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @include media.phone {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__subnav-button {
+        justify-content: center;
+        min-width: 0;
+        transition: background-color 0.19s var(--settings-enter-ease),
+            box-shadow 0.19s var(--settings-enter-ease),
+            color 0.19s var(--settings-enter-ease),
+            transform 0.19s var(--settings-enter-ease);
+    }
+
+    &__cards {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+        @include media.tablet {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__card {
+        border-radius: 16px;
+        border: 1px solid var(--page-border);
+        background: var(--page-step);
+        padding: 18px;
+    }
+
+    &__card-title {
+        margin-bottom: 8px;
+        color: var(--text-color);
+    }
+
+    &__card-description {
+        margin-bottom: 16px;
+        color: var(--page-muted);
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    &__card-action {
+        min-width: 0;
+        width: 100%;
     }
 
     &__eyebrow {
@@ -293,6 +358,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+        &__subnav,
         &__hero,
         &__panel {
             animation: none;
@@ -303,11 +369,11 @@
 @keyframes settings-fade-up {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translate3d(0, 6px, 0) scale(0.998);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0) scale(1);
     }
 }
