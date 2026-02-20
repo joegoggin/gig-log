@@ -2,7 +2,8 @@
 //!
 //! These tests cover core auth success and failure paths, including signup,
 //! email confirmation, login, password reset verification, and password update
-//! behavior with real database persistence and auth-guard enforcement.
+//! behavior (both reset and authenticated change flows) with real database
+//! persistence and auth-guard enforcement.
 
 mod support;
 
@@ -943,6 +944,341 @@ async fn set_password_revokes_old_refresh_tokens_and_stores_new_token() {
 
     assert_eq!(active_count, 1);
     assert!(revoked_count >= 1);
+}
+
+#[actix_web::test]
+// Verifies authenticated change-password updates credentials and rotates session cookies/tokens.
+async fn change_password_updates_password_and_rotates_refresh_session() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("change-password-success");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
+
+    let user_id = user_id_for_email(&pool, &email).await;
+    let old_hash: String = sqlx::query_scalar("SELECT hashed_password FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .expect("user password hash should be queryable");
+
+    let change_password = test::TestRequest::post()
+        .uri("/auth/change-password")
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .set_json(json!({
+            "current_password": "password123",
+            "new_password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let change_password_response = test::call_service(&app, change_password).await;
+    assert_eq!(change_password_response.status(), StatusCode::OK);
+
+    let cookie_names: Vec<String> = change_password_response
+        .response()
+        .cookies()
+        .map(|cookie| cookie.name().to_string())
+        .collect();
+    assert!(cookie_names.iter().any(|name| name == "access_token"));
+    assert!(cookie_names.iter().any(|name| name == "refresh_token"));
+
+    let new_hash: String = sqlx::query_scalar("SELECT hashed_password FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .expect("user password hash should be queryable");
+    assert_ne!(old_hash, new_hash);
+
+    let active_count = active_refresh_token_count(&pool, user_id).await;
+    let revoked_count = revoked_refresh_token_count(&pool, user_id).await;
+    assert_eq!(active_count, 1);
+    assert!(revoked_count >= 1);
+
+    let old_password_login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .to_request();
+    let old_password_login_response = test::call_service(&app, old_password_login).await;
+    assert_eq!(
+        old_password_login_response.status(),
+        StatusCode::UNAUTHORIZED
+    );
+
+    let new_password_login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "new-password-123"
+        }))
+        .to_request();
+    let new_password_login_response = test::call_service(&app, new_password_login).await;
+    assert_eq!(new_password_login_response.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
+// Verifies change-password rejects invalid current credentials without mutating password state.
+async fn change_password_with_invalid_current_password_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("change-password-invalid");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
+
+    let user_id = user_id_for_email(&pool, &email).await;
+    let hash_before: String = sqlx::query_scalar("SELECT hashed_password FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .expect("user password hash should be queryable");
+
+    let change_password = test::TestRequest::post()
+        .uri("/auth/change-password")
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .set_json(json!({
+            "current_password": "wrong-password",
+            "new_password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let change_password_response = test::call_service(&app, change_password).await;
+    assert_eq!(change_password_response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(change_password_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("INVALID_CREDENTIALS")
+    );
+
+    let hash_after: String = sqlx::query_scalar("SELECT hashed_password FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .expect("user password hash should be queryable");
+    assert_eq!(hash_before, hash_after);
+
+    let active_count = active_refresh_token_count(&pool, user_id).await;
+    let revoked_count = revoked_refresh_token_count(&pool, user_id).await;
+    assert_eq!(active_count, 1);
+    assert_eq!(revoked_count, 0);
+}
+
+#[actix_web::test]
+// Verifies stale cookies from a logged-out session cannot be reused to change a password.
+async fn log_out_then_change_password_with_old_cookies_returns_unauthorized() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("logout-change-password");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+    let refresh_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "refresh_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("refresh cookie should be set on login");
+
+    let log_out = test::TestRequest::post()
+        .uri("/auth/log-out")
+        .cookie(refresh_cookie.clone())
+        .to_request();
+    let log_out_response = test::call_service(&app, log_out).await;
+    assert_eq!(log_out_response.status(), StatusCode::OK);
+
+    let change_password = test::TestRequest::post()
+        .uri("/auth/change-password")
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .set_json(json!({
+            "current_password": "password123",
+            "new_password": "new-password-123",
+            "confirm": "new-password-123"
+        }))
+        .to_request();
+    let change_password_response = test::call_service(&app, change_password).await;
+    assert_eq!(change_password_response.status(), StatusCode::UNAUTHORIZED);
+
+    let body: serde_json::Value = test::read_body_json(change_password_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("UNAUTHORIZED")
+    );
 }
 
 #[actix_web::test]

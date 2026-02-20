@@ -4,7 +4,7 @@
 //! to perform cross-field validation that cannot be expressed with simple
 //! field-level attributes.
 
-use crate::routes::auth::{SetPasswordRequest, SignUpRequest};
+use crate::routes::auth::{ChangePasswordRequest, SetPasswordRequest, SignUpRequest};
 
 /// Validates that two password fields match.
 ///
@@ -44,6 +44,18 @@ pub fn validate_signup_passwords_match(
     validate_passwords_match(&req.password, &req.confirm)
 }
 
+/// Validates that the new_password and confirm fields match in a change-password request.
+///
+/// Used with the `#[validate(custom(...))]` attribute on [`ChangePasswordRequest`].
+///
+/// See [`change_password`](crate::routes::auth::handlers::change_password) for the handler
+/// that uses this validation.
+pub fn validate_change_password_match(
+    req: &ChangePasswordRequest,
+) -> Result<(), validator::ValidationError> {
+    validate_passwords_match(&req.new_password, &req.confirm)
+}
+
 /// Validates that the password and confirm fields match in a set-password request.
 ///
 /// Used with the `#[validate(custom(...))]` attribute on [`SetPasswordRequest`].
@@ -58,8 +70,11 @@ pub fn validate_set_password_match(
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_set_password_match, validate_signup_passwords_match};
-    use crate::routes::auth::{SetPasswordRequest, SignUpRequest};
+    use super::{
+        validate_change_password_match, validate_set_password_match,
+        validate_signup_passwords_match,
+    };
+    use crate::routes::auth::{ChangePasswordRequest, SetPasswordRequest, SignUpRequest};
 
     #[test]
     // Verifies signup password matching validation accepts equal values.
@@ -73,6 +88,18 @@ mod tests {
         };
 
         assert!(validate_signup_passwords_match(&request).is_ok());
+    }
+
+    #[test]
+    // Verifies change-password validation accepts matching new-password values.
+    fn change_password_validator_accepts_matching_passwords() {
+        let request = ChangePasswordRequest {
+            current_password: "old-password-123".to_string(),
+            new_password: "new-password-123".to_string(),
+            confirm: "new-password-123".to_string(),
+        };
+
+        assert!(validate_change_password_match(&request).is_ok());
     }
 
     #[test]

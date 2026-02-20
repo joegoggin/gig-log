@@ -55,6 +55,16 @@ pub struct UserForTokenRefresh {
     pub email: String,
 }
 
+/// User fields required for authenticated password changes.
+pub struct UserForPasswordChange {
+    /// Unique user identifier.
+    pub id: Uuid,
+    /// User email address.
+    pub email: String,
+    /// Stored password hash used to verify the current password.
+    pub hashed_password: String,
+}
+
 /// Public user profile returned for authenticated sessions.
 #[derive(Debug, Serialize)]
 pub struct CurrentUser {
@@ -227,6 +237,31 @@ impl AuthRepo {
         let result = sqlx::query_as!(
             UserForTokenRefresh,
             r#"SELECT id, email FROM users WHERE id = $1"#,
+            user_id
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    /// Finds user data required for authenticated password changes.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - User identifier to look up
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the query fails.
+    pub async fn find_user_for_password_change(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+    ) -> Result<Option<UserForPasswordChange>, sqlx::Error> {
+        let result = sqlx::query_as!(
+            UserForPasswordChange,
+            r#"SELECT id, email, hashed_password FROM users WHERE id = $1"#,
             user_id
         )
         .fetch_optional(pool)

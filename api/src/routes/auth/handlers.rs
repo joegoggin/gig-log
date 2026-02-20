@@ -23,10 +23,10 @@ use crate::models::auth_code::AuthCodeType;
 use crate::repository::auth::AuthRepo;
 
 use super::payloads::{
-    ConfirmEmailRequest, ConfirmEmailResponse, CurrentUserResponse, ForgotPasswordRequest,
-    ForgotPasswordResponse, LogInRequest, LogInResponse, LogOutResponse, RefreshSessionResponse,
-    SetPasswordRequest, SetPasswordResponse, SignUpRequest, SignUpResponse,
-    VerifyForgotPasswordRequest, VerifyForgotPasswordResponse,
+    ChangePasswordRequest, ChangePasswordResponse, ConfirmEmailRequest, ConfirmEmailResponse,
+    CurrentUserResponse, ForgotPasswordRequest, ForgotPasswordResponse, LogInRequest,
+    LogInResponse, LogOutResponse, RefreshSessionResponse, SetPasswordRequest, SetPasswordResponse,
+    SignUpRequest, SignUpResponse, VerifyForgotPasswordRequest, VerifyForgotPasswordResponse,
 };
 
 /// Registers a new user account.
@@ -600,6 +600,132 @@ pub async fn verify_forgot_password(
         }))
 }
 
+/// Changes the authenticated user's password.
+///
+/// Verifies the current password, updates the stored password hash, revokes all
+/// active refresh sessions, and rotates access/refresh cookies.
+///
+/// # Route
+///
+/// `POST /auth/change-password`
+///
+/// # Request Body ([`ChangePasswordRequest`])
+///
+/// - `current_password` - The user's existing password
+/// - `new_password` - The replacement password (minimum 8 characters)
+/// - `confirm` - Password confirmation (must match `new_password`)
+///
+/// # Response Body ([`ChangePasswordResponse`])
+///
+/// - `message` - Success message
+///
+/// # Errors
+///
+/// - `Unauthorized` - If not authenticated, no active refresh session exists, or the user no longer exists
+/// - `InvalidCredentials` - If `current_password` does not match the existing password
+/// - `TokenInvalid` - If the refresh token is malformed or has an invalid token type
+/// - `TokenExpired` - If the refresh token is expired
+/// - `InternalError` - If password hashing or database operations fail
+#[post("/auth/change-password")]
+pub async fn change_password(
+    req: HttpRequest,
+    user: AuthenticatedUser,
+    state: web::Data<AppState>,
+    body: ValidatedJson<ChangePasswordRequest>,
+) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+
+    // Require an active refresh-session token so logout immediately invalidates change-password access.
+    let refresh_cookie = req.cookie("refresh_token").ok_or(ApiError::Unauthorized)?;
+    let refresh_claims = decode_refresh_token(refresh_cookie.value(), &state.env.jwt_secret)?;
+
+    if refresh_claims.sub != user.user_id.to_string() {
+        return Err(ApiError::Unauthorized);
+    }
+
+    let refresh_token_hash = {
+        let mut hasher = Sha256::new();
+        hasher.update(refresh_claims.jti.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+
+    // Start transaction early so refresh-session validation and credential updates
+    // are performed atomically against concurrent logout requests.
+    let mut tx = state.pool.begin().await?;
+
+    if !AuthRepo::consume_active_refresh_token(&mut tx, user.user_id, &refresh_token_hash).await? {
+        return Err(ApiError::Unauthorized);
+    }
+
+    // Ensure the authenticated subject still maps to a real user account and verify
+    // the user-provided current password before mutating credentials.
+    let user_for_password_change =
+        AuthRepo::find_user_for_password_change(&state.pool, user.user_id)
+            .await?
+            .ok_or(ApiError::Unauthorized)?;
+
+    if !verify_password(
+        &body.current_password,
+        &user_for_password_change.hashed_password,
+    )? {
+        return Err(ApiError::InvalidCredentials);
+    }
+
+    // Hash and persist the new password.
+    let hashed_password = hash_password(&body.new_password)?;
+    AuthRepo::update_user_password(&mut tx, user.user_id, &hashed_password).await?;
+
+    // Revoke all refresh sessions and issue a fresh session after commit.
+    AuthRepo::revoke_all_user_refresh_tokens(&mut tx, user.user_id).await?;
+    tx.commit().await?;
+
+    let access_token = create_access_token(
+        user.user_id,
+        &user_for_password_change.email,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
+    )?;
+
+    let (refresh_token, jti) = create_refresh_token(
+        user.user_id,
+        &state.env.jwt_secret,
+        state.env.jwt_refresh_token_expiry_seconds,
+        refresh_claims.remember_me,
+    )?;
+
+    let token_hash = {
+        let mut hasher = Sha256::new();
+        hasher.update(jti.as_bytes());
+        hex::encode(hasher.finalize())
+    };
+    let expires_at =
+        Utc::now() + Duration::seconds(state.env.jwt_refresh_token_expiry_seconds as i64);
+
+    AuthRepo::create_refresh_token(&state.pool, user.user_id, &token_hash, expires_at).await?;
+
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        state.env.cookie_domain.as_deref(),
+        state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
+    );
+    let refresh_cookie = create_refresh_token_cookie(
+        &refresh_token,
+        state.env.cookie_domain.as_deref(),
+        state.env.cookie_secure,
+        refresh_claims
+            .remember_me
+            .then_some(state.env.jwt_refresh_token_expiry_seconds),
+    );
+
+    Ok(HttpResponse::Ok()
+        .cookie(access_cookie)
+        .cookie(refresh_cookie)
+        .json(ChangePasswordResponse {
+            message: "Password changed successfully.".to_string(),
+        }))
+}
+
 /// Sets a new password for the authenticated user.
 ///
 /// Updates the user's password, revokes all existing refresh tokens for
@@ -884,6 +1010,95 @@ mod tests {
 
         let response = test::call_service(&app, request).await;
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies change-password rejects unauthenticated requests before validation logic executes.
+    async fn change_password_returns_unauthorized_without_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/change-password")
+            .set_json(json!({
+                "current_password": "password123",
+                "new_password": "new-password-123",
+                "confirm": "new-password-123"
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies change-password requires a refresh-session cookie even with a valid access token.
+    async fn change_password_returns_unauthorized_without_refresh_cookie() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "user@example.com",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("test access token should be created");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/change-password")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "current_password": "password123",
+                "new_password": "new-password-123",
+                "confirm": "new-password-123"
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies change-password payload validation rejects malformed fields before DB access.
+    async fn change_password_returns_bad_request_for_invalid_payload() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "user@example.com",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("test access token should be created");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/change-password")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "current_password": "",
+                "new_password": "short",
+                "confirm": "different"
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[actix_web::test]

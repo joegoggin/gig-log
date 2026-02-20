@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::repository::auth::CurrentUser;
 use crate::validators::password_match::{
-    validate_set_password_match, validate_signup_passwords_match,
+    validate_change_password_match, validate_set_password_match, validate_signup_passwords_match,
 };
 
 /// Request body for user registration.
@@ -169,6 +169,37 @@ pub struct VerifyForgotPasswordRequest {
 /// See [`verify_forgot_password`](super::handlers::verify_forgot_password) for the handler that produces this response.
 #[derive(Debug, Serialize)]
 pub struct VerifyForgotPasswordResponse {
+    /// Success message.
+    pub message: String,
+}
+
+/// Request body for changing password while authenticated.
+///
+/// Validates that new-password and confirmation fields match and meet minimum
+/// length requirements.
+///
+/// See [`change_password`](super::handlers::change_password) for the handler that processes this request.
+#[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_change_password_match"))]
+pub struct ChangePasswordRequest {
+    /// The user's current password.
+    #[validate(length(min = 1, message = "Current password is required"))]
+    pub current_password: String,
+
+    /// The new password (minimum 8 characters).
+    #[validate(length(min = 8, message = "New password must have at least 8 characters"))]
+    pub new_password: String,
+
+    /// Confirmation for `new_password`.
+    #[validate(length(min = 1, message = "Confirm password is required"))]
+    pub confirm: String,
+}
+
+/// Response body for successful authenticated password change.
+///
+/// See [`change_password`](super::handlers::change_password) for the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct ChangePasswordResponse {
     /// Success message.
     pub message: String,
 }

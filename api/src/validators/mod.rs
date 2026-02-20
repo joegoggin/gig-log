@@ -8,7 +8,7 @@
 //!
 //! - [`company_tax_rate`] - Company tax-withholding cross-field validation
 //! - [`job_payment_type`] - Job payment-type cross-field validation
-//! - [`password_match`] - Password confirmation validation for sign-up and password reset flows
+//! - [`password_match`] - Password confirmation validation for sign-up and password-update flows
 //! - [`payment_consistency`] - Payment payout/date/status cross-field validation
 
 pub mod company_tax_rate;

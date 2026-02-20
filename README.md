@@ -62,7 +62,7 @@ GigLog is still in active development.
 
 ### ✅ Completed
 
-- [x] User authentication flow (sign up, log in, remember-me sessions, refresh-token rotation)
+- [x] User authentication flow (sign up, log in, remember-me sessions, refresh-token rotation, password reset/change)
 - [x] Company management flow (list, view, create, edit, and delete companies)
 - [x] Job management flow (list, view, create, edit, and delete jobs)
 - [x] Payment management flow (list, view, create, edit, and delete payments)
