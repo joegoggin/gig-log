@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styles from "./SettingsPage.module.scss";
+import type { ThemeMode } from "@/lib/appearance";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
 import Button from "@/components/core/Button/Button";
@@ -7,6 +8,7 @@ import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import TextInput from "@/components/core/TextInput/TextInput";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import api from "@/lib/axios";
 
@@ -41,10 +43,37 @@ type RequestEmailChangeMutationResult = {
     normalizedEmail: string;
 };
 
+type ThemeModeOption = {
+    /** Theme mode value applied when selected */
+    value: ThemeMode;
+    /** Visible label for the mode option */
+    label: string;
+    /** Supporting copy describing the mode behavior */
+    description: string;
+};
+
+const themeModeOptions: Array<ThemeModeOption> = [
+    {
+        value: "system",
+        label: "System",
+        description: "Automatically matches your device preference.",
+    },
+    {
+        value: "light",
+        label: "Light",
+        description: "Keeps surfaces bright for daytime readability.",
+    },
+    {
+        value: "dark",
+        label: "Dark",
+        description: "Uses darker surfaces for lower-glare sessions.",
+    },
+];
+
 /**
- * The authenticated account settings page for security workflows.
- * Lets signed-in users change their password and complete a verified
- * email-change flow with request and confirmation steps.
+ * The authenticated account settings page for security and appearance workflows.
+ * Lets signed-in users change their password, complete a verified email-change
+ * flow, and choose a persisted theme mode preference.
  *
  * Route: `/settings`
  *
@@ -61,6 +90,7 @@ type RequestEmailChangeMutationResult = {
  */
 function SettingsPage() {
     const { user, refreshUser } = useAuth();
+    const { mode, resolvedTheme, setMode } = useAppearance();
     const { addNotification } = useNotification();
     const [pendingEmailChange, setPendingEmailChange] = useState<string | null>(null);
     const {
@@ -208,10 +238,10 @@ function SettingsPage() {
     return (
         <section className={styles["settings-page"]}>
             <header className={styles["settings-page__hero"]}>
-                <p className={styles["settings-page__eyebrow"]}>Account security</p>
+                <p className={styles["settings-page__eyebrow"]}>Account and appearance</p>
                 <h1>Settings</h1>
                 <p className={styles["settings-page__lead"]}>
-                    Keep your login credentials current and protect account access.
+                    Keep your credentials current and personalize how GigLog looks.
                 </p>
                 {user?.email && (
                     <p className={styles["settings-page__current-email"]}>
@@ -305,6 +335,70 @@ function SettingsPage() {
                     </div>
                 </article>
             </div>
+
+            <article
+                className={`${styles["settings-page__panel"]} ${styles["settings-page__panel--appearance"]}`}
+            >
+                <h2>Theme Mode</h2>
+                <p className={styles["settings-page__panel-lead"]}>
+                    Choose how GigLog handles light and dark surfaces across the app.
+                </p>
+
+                <fieldset className={styles["settings-page__theme-fieldset"]}>
+                    <legend className={styles["settings-page__theme-legend"]}>
+                        Appearance mode
+                    </legend>
+
+                    <div className={styles["settings-page__theme-options"]}>
+                        {themeModeOptions.map((option) => {
+                            const inputId = `theme-mode-${option.value}`;
+                            const isActive = mode === option.value;
+
+                            return (
+                                <label
+                                    key={option.value}
+                                    htmlFor={inputId}
+                                    className={`${styles["settings-page__theme-option"]} ${
+                                        isActive
+                                            ? styles[
+                                                  "settings-page__theme-option--active"
+                                              ]
+                                            : ""
+                                    }`}
+                                >
+                                    <input
+                                        id={inputId}
+                                        type="radio"
+                                        name="theme-mode"
+                                        value={option.value}
+                                        checked={isActive}
+                                        onChange={() => setMode(option.value)}
+                                    />
+                                    <span
+                                        className={
+                                            styles["settings-page__theme-option-label"]
+                                        }
+                                    >
+                                        {option.label}
+                                    </span>
+                                    <span
+                                        className={
+                                            styles["settings-page__theme-option-description"]
+                                        }
+                                    >
+                                        {option.description}
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </fieldset>
+
+                <p className={styles["settings-page__theme-status"]}>
+                    Active theme: <strong>{resolvedTheme === "dark" ? "Dark" : "Light"}</strong>
+                    {mode === "system" ? " (following your device setting)." : "."}
+                </p>
+            </article>
         </section>
     );
 }

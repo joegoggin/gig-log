@@ -6,6 +6,9 @@
     --page-border: rgba(26, 27, 38, 0.14);
     --page-muted: rgba(26, 27, 38, 0.78);
     --page-step: rgba(255, 255, 255, 0.38);
+    --page-theme-option-surface: rgba(255, 255, 255, 0.52);
+    --page-theme-option-border-active: rgba(122, 162, 247, 0.72);
+    --page-theme-option-shadow: rgba(122, 162, 247, 0.18);
 }
 
 [data-theme="dark"] .settings-page {
@@ -13,6 +16,9 @@
     --page-border: rgba(169, 177, 214, 0.2);
     --page-muted: rgba(169, 177, 214, 0.88);
     --page-step: rgba(26, 27, 38, 0.32);
+    --page-theme-option-surface: rgba(26, 27, 38, 0.3);
+    --page-theme-option-border-active: rgba(125, 207, 255, 0.7);
+    --page-theme-option-shadow: rgba(125, 207, 255, 0.15);
 }
 
 .settings-page {
@@ -35,6 +41,10 @@
 
     &__panel {
         animation-delay: 0.06s;
+    }
+
+    &__panel--appearance {
+        animation-delay: 0.12s;
     }
 
     &__grid {
@@ -97,6 +107,83 @@
         font-size: 14px;
     }
 
+    &__theme-fieldset {
+        margin: 0;
+        border: 0;
+        min-width: 0;
+        padding: 0;
+    }
+
+    &__theme-legend {
+        margin-bottom: 12px;
+        color: var(--text-color);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    &__theme-options {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+        @include media.tablet {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__theme-option {
+        position: relative;
+        display: grid;
+        gap: 6px;
+        border-radius: 14px;
+        border: 1px solid var(--page-border);
+        background: var(--page-theme-option-surface);
+        padding: 14px;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease,
+            transform 0.2s ease;
+
+        input {
+            position: absolute;
+            inline-size: 1px;
+            block-size: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        &:focus-within {
+            border-color: var(--page-theme-option-border-active);
+            box-shadow: 0 0 0 2px var(--page-theme-option-shadow);
+            transform: translateY(-1px);
+        }
+    }
+
+    &__theme-option--active {
+        border-color: var(--page-theme-option-border-active);
+        box-shadow: 0 8px 18px -12px var(--page-theme-option-shadow);
+        transform: translateY(-1px);
+    }
+
+    &__theme-option-label {
+        color: var(--text-color);
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    &__theme-option-description {
+        color: var(--page-muted);
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    &__theme-status {
+        margin-top: 14px;
+        color: var(--page-muted);
+        font-size: 14px;
+    }
+
     h2,
     h3 {
         line-height: 1.15;
@@ -110,13 +197,13 @@
         max-width: 640px;
     }
 
-    :global(button) {
+    form :global(button) {
         margin-top: 22px;
         min-width: 220px;
     }
 
     @include media.tablet {
-        :global(button) {
+        form :global(button) {
             width: 100%;
             min-width: 0;
         }

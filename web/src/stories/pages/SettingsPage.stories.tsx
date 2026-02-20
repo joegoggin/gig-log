@@ -6,6 +6,7 @@
  * - Email-change request submits normalized payload and handles validation failures.
  * - Email-change confirmation submits expected payload, triggers auth refresh,
  *   and renders validation errors.
+ * - Theme mode controls switch appearance and update `data-theme`.
  *
  * Regression focus:
  * - Prevents API contract drift for settings form payloads.
@@ -371,5 +372,39 @@ export const ShowsEmailConfirmValidationErrors: Story = {
         } finally {
             restorePost();
         }
+    },
+};
+
+export const SwitchesThemeModeAndUpdatesDataTheme: Story = {
+    parameters: {
+        storyTest: {
+            router: {
+                storyPath: "/settings",
+                initialEntries: ["/settings"],
+            },
+            auth: {
+                isLoggedIn: true,
+                isLoading: false,
+            },
+            appearance: {
+                mode: "dark",
+            },
+        },
+    } satisfies StoryTestParameters,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        const lightModeRadio = canvas.getByRole("radio", { name: /^Light / });
+        const darkModeRadio = canvas.getByRole("radio", { name: /^Dark / });
+
+        await expect(darkModeRadio).toBeChecked();
+        await expect(rootElement.getAttribute("data-theme")).toBe("dark");
+
+        await userEvent.click(canvas.getByText("Light"));
+
+        await waitFor(() => {
+            expect(rootElement.getAttribute("data-theme")).toBe("light");
+        });
+        await expect(lightModeRadio).toBeChecked();
     },
 };
