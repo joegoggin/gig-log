@@ -8,7 +8,9 @@ use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::{Duration, Utc};
 use sha2::{Digest, Sha256};
 
-use crate::auth::codes::{generate_auth_code, hash_code, verify_code};
+use crate::auth::codes::{
+    generate_auth_code, hash_code, hash_email_change_code, verify_code, verify_email_change_code,
+};
 use crate::auth::cookies::{
     clear_access_token_cookie, clear_refresh_token_cookie, create_access_token_cookie,
     create_refresh_token_cookie,
@@ -23,10 +25,12 @@ use crate::models::auth_code::AuthCodeType;
 use crate::repository::auth::AuthRepo;
 
 use super::payloads::{
-    ChangePasswordRequest, ChangePasswordResponse, ConfirmEmailRequest, ConfirmEmailResponse,
-    CurrentUserResponse, ForgotPasswordRequest, ForgotPasswordResponse, LogInRequest,
-    LogInResponse, LogOutResponse, RefreshSessionResponse, SetPasswordRequest, SetPasswordResponse,
-    SignUpRequest, SignUpResponse, VerifyForgotPasswordRequest, VerifyForgotPasswordResponse,
+    ChangePasswordRequest, ChangePasswordResponse, ConfirmEmailChangeRequest,
+    ConfirmEmailChangeResponse, ConfirmEmailRequest, ConfirmEmailResponse, CurrentUserResponse,
+    ForgotPasswordRequest, ForgotPasswordResponse, LogInRequest, LogInResponse, LogOutResponse,
+    RefreshSessionResponse, RequestEmailChangeRequest, RequestEmailChangeResponse,
+    SetPasswordRequest, SetPasswordResponse, SignUpRequest, SignUpResponse,
+    VerifyForgotPasswordRequest, VerifyForgotPasswordResponse,
 };
 
 /// Registers a new user account.
@@ -171,6 +175,171 @@ pub async fn confirm_email(
     Ok(HttpResponse::Ok().json(ConfirmEmailResponse {
         message: "Email confirmed successfully.".to_string(),
     }))
+}
+
+/// Initiates an authenticated email-change request.
+///
+/// Generates a dedicated email-change confirmation code and sends it to the
+/// requested new email address when that email is available.
+///
+/// To reduce account-enumeration risk, this endpoint always returns a generic
+/// success message even when the target email is already in use.
+///
+/// # Route
+///
+/// `POST /auth/request-email-change`
+///
+/// # Request Body ([`RequestEmailChangeRequest`])
+///
+/// - `new_email` - New email address to verify before applying the update
+///
+/// # Response Body ([`RequestEmailChangeResponse`])
+///
+/// - `message` - Generic status message
+///
+/// # Errors
+///
+/// - `Unauthorized` - If the access token is valid but the user no longer exists
+/// - `InternalError` - If database operations fail
+#[post("/auth/request-email-change")]
+pub async fn request_email_change(
+    state: web::Data<AppState>,
+    auth_user: AuthenticatedUser,
+    body: ValidatedJson<RequestEmailChangeRequest>,
+) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+    let normalized_email = body.new_email.trim().to_lowercase();
+    let generic_message = "If this email is available, a confirmation code has been sent.";
+
+    let user = AuthRepo::find_user_by_id(&state.pool, auth_user.user_id)
+        .await?
+        .ok_or(ApiError::Unauthorized)?;
+
+    if normalized_email == user.email {
+        return Ok(HttpResponse::Ok().json(RequestEmailChangeResponse {
+            message: generic_message.to_string(),
+        }));
+    }
+
+    if AuthRepo::check_email_exists_for_other_user(
+        &state.pool,
+        &normalized_email,
+        auth_user.user_id,
+    )
+    .await?
+    {
+        return Ok(HttpResponse::Ok().json(RequestEmailChangeResponse {
+            message: generic_message.to_string(),
+        }));
+    }
+
+    AuthRepo::invalidate_email_change_codes(&state.pool, auth_user.user_id).await?;
+
+    let code = generate_auth_code();
+    let code_hash = hash_email_change_code(&code, &normalized_email);
+    let expires_at = Utc::now() + Duration::seconds(state.env.auth_code_expiry_seconds as i64);
+
+    AuthRepo::create_auth_code(
+        &state.pool,
+        auth_user.user_id,
+        &code_hash,
+        AuthCodeType::EmailChange,
+        expires_at,
+    )
+    .await?;
+
+    let _ = state
+        .email_sender
+        .send_email_change_email(&normalized_email, &user.first_name, &code)
+        .await;
+
+    Ok(HttpResponse::Ok().json(RequestEmailChangeResponse {
+        message: generic_message.to_string(),
+    }))
+}
+
+/// Confirms and applies an authenticated email change.
+///
+/// Validates an email-change code against the requested new email, then updates
+/// the user's email only after successful code verification.
+///
+/// On success, `email_confirmed` remains `true` because ownership of the new
+/// email is proven by the confirmation code.
+///
+/// # Route
+///
+/// `POST /auth/confirm-email-change`
+///
+/// # Request Body ([`ConfirmEmailChangeRequest`])
+///
+/// - `new_email` - New email address being confirmed
+/// - `auth_code` - One-time code sent to `new_email`
+///
+/// # Response Body ([`ConfirmEmailChangeResponse`])
+///
+/// - `message` - Success message
+///
+/// # Errors
+///
+/// - `Unauthorized` - If the access token is valid but the user no longer exists
+/// - `AuthCodeExpired` - If no valid email-change code exists
+/// - `InvalidAuthCode` - If the provided code doesn't match the target email/code pair
+/// - `EmailAlreadyExists` - If another account now owns the target email
+#[post("/auth/confirm-email-change")]
+pub async fn confirm_email_change(
+    state: web::Data<AppState>,
+    auth_user: AuthenticatedUser,
+    body: ValidatedJson<ConfirmEmailChangeRequest>,
+) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+    let normalized_email = body.new_email.trim().to_lowercase();
+
+    if AuthRepo::find_user_by_id(&state.pool, auth_user.user_id)
+        .await?
+        .is_none()
+    {
+        return Err(ApiError::Unauthorized);
+    }
+
+    let auth_code =
+        AuthRepo::find_valid_auth_code(&state.pool, auth_user.user_id, AuthCodeType::EmailChange)
+            .await?
+            .ok_or(ApiError::AuthCodeExpired)?;
+
+    if !verify_email_change_code(&body.auth_code, &normalized_email, &auth_code.code_hash) {
+        return Err(ApiError::InvalidAuthCode);
+    }
+
+    let mut tx = state.pool.begin().await?;
+    AuthRepo::mark_auth_code_used(&mut tx, auth_code.id).await?;
+
+    let updated =
+        AuthRepo::update_user_email_if_available(&mut tx, auth_user.user_id, &normalized_email)
+            .await?;
+    if !updated {
+        return Err(ApiError::EmailAlreadyExists);
+    }
+
+    tx.commit().await?;
+
+    let access_token = create_access_token(
+        auth_user.user_id,
+        &normalized_email,
+        &state.env.jwt_secret,
+        state.env.jwt_access_token_expiry_seconds,
+    )?;
+    let access_cookie = create_access_token_cookie(
+        &access_token,
+        state.env.cookie_domain.as_deref(),
+        state.env.cookie_secure,
+        state.env.jwt_access_token_expiry_seconds,
+    );
+
+    Ok(HttpResponse::Ok()
+        .cookie(access_cookie)
+        .json(ConfirmEmailChangeResponse {
+            message: "Email changed successfully.".to_string(),
+        }))
 }
 
 /// Authenticates a user and issues JWT tokens.
@@ -888,6 +1057,15 @@ mod tests {
         ) -> Result<(), ApiError> {
             Ok(())
         }
+
+        async fn send_email_change_email(
+            &self,
+            _to_email: &str,
+            _first_name: &str,
+            _code: &str,
+        ) -> Result<(), ApiError> {
+            Ok(())
+        }
     }
 
     fn test_state() -> AppState {
@@ -956,6 +1134,108 @@ mod tests {
 
         let response = test::call_service(&app, request).await;
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies request-email-change rejects unauthenticated requests before DB access.
+    async fn request_email_change_returns_unauthorized_without_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/request-email-change")
+            .set_json(json!({ "new_email": "new.email@example.com" }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies request-email-change payload validation rejects invalid email format.
+    async fn request_email_change_returns_bad_request_for_invalid_payload() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "user@example.com",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("test access token should be created");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/request-email-change")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({ "new_email": "not-an-email" }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    // Verifies confirm-email-change rejects unauthenticated requests before DB access.
+    async fn confirm_email_change_returns_unauthorized_without_cookie() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/confirm-email-change")
+            .set_json(json!({
+                "new_email": "new.email@example.com",
+                "auth_code": "123456"
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies confirm-email-change payload validation rejects malformed fields.
+    async fn confirm_email_change_returns_bad_request_for_invalid_payload() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "user@example.com",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("test access token should be created");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .configure(configure_routes),
+        )
+        .await;
+
+        let request = test::TestRequest::post()
+            .uri("/auth/confirm-email-change")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "new_email": "not-an-email",
+                "auth_code": ""
+            }))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[actix_web::test]

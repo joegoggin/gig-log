@@ -273,6 +273,15 @@ mod tests {
         ) -> Result<(), ApiError> {
             Ok(())
         }
+
+        async fn send_email_change_email(
+            &self,
+            _to_email: &str,
+            _first_name: &str,
+            _code: &str,
+        ) -> Result<(), ApiError> {
+            Ok(())
+        }
     }
 
     fn test_env() -> Env {

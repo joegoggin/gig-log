@@ -75,6 +75,48 @@ pub struct ConfirmEmailResponse {
     pub message: String,
 }
 
+/// Request body for initiating an authenticated email-change flow.
+///
+/// See [`request_email_change`](super::handlers::request_email_change) for the handler that processes this request.
+#[derive(Debug, Deserialize, Validate)]
+pub struct RequestEmailChangeRequest {
+    /// New email address to verify before applying the account update.
+    #[validate(email(message = "Email is invalid"))]
+    pub new_email: String,
+}
+
+/// Response body for email-change request initiation.
+///
+/// See [`request_email_change`](super::handlers::request_email_change) for the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct RequestEmailChangeResponse {
+    /// Generic message returned to avoid exposing email-availability details.
+    pub message: String,
+}
+
+/// Request body for confirming an authenticated email-change flow.
+///
+/// See [`confirm_email_change`](super::handlers::confirm_email_change) for the handler that processes this request.
+#[derive(Debug, Deserialize, Validate)]
+pub struct ConfirmEmailChangeRequest {
+    /// New email address being confirmed.
+    #[validate(email(message = "Email is invalid"))]
+    pub new_email: String,
+
+    /// One-time code sent to `new_email`.
+    #[validate(length(min = 1, message = "Auth code is required"))]
+    pub auth_code: String,
+}
+
+/// Response body for successful email-change confirmation.
+///
+/// See [`confirm_email_change`](super::handlers::confirm_email_change) for the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct ConfirmEmailChangeResponse {
+    /// Success message.
+    pub message: String,
+}
+
 /// Request body for user login.
 ///
 /// See [`log_in`](super::handlers::log_in) for the handler that processes this request.

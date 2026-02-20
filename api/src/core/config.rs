@@ -5,8 +5,8 @@
 use actix_web::web::ServiceConfig;
 
 use crate::routes::auth::{
-    change_password, confirm_email, current_user, forgot_password, log_in, log_out,
-    refresh_session, set_password, sign_up, verify_forgot_password,
+    change_password, confirm_email, confirm_email_change, current_user, forgot_password, log_in,
+    log_out, refresh_session, request_email_change, set_password, sign_up, verify_forgot_password,
 };
 use crate::routes::companies::{
     create_company, delete_company, get_company, list_companies, update_company,
@@ -37,6 +37,8 @@ pub fn configure_routes(config: &mut ServiceConfig) {
         .service(log_out)
         .service(refresh_session)
         .service(current_user)
+        .service(request_email_change)
+        .service(confirm_email_change)
         .service(forgot_password)
         .service(verify_forgot_password)
         .service(set_password)

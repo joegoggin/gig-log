@@ -13,9 +13,11 @@ pub enum AuthCodeType {
     EmailConfirmation,
     /// Code sent to allow a user to reset their password.
     PasswordReset,
+    /// Code sent to verify ownership of a new email before applying an email change.
+    EmailChange,
 }
 
-/// A time-limited authentication code used for email confirmation or password reset.
+/// A time-limited authentication code used for email and password security flows.
 ///
 /// Codes are hashed before storage and can only be used once. They expire after
 /// a configured time period.

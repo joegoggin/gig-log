@@ -25,6 +25,8 @@ pub enum MockEmailKind {
     Confirmation,
     /// Password reset email.
     PasswordReset,
+    /// Email-change verification email.
+    EmailChange,
 }
 
 /// Captured email invocation for assertions in tests.
@@ -93,6 +95,25 @@ impl EmailSender for MockEmailSender {
             .expect("mock email mutex poisoned")
             .push(MockEmailCall {
                 kind: MockEmailKind::PasswordReset,
+                to_email: to_email.to_string(),
+                first_name: first_name.to_string(),
+                code: code.to_string(),
+            });
+
+        Ok(())
+    }
+
+    async fn send_email_change_email(
+        &self,
+        to_email: &str,
+        first_name: &str,
+        code: &str,
+    ) -> Result<(), ApiError> {
+        self.calls
+            .lock()
+            .expect("mock email mutex poisoned")
+            .push(MockEmailCall {
+                kind: MockEmailKind::EmailChange,
                 to_email: to_email.to_string(),
                 first_name: first_name.to_string(),
                 code: code.to_string(),

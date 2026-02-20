@@ -1,9 +1,9 @@
 //! Integration tests for authentication routes.
 //!
 //! These tests cover core auth success and failure paths, including signup,
-//! email confirmation, login, password reset verification, and password update
-//! behavior (both reset and authenticated change flows) with real database
-//! persistence and auth-guard enforcement.
+//! email confirmation, login, email change, password reset verification, and
+//! password update behavior (both reset and authenticated change flows) with
+//! real database persistence and auth-guard enforcement.
 
 mod support;
 
@@ -38,6 +38,14 @@ async fn user_id_for_email(pool: &Pool<Postgres>, email: &str) -> Uuid {
 async fn email_confirmed_for_user(pool: &Pool<Postgres>, email: &str) -> bool {
     sqlx::query_scalar("SELECT email_confirmed FROM users WHERE email = $1")
         .bind(email)
+        .fetch_one(pool)
+        .await
+        .expect("user should exist")
+}
+
+async fn email_for_user(pool: &Pool<Postgres>, user_id: Uuid) -> String {
+    sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
+        .bind(user_id)
         .fetch_one(pool)
         .await
         .expect("user should exist")
@@ -1374,4 +1382,464 @@ async fn log_out_then_set_password_with_old_cookies_returns_unauthorized() {
             .and_then(|code| code.as_str()),
         Some("UNAUTHORIZED")
     );
+}
+
+#[actix_web::test]
+// Verifies duplicate email-change requests return a generic success response without issuing codes.
+async fn request_email_change_for_existing_email_returns_generic_success() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let occupied_email = unique_email("email-change-occupied");
+    let occupied_sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Target",
+            "last_name": "User",
+            "email": occupied_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let occupied_sign_up_response = test::call_service(&app, occupied_sign_up).await;
+    assert_eq!(occupied_sign_up_response.status(), StatusCode::CREATED);
+
+    let owner_email = unique_email("email-change-owner");
+    let owner_sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Owner",
+            "last_name": "User",
+            "email": owner_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let owner_sign_up_response = test::call_service(&app, owner_sign_up).await;
+    assert_eq!(owner_sign_up_response.status(), StatusCode::CREATED);
+
+    let owner_confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == owner_email)
+        .map(|call| call.code)
+        .expect("owner confirmation email should be captured");
+
+    let owner_confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": owner_email,
+            "auth_code": owner_confirmation_code
+        }))
+        .to_request();
+    let owner_confirm_response = test::call_service(&app, owner_confirm).await;
+    assert_eq!(owner_confirm_response.status(), StatusCode::OK);
+
+    let owner_login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": owner_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let owner_login_response = test::call_service(&app, owner_login).await;
+    assert_eq!(owner_login_response.status(), StatusCode::OK);
+
+    let owner_access_cookie = owner_login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+
+    let request_email_change = test::TestRequest::post()
+        .uri("/auth/request-email-change")
+        .cookie(owner_access_cookie)
+        .set_json(json!({ "new_email": occupied_email.to_uppercase() }))
+        .to_request();
+    let request_email_change_response = test::call_service(&app, request_email_change).await;
+    assert_eq!(request_email_change_response.status(), StatusCode::OK);
+
+    let body: serde_json::Value = test::read_body_json(request_email_change_response).await;
+    assert_eq!(
+        body.get("message").and_then(|value| value.as_str()),
+        Some("If this email is available, a confirmation code has been sent.")
+    );
+
+    let email_change_call_count = mock_email
+        .calls()
+        .into_iter()
+        .filter(|call| call.kind == MockEmailKind::EmailChange && call.to_email == occupied_email)
+        .count();
+    assert_eq!(email_change_call_count, 0);
+
+    let owner_id = user_id_for_email(&pool, &owner_email).await;
+    let active_email_change_code_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM auth_codes WHERE user_id = $1 AND code_type = $2::auth_code_type AND used = false",
+    )
+    .bind(owner_id)
+    .bind("email_change")
+    .fetch_one(&pool)
+    .await
+    .expect("auth code count query should succeed");
+    assert_eq!(active_email_change_code_count, 0);
+}
+
+#[actix_web::test]
+// Verifies successful email-change request + confirm updates email and consumes the auth code.
+async fn email_change_confirmation_updates_email_and_marks_code_used() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let current_email = unique_email("email-change-current");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": current_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == current_email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": current_email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": current_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+
+    let normalized_new_email = unique_email("email-change-next");
+
+    let request_email_change = test::TestRequest::post()
+        .uri("/auth/request-email-change")
+        .cookie(access_cookie.clone())
+        .set_json(json!({ "new_email": normalized_new_email.to_uppercase() }))
+        .to_request();
+    let request_email_change_response = test::call_service(&app, request_email_change).await;
+    assert_eq!(request_email_change_response.status(), StatusCode::OK);
+
+    let email_change_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| {
+            call.kind == MockEmailKind::EmailChange && call.to_email == normalized_new_email
+        })
+        .map(|call| call.code)
+        .expect("email-change confirmation email should be captured");
+
+    let confirm_email_change = test::TestRequest::post()
+        .uri("/auth/confirm-email-change")
+        .cookie(access_cookie)
+        .set_json(json!({
+            "new_email": normalized_new_email.to_uppercase(),
+            "auth_code": email_change_code
+        }))
+        .to_request();
+    let confirm_email_change_response = test::call_service(&app, confirm_email_change).await;
+    assert_eq!(confirm_email_change_response.status(), StatusCode::OK);
+
+    let cookie_names: Vec<String> = confirm_email_change_response
+        .response()
+        .cookies()
+        .map(|cookie| cookie.name().to_string())
+        .collect();
+    assert!(cookie_names.iter().any(|name| name == "access_token"));
+
+    let user_id = user_id_for_email(&pool, &normalized_new_email).await;
+    assert_eq!(email_for_user(&pool, user_id).await, normalized_new_email);
+    assert!(email_confirmed_for_user(&pool, &normalized_new_email).await);
+
+    let used_email_change_codes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM auth_codes WHERE user_id = $1 AND code_type = $2::auth_code_type AND used = true",
+    )
+    .bind(user_id)
+    .bind("email_change")
+    .fetch_one(&pool)
+    .await
+    .expect("auth code usage query should succeed");
+    assert_eq!(used_email_change_codes, 1);
+
+    let old_email_login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": current_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let old_email_login_response = test::call_service(&app, old_email_login).await;
+    assert_eq!(old_email_login_response.status(), StatusCode::UNAUTHORIZED);
+
+    let new_email_login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": normalized_new_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let new_email_login_response = test::call_service(&app, new_email_login).await;
+    assert_eq!(new_email_login_response.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
+// Verifies confirm-email-change rejects mismatched codes and leaves email unchanged.
+async fn confirm_email_change_with_invalid_code_returns_bad_request() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let current_email = unique_email("email-invalid-current");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": current_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == current_email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": current_email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": current_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+
+    let new_email = unique_email("email-invalid-next");
+
+    let request_email_change = test::TestRequest::post()
+        .uri("/auth/request-email-change")
+        .cookie(access_cookie.clone())
+        .set_json(json!({ "new_email": new_email }))
+        .to_request();
+    let request_email_change_response = test::call_service(&app, request_email_change).await;
+    assert_eq!(request_email_change_response.status(), StatusCode::OK);
+
+    let confirm_email_change = test::TestRequest::post()
+        .uri("/auth/confirm-email-change")
+        .cookie(access_cookie)
+        .set_json(json!({
+            "new_email": new_email,
+            "auth_code": "000000"
+        }))
+        .to_request();
+    let confirm_email_change_response = test::call_service(&app, confirm_email_change).await;
+    assert_eq!(
+        confirm_email_change_response.status(),
+        StatusCode::BAD_REQUEST
+    );
+
+    let body: serde_json::Value = test::read_body_json(confirm_email_change_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("INVALID_AUTH_CODE")
+    );
+
+    let user_id = user_id_for_email(&pool, &current_email).await;
+    assert_eq!(email_for_user(&pool, user_id).await, current_email);
+
+    let used_email_change_codes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM auth_codes WHERE user_id = $1 AND code_type = $2::auth_code_type AND used = true",
+    )
+    .bind(user_id)
+    .bind("email_change")
+    .fetch_one(&pool)
+    .await
+    .expect("auth code usage query should succeed");
+    assert_eq!(used_email_change_codes, 0);
+}
+
+#[actix_web::test]
+// Verifies confirm-email-change rejects expired codes and leaves email unchanged.
+async fn confirm_email_change_with_expired_code_returns_bad_request() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let current_email = unique_email("email-expired-current");
+    let sign_up = test::TestRequest::post()
+        .uri("/auth/sign-up")
+        .set_json(json!({
+            "first_name": "Taylor",
+            "last_name": "User",
+            "email": current_email,
+            "password": "password123",
+            "confirm": "password123"
+        }))
+        .to_request();
+    let sign_up_response = test::call_service(&app, sign_up).await;
+    assert_eq!(sign_up_response.status(), StatusCode::CREATED);
+
+    let confirmation_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::Confirmation && call.to_email == current_email)
+        .map(|call| call.code)
+        .expect("confirmation email should be captured");
+
+    let confirm = test::TestRequest::post()
+        .uri("/auth/confirm-email")
+        .set_json(json!({
+            "email": current_email,
+            "auth_code": confirmation_code
+        }))
+        .to_request();
+    let confirm_response = test::call_service(&app, confirm).await;
+    assert_eq!(confirm_response.status(), StatusCode::OK);
+
+    let login = test::TestRequest::post()
+        .uri("/auth/log-in")
+        .set_json(json!({
+            "email": current_email,
+            "password": "password123"
+        }))
+        .to_request();
+    let login_response = test::call_service(&app, login).await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+
+    let access_cookie = login_response
+        .response()
+        .cookies()
+        .find(|cookie| cookie.name() == "access_token")
+        .map(|cookie| cookie.to_owned())
+        .expect("access cookie should be set on login");
+
+    let new_email = unique_email("email-change-expired-next");
+    let request_email_change = test::TestRequest::post()
+        .uri("/auth/request-email-change")
+        .cookie(access_cookie.clone())
+        .set_json(json!({ "new_email": new_email }))
+        .to_request();
+    let request_email_change_response = test::call_service(&app, request_email_change).await;
+    assert_eq!(request_email_change_response.status(), StatusCode::OK);
+
+    let email_change_code = mock_email
+        .calls()
+        .into_iter()
+        .find(|call| call.kind == MockEmailKind::EmailChange && call.to_email == new_email)
+        .map(|call| call.code)
+        .expect("email-change confirmation email should be captured");
+
+    let user_id = user_id_for_email(&pool, &current_email).await;
+    sqlx::query(
+        "UPDATE auth_codes SET expires_at = NOW() - INTERVAL '1 minute' WHERE user_id = $1 AND code_type = $2::auth_code_type AND used = false",
+    )
+    .bind(user_id)
+    .bind("email_change")
+    .execute(&pool)
+    .await
+    .expect("auth code expiry update should succeed");
+
+    let confirm_email_change = test::TestRequest::post()
+        .uri("/auth/confirm-email-change")
+        .cookie(access_cookie)
+        .set_json(json!({
+            "new_email": new_email,
+            "auth_code": email_change_code
+        }))
+        .to_request();
+    let confirm_email_change_response = test::call_service(&app, confirm_email_change).await;
+    assert_eq!(
+        confirm_email_change_response.status(),
+        StatusCode::BAD_REQUEST
+    );
+
+    let body: serde_json::Value = test::read_body_json(confirm_email_change_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|code| code.as_str()),
+        Some("AUTH_CODE_EXPIRED")
+    );
+
+    assert_eq!(email_for_user(&pool, user_id).await, current_email);
 }

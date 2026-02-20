@@ -38,6 +38,32 @@ pub fn verify_code(code: &str, hash: &str) -> bool {
     constant_time_compare(&code_hash, hash)
 }
 
+/// Hashes an email-change confirmation code scoped to a target email address.
+///
+/// Scoping the hash to the normalized email ensures a valid code for one email
+/// cannot be reused to confirm a different email address.
+///
+/// # Arguments
+///
+/// - `code` - Plain-text confirmation code
+/// - `new_email` - Target email address being confirmed
+pub fn hash_email_change_code(code: &str, new_email: &str) -> String {
+    let normalized_email = new_email.trim().to_lowercase();
+    hash_code(&format!("{normalized_email}:{code}"))
+}
+
+/// Verifies an email-change code against a stored scoped hash.
+///
+/// # Arguments
+///
+/// - `code` - User-provided plain-text code
+/// - `new_email` - Target email address being confirmed
+/// - `hash` - Stored hex-encoded SHA-256 hash
+pub fn verify_email_change_code(code: &str, new_email: &str, hash: &str) -> bool {
+    let code_hash = hash_email_change_code(code, new_email);
+    constant_time_compare(&code_hash, hash)
+}
+
 /// Compares two strings in constant time when lengths match.
 ///
 /// # Arguments
@@ -58,7 +84,10 @@ fn constant_time_compare(a: &str, b: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_auth_code, hash_code, verify_code};
+    use super::{
+        generate_auth_code, hash_code, hash_email_change_code, verify_code,
+        verify_email_change_code,
+    };
 
     #[test]
     // Verifies generated auth codes are always six numeric characters.
@@ -86,5 +115,41 @@ mod tests {
 
         assert!(verify_code("654321", &hash));
         assert!(!verify_code("111111", &hash));
+    }
+
+    #[test]
+    // Verifies email-change hashes normalize casing/whitespace for target emails.
+    fn hash_email_change_code_normalizes_target_email() {
+        let first = hash_email_change_code("123456", " New.Email@Example.com ");
+        let second = hash_email_change_code("123456", "new.email@example.com");
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    // Verifies email-change verification is bound to the intended target email.
+    fn verify_email_change_code_requires_matching_email_scope() {
+        let hash = hash_email_change_code("999999", "next@example.com");
+
+        assert!(verify_email_change_code(
+            "999999",
+            "next@example.com",
+            &hash
+        ));
+        assert!(verify_email_change_code(
+            "999999",
+            " NEXT@EXAMPLE.COM ",
+            &hash
+        ));
+        assert!(!verify_email_change_code(
+            "999999",
+            "other@example.com",
+            &hash
+        ));
+        assert!(!verify_email_change_code(
+            "111111",
+            "next@example.com",
+            &hash
+        ));
     }
 }

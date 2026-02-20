@@ -3,6 +3,6 @@
 //! This module contains wrappers around third-party services so business logic
 //! can depend on a small, testable interface.
 //!
-//! - [`email`] - Transactional email delivery via Resend
+//! - [`email`] - Transactional email delivery via Resend for auth flows
 
 pub mod email;

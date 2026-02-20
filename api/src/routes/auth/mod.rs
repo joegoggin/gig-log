@@ -6,6 +6,7 @@
 //! - Session refresh via refresh-token rotation
 //! - Password reset flow (forgot password, verify code, set new password)
 //! - Authenticated password change with current-password verification
+//! - Authenticated email-change request and confirmation
 //! - Current user retrieval for authenticated sessions
 //!
 //! # Module Structure
@@ -18,8 +19,8 @@ pub mod payloads;
 
 // Re-export handlers at module level for easy route registration
 pub use handlers::{
-    change_password, confirm_email, current_user, forgot_password, log_in, log_out,
-    refresh_session, set_password, sign_up, verify_forgot_password,
+    change_password, confirm_email, confirm_email_change, current_user, forgot_password, log_in,
+    log_out, refresh_session, request_email_change, set_password, sign_up, verify_forgot_password,
 };
 
 // Re-export payload types that are used by other modules

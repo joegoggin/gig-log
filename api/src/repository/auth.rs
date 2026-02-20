@@ -120,6 +120,33 @@ impl AuthRepo {
         Ok(result.is_some())
     }
 
+    /// Checks whether an email address is used by any user other than the given user.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `email` - Email address to check
+    /// - `user_id` - User ID to exclude from the check
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the query fails.
+    pub async fn check_email_exists_for_other_user(
+        pool: &Pool<Postgres>,
+        email: &str,
+        user_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query_scalar!(
+            r#"SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2"#,
+            email,
+            user_id
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(result.is_some())
+    }
+
     /// Finds user credentials and account state for login.
     ///
     /// # Arguments
@@ -387,6 +414,49 @@ impl AuthRepo {
         Ok(())
     }
 
+    /// Updates a user's email when no other account currently owns that email.
+    ///
+    /// This operation also sets `email_confirmed = true` because successful
+    /// email-change confirmation proves ownership of the new address.
+    ///
+    /// # Arguments
+    ///
+    /// - `tx` - Active database transaction
+    /// - `user_id` - User identifier to update
+    /// - `email` - New email address to persist
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the update query fails.
+    pub async fn update_user_email_if_available(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        user_id: Uuid,
+        email: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let updated = sqlx::query!(
+            r#"
+            UPDATE users
+            SET email = $1,
+                email_confirmed = true,
+                updated_at = NOW()
+            WHERE id = $2
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM users AS existing_user
+                  WHERE LOWER(existing_user.email) = LOWER($1)
+                    AND existing_user.id != $2
+              )
+            RETURNING id
+            "#,
+            email,
+            user_id
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        Ok(updated.is_some())
+    }
+
     /// Stores a hashed authentication code for a user.
     ///
     /// # Arguments
@@ -529,6 +599,35 @@ impl AuthRepo {
         WHERE user_id = $1 AND code_type = 'password_reset' AND used = false
         "#,
             user_id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Invalidates all active email-change codes for a user.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - User whose email-change codes should be invalidated
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the update fails.
+    pub async fn invalidate_email_change_codes(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            UPDATE auth_codes
+            SET used = true
+            WHERE user_id = $1 AND code_type = $2 AND used = false
+            "#,
+            user_id,
+            AuthCodeType::EmailChange as AuthCodeType
         )
         .execute(pool)
         .await?;

@@ -1,7 +1,7 @@
 //! Transactional email delivery helpers.
 //!
-//! This module wraps the Resend client used to send account confirmation and
-//! password reset emails.
+//! This module wraps the Resend client used to send account confirmation,
+//! password reset, and email-change verification emails.
 
 use async_trait::async_trait;
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
@@ -41,6 +41,24 @@ pub trait EmailSender {
     ///
     /// Returns [`ApiError::EmailServiceError`] when email delivery fails.
     async fn send_password_reset_email(
+        &self,
+        to_email: &str,
+        first_name: &str,
+        code: &str,
+    ) -> Result<(), ApiError>;
+
+    /// Sends an email-change verification email with a one-time confirmation code.
+    ///
+    /// # Arguments
+    ///
+    /// - `to_email` - New email address being verified
+    /// - `first_name` - Recipient first name shown in the email body
+    /// - `code` - Email-change verification code to include in the email
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiError::EmailServiceError`] when email delivery fails.
+    async fn send_email_change_email(
         &self,
         to_email: &str,
         first_name: &str,
@@ -150,6 +168,51 @@ impl EmailSender for EmailService {
             &self.from_email,
             vec![to_email.to_string()],
             "Reset your GigLog password",
+        )
+        .with_html(&html_body);
+
+        self.client
+            .emails
+            .send(email)
+            .await
+            .map_err(|e| ApiError::EmailServiceError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Sends an email-change verification email with a one-time confirmation code.
+    ///
+    /// # Arguments
+    ///
+    /// - `to_email` - New email address being verified
+    /// - `first_name` - Recipient first name shown in the email body
+    /// - `code` - Email-change verification code to include in the email
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiError::EmailServiceError`] when the upstream email provider
+    /// rejects the request or is unavailable.
+    async fn send_email_change_email(
+        &self,
+        to_email: &str,
+        first_name: &str,
+        code: &str,
+    ) -> Result<(), ApiError> {
+        let html_body = format!(
+            r#"
+            <h2>Confirm your new GigLog email</h2>
+            <p>Hi {},</p>
+            <p>Your email-change code is: <strong>{}</strong></p>
+            <p>This code expires in 10 minutes.</p>
+            <p>If you didn't request this change, you can safely ignore this email.</p>
+            "#,
+            first_name, code
+        );
+
+        let email = CreateEmailBaseOptions::new(
+            &self.from_email,
+            vec![to_email.to_string()],
+            "Confirm your new GigLog email",
         )
         .with_html(&html_body);
 
