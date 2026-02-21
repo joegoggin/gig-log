@@ -42,6 +42,7 @@
     position: relative;
 
     &__sidebar {
+        align-self: flex-start;
         position: sticky;
         top: 0;
         z-index: 20;

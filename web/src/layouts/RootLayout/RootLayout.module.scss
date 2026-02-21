@@ -22,11 +22,11 @@
     position: relative;
     min-height: 100dvh;
     background: var(--root-ambient-surface);
-    overflow: hidden;
 
     &__ambient {
         position: absolute;
         inset: 0;
+        overflow: hidden;
         pointer-events: none;
         z-index: 0;
     }
