@@ -62,7 +62,8 @@ GigLog is still in active development.
 
 ### ✅ Completed
 
-- [x] User authentication flow (sign up, log in, remember-me sessions, refresh-token rotation, password reset/change)
+- [x] User authentication flow (sign up, email confirmation, log in, remember-me sessions, refresh-token rotation, forgot-password, set-password, and authenticated password/email change)
+- [x] Settings center (dedicated password/email security pages plus persisted appearance mode and palette preferences)
 - [x] Company management flow (list, view, create, edit, and delete companies)
 - [x] Job management flow (list, view, create, edit, and delete jobs)
 - [x] Payment management flow (list, view, create, edit, and delete payments)
@@ -109,7 +110,7 @@ Use this flow in a portfolio review:
 2. Open the app at <http://localhost:3000>
 3. Sign up or log in
 4. Complete the auth flow (sign up, email confirmation, log in, and remember-me behavior)
-5. Navigate through dashboard, company management, job management, payment routes, and settings (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`, `/payments`, `/payments/create`, `/payments/:id`, `/payments/:id/edit`, `/settings`) to review list/detail workflows and account-security actions (password/email change)
+5. Navigate through dashboard, company management, job management, payment routes, and settings (`/companies`, `/companies/create`, `/companies/:id`, `/jobs`, `/jobs/create`, `/jobs/:id`, `/jobs/:id/edit`, `/payments`, `/payments/create`, `/payments/:id`, `/payments/:id/edit`, `/settings`, `/settings/password`, `/settings/email`, `/settings/appearance`) to review list/detail workflows, verified account-security updates (current-password change plus code-confirmed email change), and persisted appearance preferences (theme mode plus DB-backed preset/custom palette roles for background, text, primary, secondary, and accent colors, including custom palette create/edit workflows)
 6. Open Storybook at <http://localhost:6006> for documented UI states
 7. Open Rustdoc at <http://localhost:7007> for backend module and API docs
 

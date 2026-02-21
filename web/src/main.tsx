@@ -6,6 +6,9 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 import reportWebVitals from "./reportWebVitals.ts";
+import { initializeAppearance } from "@/lib/appearance";
+
+initializeAppearance();
 
 // Create a new router instance
 const router = createRouter({

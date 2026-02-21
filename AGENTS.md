@@ -799,3 +799,12 @@ When asked to implement an issue you should do the following:
     - Wait for me to tell you to move to the next task
     - Once you move to the next task set the status of the sub-issue to `Done`
 - Once you are done with all the sub-tasks prompt me for a code review
+
+## Git
+
+When working with git you should follow these conventions:
+
+- NEVER commit or push to `main`
+- If asked to push to `main` prompt me about creating a branch
+- If working with an issue and there is no branch associated with the main issue
+  create a branch for it and link it to the main issue

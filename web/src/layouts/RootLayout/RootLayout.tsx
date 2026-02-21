@@ -1,4 +1,4 @@
-import {  useEffect, useState } from "react";
+import { useState } from "react";
 import styles from "./RootLayout.module.scss";
 import type {ReactNode} from "react";
 import type {DeleteModalProps} from "@/components/modals/DeleteModal";
@@ -29,7 +29,7 @@ type Modal = {
 /**
  *
  * The root layout component that wraps all pages in the application.
- * Handles theme detection, notifications display, and global modals.
+ * Handles notifications display and global modals.
  *
  * ## Props
  *
@@ -51,15 +51,6 @@ function RootLayout({ className = "", showAmbient = true, children }: RootLayout
 
     // TODO: Replace with modal state from a modal context/store
     const modal: Modal = {};
-
-    useEffect(() => {
-        const prefersDark = window.matchMedia(
-            "(prefers-color-scheme: dark)",
-        ).matches;
-        const theme = prefersDark ? "dark" : "light";
-
-        document.documentElement.setAttribute("data-theme", theme);
-    }, []);
 
     return (
         <>

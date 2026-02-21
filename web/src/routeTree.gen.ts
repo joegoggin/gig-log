@@ -22,6 +22,9 @@ import { Route as AuthenticatedPaymentsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedJobsIndexRouteImport } from './routes/_authenticated/jobs/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedCompaniesIndexRouteImport } from './routes/_authenticated/companies/index'
+import { Route as AuthenticatedSettingsPasswordRouteImport } from './routes/_authenticated/settings/password'
+import { Route as AuthenticatedSettingsEmailRouteImport } from './routes/_authenticated/settings/email'
+import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedPaymentsCreateRouteImport } from './routes/_authenticated/payments/create'
 import { Route as AuthenticatedJobsCreateRouteImport } from './routes/_authenticated/jobs/create'
 import { Route as AuthenticatedCompaniesCreateRouteImport } from './routes/_authenticated/companies/create'
@@ -101,6 +104,24 @@ const AuthenticatedCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSettingsPasswordRoute =
+  AuthenticatedSettingsPasswordRouteImport.update({
+    id: '/settings/password',
+    path: '/settings/password',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsEmailRoute =
+  AuthenticatedSettingsEmailRouteImport.update({
+    id: '/settings/email',
+    path: '/settings/email',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsAppearanceRoute =
+  AuthenticatedSettingsAppearanceRouteImport.update({
+    id: '/settings/appearance',
+    path: '/settings/appearance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPaymentsCreateRoute =
   AuthenticatedPaymentsCreateRouteImport.update({
     id: '/payments/create',
@@ -160,6 +181,9 @@ export interface FileRoutesByFullPath {
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/payments/create': typeof AuthenticatedPaymentsCreateRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/email': typeof AuthenticatedSettingsEmailRoute
+  '/settings/password': typeof AuthenticatedSettingsPasswordRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -183,6 +207,9 @@ export interface FileRoutesByTo {
   '/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/payments/create': typeof AuthenticatedPaymentsCreateRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/email': typeof AuthenticatedSettingsEmailRoute
+  '/settings/password': typeof AuthenticatedSettingsPasswordRoute
   '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/jobs': typeof AuthenticatedJobsIndexRoute
@@ -208,6 +235,9 @@ export interface FileRoutesById {
   '/_authenticated/companies/create': typeof AuthenticatedCompaniesCreateRoute
   '/_authenticated/jobs/create': typeof AuthenticatedJobsCreateRoute
   '/_authenticated/payments/create': typeof AuthenticatedPaymentsCreateRoute
+  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/_authenticated/settings/email': typeof AuthenticatedSettingsEmailRoute
+  '/_authenticated/settings/password': typeof AuthenticatedSettingsPasswordRoute
   '/_authenticated/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/jobs/': typeof AuthenticatedJobsIndexRoute
@@ -233,6 +263,9 @@ export interface FileRouteTypes {
     | '/companies/create'
     | '/jobs/create'
     | '/payments/create'
+    | '/settings/appearance'
+    | '/settings/email'
+    | '/settings/password'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -256,6 +289,9 @@ export interface FileRouteTypes {
     | '/companies/create'
     | '/jobs/create'
     | '/payments/create'
+    | '/settings/appearance'
+    | '/settings/email'
+    | '/settings/password'
     | '/companies'
     | '/dashboard'
     | '/jobs'
@@ -280,6 +316,9 @@ export interface FileRouteTypes {
     | '/_authenticated/companies/create'
     | '/_authenticated/jobs/create'
     | '/_authenticated/payments/create'
+    | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/email'
+    | '/_authenticated/settings/password'
     | '/_authenticated/companies/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/jobs/'
@@ -403,6 +442,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompaniesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/password': {
+      id: '/_authenticated/settings/password'
+      path: '/settings/password'
+      fullPath: '/settings/password'
+      preLoaderRoute: typeof AuthenticatedSettingsPasswordRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/email': {
+      id: '/_authenticated/settings/email'
+      path: '/settings/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof AuthenticatedSettingsEmailRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/appearance': {
+      id: '/_authenticated/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/payments/create': {
       id: '/_authenticated/payments/create'
       path: '/payments/create'
@@ -473,6 +533,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCompaniesCreateRoute: typeof AuthenticatedCompaniesCreateRoute
   AuthenticatedJobsCreateRoute: typeof AuthenticatedJobsCreateRoute
   AuthenticatedPaymentsCreateRoute: typeof AuthenticatedPaymentsCreateRoute
+  AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
+  AuthenticatedSettingsEmailRoute: typeof AuthenticatedSettingsEmailRoute
+  AuthenticatedSettingsPasswordRoute: typeof AuthenticatedSettingsPasswordRoute
   AuthenticatedCompaniesIndexRoute: typeof AuthenticatedCompaniesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedJobsIndexRoute: typeof AuthenticatedJobsIndexRoute
@@ -490,6 +553,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCompaniesCreateRoute: AuthenticatedCompaniesCreateRoute,
   AuthenticatedJobsCreateRoute: AuthenticatedJobsCreateRoute,
   AuthenticatedPaymentsCreateRoute: AuthenticatedPaymentsCreateRoute,
+  AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
+  AuthenticatedSettingsEmailRoute: AuthenticatedSettingsEmailRoute,
+  AuthenticatedSettingsPasswordRoute: AuthenticatedSettingsPasswordRoute,
   AuthenticatedCompaniesIndexRoute: AuthenticatedCompaniesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedJobsIndexRoute: AuthenticatedJobsIndexRoute,

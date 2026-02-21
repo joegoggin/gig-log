@@ -11,15 +11,55 @@
     margin: 0;
 }
 
+@include colors.register-color-palettes;
+
 [data-theme="light"] {
-    --bg-color: #{colors.$white};
-    --text-color: #{colors.$black};
+    --bg-rgb: var(--color-background-rgb);
+    --text-rgb: var(--color-text-rgb);
+    --bg-color: rgb(var(--bg-rgb));
+    --text-color: rgb(var(--text-rgb));
+    --auth-surface-rgb: var(--bg-rgb);
+    --auth-border-rgb: var(--text-rgb);
+    --auth-muted-rgb: var(--text-rgb);
+    --auth-overlay-rgb: var(--text-rgb);
+    --auth-primary-rgb: var(--color-primary-100-rgb);
+    --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+    --auth-secondary-rgb: var(--color-secondary-100-rgb);
+    --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+    --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+    --logo-mark-blue-rgb: var(--color-blue-100-rgb);
+    --logo-mark-cyan-rgb: var(--color-cyan-100-rgb);
+    --logo-mark-yellow-rgb: var(--color-yellow-100-rgb);
+    --logo-mark-magenta-rgb: var(--color-magenta-100-rgb);
+    --logo-mark-green-rgb: var(--color-green-100-rgb);
+    --logo-mark-blue-highlight-rgb: var(--color-blue-80-rgb);
+    --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+    --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
     background: var(--bg-color);
 }
 
 [data-theme="dark"] {
-    --bg-color: #{colors.$black};
-    --text-color: #{colors.$white};
+    --bg-rgb: var(--color-text-rgb);
+    --text-rgb: var(--color-background-rgb);
+    --bg-color: rgb(var(--bg-rgb));
+    --text-color: rgb(var(--text-rgb));
+    --auth-surface-rgb: var(--bg-rgb);
+    --auth-border-rgb: var(--text-rgb);
+    --auth-muted-rgb: var(--text-rgb);
+    --auth-overlay-rgb: var(--text-rgb);
+    --auth-primary-rgb: var(--color-primary-100-rgb);
+    --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+    --auth-secondary-rgb: var(--color-secondary-100-rgb);
+    --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+    --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+    --logo-mark-blue-rgb: var(--color-blue-80-rgb);
+    --logo-mark-cyan-rgb: var(--color-cyan-80-rgb);
+    --logo-mark-yellow-rgb: var(--color-yellow-80-rgb);
+    --logo-mark-magenta-rgb: var(--color-magenta-80-rgb);
+    --logo-mark-green-rgb: var(--color-green-80-rgb);
+    --logo-mark-blue-highlight-rgb: var(--color-blue-60-rgb);
+    --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+    --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
     background: var(--bg-color);
 }
 

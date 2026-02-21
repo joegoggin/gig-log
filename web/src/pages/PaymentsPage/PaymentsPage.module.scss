@@ -2,15 +2,15 @@
 @use "@sass/variables/colors" as colors;
 
 [data-theme="light"] .payments-page {
-    --page-surface: rgba(255, 255, 255, 0.62);
-    --page-border: rgba(26, 27, 38, 0.14);
-    --page-muted: rgba(26, 27, 38, 0.78);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.62);
+    --page-border: rgba(var(--auth-border-rgb), 0.14);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.78);
 }
 
 [data-theme="dark"] .payments-page {
-    --page-surface: rgba(169, 177, 214, 0.1);
-    --page-border: rgba(169, 177, 214, 0.2);
-    --page-muted: rgba(169, 177, 214, 0.88);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.1);
+    --page-border: rgba(var(--auth-border-rgb), 0.2);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.88);
 }
 
 .payments-page {
@@ -50,7 +50,7 @@
         margin-bottom: 10px;
         padding: 6px 12px;
         border-radius: 999px;
-        background: rgba(colors.$cyan-100, 0.2);
+        background: rgba(colors.$cyan-100-rgb, 0.2);
         color: var(--page-muted);
         font-size: 12px;
         font-weight: 600;
@@ -108,8 +108,8 @@
 
         &:hover {
             transform: translateY(-2px);
-            border-color: rgba(colors.$cyan-100, 0.4);
-            box-shadow: 0 14px 26px rgba(colors.$black, 0.16);
+            border-color: rgba(colors.$cyan-100-rgb, 0.4);
+            box-shadow: 0 14px 26px rgba(colors.$black-rgb, 0.16);
         }
 
         h3 {
@@ -137,7 +137,7 @@
         transition: transform 0.2s ease;
         border: none;
         border-radius: 999px;
-        background: rgba(colors.$black, 0.14);
+        background: rgba(colors.$black-rgb, 0.14);
         padding: 6px 10px;
 
         &:hover {

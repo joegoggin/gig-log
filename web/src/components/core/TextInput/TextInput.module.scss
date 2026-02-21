@@ -26,8 +26,8 @@
         }
 
         &:focus {
-            border-bottom: 1px solid colors.$cyan-100;
-            box-shadow: 0 1px 0 0 colors.$cyan-100;
+            border-bottom: 1px solid rgb(var(--auth-secondary-rgb));
+            box-shadow: 0 1px 0 0 rgb(var(--auth-secondary-rgb));
         }
     }
 
