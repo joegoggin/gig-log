@@ -71,28 +71,28 @@ const themeModeOptions: Array<ThemeModeOption> = [
 
 const colorPaletteOptions: Array<ColorPaletteOption> = [
     {
-        value: "default",
-        label: "Default",
+        value: "catppuccin",
+        label: "Catppuccin",
         description:
-            "Balanced cool accents inspired by the original GigLog look.",
+            "Soothing pastel tones with soft contrast and playful accents.",
     },
     {
-        value: "sunset",
-        label: "Sunset",
+        value: "tokyo-night",
+        label: "Tokyo Night",
         description:
-            "Warmer coral and amber accents for a softer contrast profile.",
+            "Cool neon-inspired accents balanced for long coding sessions.",
     },
     {
-        value: "forest",
-        label: "Forest",
-        description: "Earthy greens and teals for a grounded, natural feel.",
+        value: "everforest",
+        label: "Everforest",
+        description: "Warm, nature-led greens with gentle eye-friendly contrast.",
     },
 ];
 
 const colorPaletteLabels: Record<ColorPalette, string> = {
-    default: "Default",
-    sunset: "Sunset",
-    forest: "Forest",
+    catppuccin: "Catppuccin",
+    "tokyo-night": "Tokyo Night",
+    everforest: "Everforest",
 };
 
 const paletteSeedOptions: Array<PaletteSeedOption> = [

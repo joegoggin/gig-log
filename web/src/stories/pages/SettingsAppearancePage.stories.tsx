@@ -23,9 +23,9 @@ import withAppProviders from "@/stories/decorators/withAppProviders";
 import withMemoryRouter from "@/stories/decorators/withMemoryRouter";
 
 const paletteEyebrowColors: Record<ColorPalette, string> = {
-    default: "rgba(122, 162, 247, 0.2)",
-    sunset: "rgba(103, 154, 245, 0.2)",
-    forest: "rgba(92, 147, 205, 0.2)",
+    catppuccin: "rgba(203, 166, 247, 0.2)",
+    "tokyo-night": "rgba(187, 154, 247, 0.2)",
+    everforest: "rgba(127, 187, 179, 0.2)",
 };
 
 const parseRgbChannels = (color: string): [number, number, number] => {
@@ -164,22 +164,24 @@ export const RestoresPalettePreferenceOnLoad: Story = {
             },
             appearance: {
                 mode: "light",
-                palette: "forest",
+                palette: "everforest",
             },
         },
     } satisfies StoryTestParameters,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
-        const forestPaletteRadio = canvas.getByRole("radio", {
-            name: /^Forest /,
+        const everforestPaletteRadio = canvas.getByRole("radio", {
+            name: /^Everforest /,
         });
         const eyebrow = canvas.getByText("Account and appearance");
 
-        await expect(rootElement.getAttribute("data-palette")).toBe("forest");
-        await expect(forestPaletteRadio).toBeChecked();
+        await expect(rootElement.getAttribute("data-palette")).toBe(
+            "everforest",
+        );
+        await expect(everforestPaletteRadio).toBeChecked();
         await expect(getComputedStyle(eyebrow).backgroundColor).toBe(
-            paletteEyebrowColors.forest,
+            paletteEyebrowColors.everforest,
         );
     },
 };
@@ -197,7 +199,7 @@ export const SwitchesPaletteAndUpdatesDataPalette: Story = {
             },
             appearance: {
                 mode: "light",
-                palette: "default",
+                palette: "tokyo-night",
             },
         },
     } satisfies StoryTestParameters,
@@ -205,40 +207,42 @@ export const SwitchesPaletteAndUpdatesDataPalette: Story = {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
         const eyebrow = canvas.getByText("Account and appearance");
-        const defaultPaletteRadio = canvas.getByRole("radio", {
-            name: /^Default /,
+        const tokyoNightPaletteRadio = canvas.getByRole("radio", {
+            name: /^Tokyo Night /,
         });
-        const sunsetPaletteRadio = canvas.getByRole("radio", {
-            name: /^Sunset /,
+        const catppuccinPaletteRadio = canvas.getByRole("radio", {
+            name: /^Catppuccin /,
         });
-        const forestPaletteRadio = canvas.getByRole("radio", {
-            name: /^Forest /,
+        const everforestPaletteRadio = canvas.getByRole("radio", {
+            name: /^Everforest /,
         });
 
-        await expect(rootElement.getAttribute("data-palette")).toBe("default");
-        await expect(defaultPaletteRadio).toBeChecked();
+        await expect(rootElement.getAttribute("data-palette")).toBe(
+            "tokyo-night",
+        );
+        await expect(tokyoNightPaletteRadio).toBeChecked();
         await expect(getComputedStyle(eyebrow).backgroundColor).toBe(
-            paletteEyebrowColors.default,
+            paletteEyebrowColors["tokyo-night"],
         );
 
-        await clickOptionLabel(sunsetPaletteRadio);
+        await clickOptionLabel(catppuccinPaletteRadio);
 
         await waitFor(() => {
-            expect(rootElement.getAttribute("data-palette")).toBe("sunset");
+            expect(rootElement.getAttribute("data-palette")).toBe("catppuccin");
         });
-        await expect(sunsetPaletteRadio).toBeChecked();
+        await expect(catppuccinPaletteRadio).toBeChecked();
         await expect(getComputedStyle(eyebrow).backgroundColor).toBe(
-            paletteEyebrowColors.sunset,
+            paletteEyebrowColors.catppuccin,
         );
 
-        await clickOptionLabel(forestPaletteRadio);
+        await clickOptionLabel(everforestPaletteRadio);
 
         await waitFor(() => {
-            expect(rootElement.getAttribute("data-palette")).toBe("forest");
+            expect(rootElement.getAttribute("data-palette")).toBe("everforest");
         });
-        await expect(forestPaletteRadio).toBeChecked();
+        await expect(everforestPaletteRadio).toBeChecked();
         await expect(getComputedStyle(eyebrow).backgroundColor).toBe(
-            paletteEyebrowColors.forest,
+            paletteEyebrowColors.everforest,
         );
     },
 };
@@ -256,7 +260,7 @@ export const MaintainsReadableContrastAcrossPalettesAndThemes: Story = {
             },
             appearance: {
                 mode: "light",
-                palette: "default",
+                palette: "tokyo-night",
             },
         },
     } satisfies StoryTestParameters,
@@ -279,9 +283,9 @@ export const MaintainsReadableContrastAcrossPalettesAndThemes: Story = {
             { radioName: /^Dark /, value: "dark" },
         ] as const;
         const paletteSelections = [
-            { radioName: /^Default /, value: "default" },
-            { radioName: /^Sunset /, value: "sunset" },
-            { radioName: /^Forest /, value: "forest" },
+            { radioName: /^Catppuccin /, value: "catppuccin" },
+            { radioName: /^Tokyo Night /, value: "tokyo-night" },
+            { radioName: /^Everforest /, value: "everforest" },
         ] as const;
 
         for (const themeSelection of themeSelections) {

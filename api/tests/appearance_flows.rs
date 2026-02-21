@@ -126,7 +126,7 @@ async fn get_appearance_returns_default_active_preset_without_preferences() {
         body.get("active_palette")
             .and_then(|value| value.get("preset_palette"))
             .and_then(|value| value.as_str()),
-        Some("default")
+        Some("tokyo-night")
     );
     assert_eq!(
         body.get("custom_palettes")
@@ -367,7 +367,7 @@ async fn set_active_palette_to_preset_updates_preference_row() {
         .insert_header(("Cookie", format!("access_token={access_token}")))
         .set_json(json!({
             "palette_type": "preset",
-            "preset_palette": "forest"
+            "preset_palette": "everforest"
         }))
         .to_request();
     let set_active_response = test::call_service(&app, set_active_request).await;
@@ -384,7 +384,7 @@ async fn set_active_palette_to_preset_updates_preference_row() {
         body.get("active_palette")
             .and_then(|value| value.get("preset_palette"))
             .and_then(|value| value.as_str()),
-        Some("forest")
+        Some("everforest")
     );
 
     let user_id = user_id_for_email(&pool, &email).await;
@@ -397,7 +397,7 @@ async fn set_active_palette_to_preset_updates_preference_row() {
     .expect("preference row should exist");
 
     assert_eq!(preference.0, "preset");
-    assert_eq!(preference.1.as_deref(), Some("forest"));
+    assert_eq!(preference.1.as_deref(), Some("everforest"));
     assert_eq!(preference.2, None);
 }
 
