@@ -34,20 +34,6 @@ type NotificationWithId = NotificationProps & {
     id: string;
 };
 
-const getDefaultStoryThemeMode = (): AppearancePreferences["mode"] => {
-    if (typeof document === "undefined") {
-        return "dark";
-    }
-
-    const themeAttribute = document.documentElement.getAttribute("data-theme");
-
-    if (themeAttribute === "light" || themeAttribute === "dark") {
-        return themeAttribute;
-    }
-
-    return "dark";
-};
-
 const createBaseAuthValue = (): NonNullable<
     ContextType<typeof AuthContext>
 > => ({
@@ -63,7 +49,7 @@ const createAppearancePreferences = (
 ): AppearancePreferences => {
     return {
         ...DEFAULT_APPEARANCE_PREFERENCES,
-        mode: config?.appearance?.mode ?? getDefaultStoryThemeMode(),
+        mode: config?.appearance?.mode ?? "dark",
         palette:
             config?.appearance?.palette ??
             DEFAULT_APPEARANCE_PREFERENCES.palette,

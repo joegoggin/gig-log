@@ -1,7 +1,7 @@
 //! Color palette shade-generation utilities.
 //!
-//! This module generates a full palette token map from six user-provided base
-//! accent colors by deriving lighter shades for each accent group.
+//! This module generates a full palette token map from user-provided
+//! role/accent seed colors by deriving lighter shades for each color group.
 
 use crate::core::error::ApiError;
 use crate::models::color_palette::GeneratedPaletteTokens;
@@ -33,7 +33,7 @@ pub struct PaletteSeedColors<'a> {
     pub cyan_seed_hex: &'a str,
 }
 
-/// Generates complete palette tokens from six base accent colors.
+/// Generates complete palette tokens from role/accent seed colors.
 ///
 /// Each accent group receives:
 /// - `100`: the original base color
@@ -46,7 +46,7 @@ pub struct PaletteSeedColors<'a> {
 ///
 /// # Arguments
 ///
-/// - `seed_colors` - The six user-provided base accent colors
+/// - `seed_colors` - User-provided role/accent seed colors
 ///
 /// # Errors
 ///
@@ -163,7 +163,7 @@ mod tests {
     //! - Valid seed colors produce deterministic 100/80/60 token shades.
     //! - Invalid hex seed values are rejected with validation errors.
 
-    use super::{PaletteSeedColors, generate_palette_tokens};
+    use super::{generate_palette_tokens, PaletteSeedColors};
 
     #[test]
     // Verifies generated shades follow the expected white-mix algorithm.

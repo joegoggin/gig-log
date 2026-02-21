@@ -321,6 +321,12 @@ pub async fn set_active_palette(
 
     let active_palette = match palette_type.as_str() {
         "preset" => {
+            if body.custom_palette_id.is_some() {
+                return Err(ApiError::ValidationError(
+                    "custom_palette_id must be omitted when palette_type is preset".to_string(),
+                ));
+            }
+
             let preset_palette = body
                 .preset_palette
                 .as_deref()
@@ -350,6 +356,12 @@ pub async fn set_active_palette(
             }
         }
         "custom" => {
+            if body.preset_palette.is_some() {
+                return Err(ApiError::ValidationError(
+                    "preset_palette must be omitted when palette_type is custom".to_string(),
+                ));
+            }
+
             let custom_palette_id = body.custom_palette_id.ok_or(ApiError::ValidationError(
                 "custom_palette_id is required when palette_type is custom".to_string(),
             ))?;
@@ -674,6 +686,72 @@ mod tests {
                 .and_then(|code| code.as_str()),
             Some("VALIDATION_ERROR")
         );
+    }
+
+    #[actix_web::test]
+    // Verifies preset palette requests reject conflicting custom palette IDs.
+    async fn set_active_palette_preset_with_custom_palette_id_returns_bad_request() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "appearance-handler@test.dev",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("access token should be created for handler test");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .service(set_active_palette),
+        )
+        .await;
+
+        let request = test::TestRequest::put()
+            .uri("/appearance/active-palette")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "palette_type": "preset",
+                "preset_palette": "default",
+                "custom_palette_id": Uuid::new_v4()
+            }))
+            .to_request();
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    // Verifies custom palette requests reject conflicting preset palette values.
+    async fn set_active_palette_custom_with_preset_palette_returns_bad_request() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "appearance-handler@test.dev",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("access token should be created for handler test");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .service(set_active_palette),
+        )
+        .await;
+
+        let request = test::TestRequest::put()
+            .uri("/appearance/active-palette")
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "palette_type": "custom",
+                "preset_palette": "default",
+                "custom_palette_id": Uuid::new_v4()
+            }))
+            .to_request();
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[actix_web::test]
