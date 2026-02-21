@@ -1,7 +1,8 @@
 //! Integration tests for appearance customization routes.
 //!
-//! These tests cover custom palette creation and active palette persistence,
-//! including default behavior, success flows, and user-ownership enforcement.
+//! These tests cover custom palette creation, editing, and active palette
+//! persistence, including default behavior, success flows, and ownership
+//! enforcement.
 
 mod support;
 
@@ -212,6 +213,120 @@ async fn create_custom_palette_persists_palette_and_sets_active_selection() {
 }
 
 #[actix_web::test]
+// Verifies custom palette edits persist updated fields and regenerated tokens.
+async fn update_custom_palette_persists_updated_fields() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool.clone());
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let email = unique_email("appearance-update");
+    let (access_token, _) = sign_up_confirm_and_log_in!(&app, &mock_email, email.as_str());
+
+    let create_request = test::TestRequest::post()
+        .uri("/appearance/palettes")
+        .insert_header(("Cookie", format!("access_token={access_token}")))
+        .set_json(json!({
+            "name": "Ocean",
+            "background_seed_hex": "#a9b1d6",
+            "text_seed_hex": "#1a1b26",
+            "primary_seed_hex": "#9ece6a",
+            "secondary_seed_hex": "#7aa2f7",
+            "green_seed_hex": "#66bb6a",
+            "red_seed_hex": "#e27d7c",
+            "yellow_seed_hex": "#d0a761",
+            "blue_seed_hex": "#5c93cd",
+            "magenta_seed_hex": "#a082ce",
+            "cyan_seed_hex": "#59b7aa"
+        }))
+        .to_request();
+    let create_response = test::call_service(&app, create_request).await;
+    assert_eq!(create_response.status(), StatusCode::CREATED);
+
+    let create_body: serde_json::Value = test::read_body_json(create_response).await;
+    let created_palette_id = Uuid::parse_str(
+        create_body
+            .get("palette")
+            .and_then(|value| value.get("id"))
+            .and_then(|value| value.as_str())
+            .expect("created palette should include id"),
+    )
+    .expect("palette id should be a valid UUID");
+
+    let update_request = test::TestRequest::put()
+        .uri(&format!("/appearance/palettes/{created_palette_id}"))
+        .insert_header(("Cookie", format!("access_token={access_token}")))
+        .set_json(json!({
+            "name": "Ocean Dusk",
+            "background_seed_hex": "#f3f3f3",
+            "text_seed_hex": "#101820",
+            "primary_seed_hex": "#336699",
+            "secondary_seed_hex": "#8e24aa",
+            "green_seed_hex": "#2e7d32",
+            "red_seed_hex": "#b71c1c",
+            "yellow_seed_hex": "#f9a825",
+            "blue_seed_hex": "#1976d2",
+            "magenta_seed_hex": "#ad1457",
+            "cyan_seed_hex": "#00838f"
+        }))
+        .to_request();
+    let update_response = test::call_service(&app, update_request).await;
+    assert_eq!(update_response.status(), StatusCode::OK);
+
+    let update_body: serde_json::Value = test::read_body_json(update_response).await;
+    assert_eq!(
+        update_body
+            .get("palette")
+            .and_then(|value| value.get("name"))
+            .and_then(|value| value.as_str()),
+        Some("Ocean Dusk")
+    );
+    assert_eq!(
+        update_body
+            .get("palette")
+            .and_then(|value| value.get("generated_tokens"))
+            .and_then(|value| value.get("primary_100"))
+            .and_then(|value| value.as_str()),
+        Some("51, 102, 153")
+    );
+
+    let user_id = user_id_for_email(&pool, &email).await;
+    let row: (String, String, serde_json::Value, i32) = sqlx::query_as(
+        "SELECT name, primary_seed_hex, generated_tokens, generation_version FROM user_color_palettes WHERE id = $1 AND user_id = $2",
+    )
+    .bind(created_palette_id)
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("updated palette row should exist");
+
+    assert_eq!(row.0, "Ocean Dusk");
+    assert_eq!(row.1, "#336699");
+    assert_eq!(
+        row.2.get("primary_100").and_then(|value| value.as_str()),
+        Some("51, 102, 153")
+    );
+    assert_eq!(row.3, 2);
+
+    let preference: (String, Option<String>, Option<Uuid>) = sqlx::query_as(
+        "SELECT active_palette_type, active_preset_palette, active_custom_palette_id FROM user_appearance_preferences WHERE user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("preference row should exist");
+
+    assert_eq!(preference.0, "custom");
+    assert_eq!(preference.1, None);
+    assert_eq!(preference.2, Some(created_palette_id));
+}
+
+#[actix_web::test]
 // Verifies active palette can be switched back to a preset after custom creation.
 async fn set_active_palette_to_preset_updates_preference_row() {
     let _guard = test_guard();
@@ -347,6 +462,84 @@ async fn set_active_palette_rejects_custom_palette_from_another_user() {
     assert_eq!(set_active_response.status(), StatusCode::NOT_FOUND);
 
     let body: serde_json::Value = test::read_body_json(set_active_response).await;
+    assert_eq!(
+        body.get("error")
+            .and_then(|error| error.get("code"))
+            .and_then(|value| value.as_str()),
+        Some("NOT_FOUND")
+    );
+}
+
+#[actix_web::test]
+// Verifies users cannot edit custom palettes they do not own.
+async fn update_custom_palette_rejects_palette_owned_by_another_user() {
+    let _guard = test_guard();
+    let pool = test_pool().await;
+    let (state, mock_email) = app_state_with_mock_email(pool);
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::new(state))
+            .configure(configure_routes),
+    )
+    .await;
+
+    let owner_email = unique_email("appearance-update-owner");
+    let (owner_access_token, _) =
+        sign_up_confirm_and_log_in!(&app, &mock_email, owner_email.as_str());
+
+    let create_request = test::TestRequest::post()
+        .uri("/appearance/palettes")
+        .insert_header(("Cookie", format!("access_token={owner_access_token}")))
+        .set_json(json!({
+            "name": "Owner Palette",
+            "background_seed_hex": "#a9b1d6",
+            "text_seed_hex": "#1a1b26",
+            "primary_seed_hex": "#9ece6a",
+            "secondary_seed_hex": "#7aa2f7",
+            "green_seed_hex": "#66bb6a",
+            "red_seed_hex": "#e27d7c",
+            "yellow_seed_hex": "#d0a761",
+            "blue_seed_hex": "#5c93cd",
+            "magenta_seed_hex": "#a082ce",
+            "cyan_seed_hex": "#59b7aa"
+        }))
+        .to_request();
+    let create_response = test::call_service(&app, create_request).await;
+    assert_eq!(create_response.status(), StatusCode::CREATED);
+
+    let create_body: serde_json::Value = test::read_body_json(create_response).await;
+    let owner_palette_id = create_body
+        .get("palette")
+        .and_then(|value| value.get("id"))
+        .and_then(|value| value.as_str())
+        .expect("owner palette id should be present")
+        .to_string();
+
+    let other_email = unique_email("appearance-update-other");
+    let (other_access_token, _) =
+        sign_up_confirm_and_log_in!(&app, &mock_email, other_email.as_str());
+
+    let update_request = test::TestRequest::put()
+        .uri(&format!("/appearance/palettes/{owner_palette_id}"))
+        .insert_header(("Cookie", format!("access_token={other_access_token}")))
+        .set_json(json!({
+            "name": "Should Fail",
+            "background_seed_hex": "#f3f3f3",
+            "text_seed_hex": "#101820",
+            "primary_seed_hex": "#336699",
+            "secondary_seed_hex": "#8e24aa",
+            "green_seed_hex": "#2e7d32",
+            "red_seed_hex": "#b71c1c",
+            "yellow_seed_hex": "#f9a825",
+            "blue_seed_hex": "#1976d2",
+            "magenta_seed_hex": "#ad1457",
+            "cyan_seed_hex": "#00838f"
+        }))
+        .to_request();
+    let update_response = test::call_service(&app, update_request).await;
+    assert_eq!(update_response.status(), StatusCode::NOT_FOUND);
+
+    let body: serde_json::Value = test::read_body_json(update_response).await;
     assert_eq!(
         body.get("error")
             .and_then(|error| error.get("code"))

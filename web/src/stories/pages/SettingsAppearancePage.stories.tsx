@@ -6,12 +6,14 @@
  * - Palette controls restore persisted state and update `data-palette`.
  * - Custom role-color controls apply background/text/primary/secondary tokens.
  * - Custom palette creation adds a selectable palette and activates it.
+ * - Custom palette editing updates palette metadata and active CSS tokens.
+ * - Custom palette editing supports validation and cancel paths.
  * - Custom palette creation requires a non-empty palette name.
  * - Contrast checks verify readable text/surface pairs across palette and theme combinations.
  *
  * These tests prevent regressions in persisted appearance preferences.
  */
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ColorPalette } from "@/lib/appearance";
 import type { StoryTestParameters } from "@/stories/testing/storyTestContext";
@@ -350,6 +352,175 @@ export const CreatesCustomPaletteAndActivatesIt: Story = {
         await expect(
             rootElement.style.getPropertyValue("--color-secondary-100-rgb").trim(),
         ).toBe(hexToRgbTriplet(secondaryHex));
+    },
+};
+
+export const EditsCustomPaletteAndAppliesUpdatedTokens: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
+        const updatedPrimaryHex = "#336699";
+
+        await userEvent.type(paletteNameInput, "Ocean Mist");
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        );
+
+        await canvas.findByRole("radio", {
+            name: /Ocean Mist/i,
+        });
+
+        await userEvent.click(
+            canvas.getByRole("button", {
+                name: /Edit Ocean Mist palette/i,
+            }),
+        );
+
+        const editHeading = await canvas.findByRole("heading", {
+            level: 3,
+            name: "Edit custom palette",
+        });
+        const editSection = editHeading.closest("section");
+
+        if (!editSection) {
+            throw new Error("Expected edit heading to be inside a section.");
+        }
+
+        const editor = within(editSection);
+        const editNameInput = editor.getByPlaceholderText("Ocean Mist");
+        const primaryColorLabel = editor.getByText("Primary").closest("label");
+
+        if (!primaryColorLabel) {
+            throw new Error("Expected primary color input label to be present.");
+        }
+
+        const primaryColorInput = primaryColorLabel.querySelector(
+            'input[type="color"]',
+        );
+
+        if (!primaryColorInput) {
+            throw new Error("Expected primary color input to be present.");
+        }
+
+        await userEvent.clear(editNameInput);
+        await userEvent.type(editNameInput, "Ocean Dusk");
+        fireEvent.change(primaryColorInput, {
+            target: { value: updatedPrimaryHex },
+        });
+        await userEvent.click(
+            editor.getByRole("button", { name: "Save Palette Changes" }),
+        );
+
+        const oceanDuskRadio = await canvas.findByRole("radio", {
+            name: /Ocean Dusk/i,
+        });
+
+        await expect(oceanDuskRadio).toBeChecked();
+        await waitFor(() => {
+            expect(
+                rootElement.style
+                    .getPropertyValue("--color-primary-100-rgb")
+                    .trim(),
+            ).toBe(hexToRgbTriplet(updatedPrimaryHex));
+        });
+        await expect(
+            canvas.queryByRole("heading", {
+                level: 3,
+                name: "Edit custom palette",
+            }),
+        ).toBeNull();
+    },
+};
+
+export const RequiresPaletteNameWhenEditingCustomPalette: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
+
+        await userEvent.type(paletteNameInput, "Sea Glass");
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        );
+        await canvas.findByRole("radio", {
+            name: /Sea Glass/i,
+        });
+
+        await userEvent.click(
+            canvas.getByRole("button", {
+                name: /Edit Sea Glass palette/i,
+            }),
+        );
+
+        const editHeading = await canvas.findByRole("heading", {
+            level: 3,
+            name: "Edit custom palette",
+        });
+        const editSection = editHeading.closest("section");
+
+        if (!editSection) {
+            throw new Error("Expected edit heading to be inside a section.");
+        }
+
+        const editor = within(editSection);
+        const editNameInput = editor.getByPlaceholderText("Ocean Mist");
+
+        await userEvent.clear(editNameInput);
+        await userEvent.click(
+            editor.getByRole("button", { name: "Save Palette Changes" }),
+        );
+
+        await expect(editor.getByText("Palette name is required")).toBeVisible();
+    },
+};
+
+export const CancelsCustomPaletteEditingWithoutSaving: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
+
+        await userEvent.type(paletteNameInput, "Evening Sky");
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        );
+        await canvas.findByRole("radio", {
+            name: /Evening Sky/i,
+        });
+
+        await userEvent.click(
+            canvas.getByRole("button", {
+                name: /Edit Evening Sky palette/i,
+            }),
+        );
+
+        const editHeading = await canvas.findByRole("heading", {
+            level: 3,
+            name: "Edit custom palette",
+        });
+        const editSection = editHeading.closest("section");
+
+        if (!editSection) {
+            throw new Error("Expected edit heading to be inside a section.");
+        }
+
+        const editor = within(editSection);
+        const editNameInput = editor.getByPlaceholderText("Ocean Mist");
+
+        await userEvent.clear(editNameInput);
+        await userEvent.type(editNameInput, "Unsaved Name");
+        await userEvent.click(editor.getByRole("button", { name: "Cancel" }));
+
+        await expect(
+            canvas.queryByRole("heading", {
+                level: 3,
+                name: "Edit custom palette",
+            }),
+        ).toBeNull();
+        await expect(
+            canvas.getByRole("radio", {
+                name: /Evening Sky/i,
+            }),
+        ).toBeChecked();
     },
 };
 

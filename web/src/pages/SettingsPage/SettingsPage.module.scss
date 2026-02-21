@@ -332,6 +332,12 @@
         gap: 8px;
     }
 
+    &__palette-option-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     &__palette-option-badge {
         border-radius: 999px;
         border: 1px solid var(--page-border);
@@ -342,6 +348,43 @@
         letter-spacing: 0.05em;
         padding: 2px 8px;
         text-transform: uppercase;
+    }
+
+    &__palette-option-edit {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border-radius: 999px;
+        border: 1px solid var(--page-border);
+        background: var(--page-step);
+        color: var(--page-muted);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        padding: 2px 10px;
+        text-transform: uppercase;
+        transition:
+            border-color 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+
+        &:hover,
+        &:focus-visible {
+            border-color: var(--page-palette-option-border-active);
+            color: var(--text-color);
+            transform: translateY(-1px);
+        }
+
+        svg {
+            width: 13px;
+            height: 13px;
+        }
+    }
+
+    &__palette-option-edit--active {
+        border-color: var(--page-palette-option-border-active);
+        color: var(--text-color);
     }
 
     &__palette-option-description {
@@ -375,12 +418,19 @@
         font-size: 14px;
     }
 
+    &__custom-palette-editor,
     &__custom-palette-creator {
         margin-top: 24px;
         border: 1px solid var(--page-border);
         border-radius: 16px;
         background: var(--page-step);
         padding: 16px;
+    }
+
+    &__form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
     }
 
     &__custom-palette-grid {
@@ -449,11 +499,18 @@
     }
 
     form :global(button) {
-        margin-top: 22px;
         min-width: 220px;
     }
 
+    &__custom-palette-creator form :global(button):first-of-type {
+        margin-top: 22px;
+    }
+
     @include media.tablet {
+        &__form-actions {
+            flex-direction: column;
+        }
+
         form :global(button) {
             width: 100%;
             min-width: 0;

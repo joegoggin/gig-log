@@ -1,10 +1,12 @@
 //! HTTP handler functions for appearance endpoints.
 //!
-//! This module contains handlers for loading appearance settings, creating
-//! user-defined custom color palettes, and updating active palette selection.
+//! This module contains handlers for loading appearance settings, creating and
+//! updating user-defined custom color palettes, and updating active palette
+//! selection.
 
 use actix_web::{HttpResponse, get, post, put, web};
 use serde_json::Value;
+use uuid::Uuid;
 
 use crate::auth::middleware::AuthenticatedUser;
 use crate::core::app_state::AppState;
@@ -20,7 +22,7 @@ use crate::services::palette_generation::{
 use super::payloads::{
     ActivePaletteSelectionResponse, CreateCustomPaletteRequest, CreateCustomPaletteResponse,
     CustomPaletteResponse, GetAppearanceResponse, SetActivePaletteRequest,
-    SetActivePaletteResponse,
+    SetActivePaletteResponse, UpdateCustomPaletteRequest, UpdateCustomPaletteResponse,
 };
 
 const PRESET_PALETTES: [&str; 3] = ["default", "sunset", "forest"];
@@ -68,7 +70,7 @@ pub async fn get_appearance(
 
 /// Creates a custom palette for the authenticated user.
 ///
-/// Accepts six base accent colors and generates a full 100/80/60 token set.
+/// Accepts role and accent seed colors and generates a full 100/80/60 token set.
 /// The newly created custom palette becomes the active palette.
 ///
 /// # Route
@@ -174,6 +176,111 @@ pub async fn create_custom_palette(
         message: "Custom palette created successfully.".to_string(),
         palette,
         active_palette,
+    }))
+}
+
+/// Updates an existing custom palette for the authenticated user.
+///
+/// Replaces the palette name and all role/accent seed colors, then regenerates
+/// the full 100/80/60 token set from those seeds.
+///
+/// # Route
+///
+/// `PUT /appearance/palettes/{palette_id}`
+///
+/// # Request Body ([`UpdateCustomPaletteRequest`])
+///
+/// - `name` - Updated user-defined palette name
+/// - `background_seed_hex` - Updated background base color in `#RRGGBB`
+/// - `text_seed_hex` - Updated text base color in `#RRGGBB`
+/// - `primary_seed_hex` - Updated primary action base color in `#RRGGBB`
+/// - `secondary_seed_hex` - Updated secondary action base color in `#RRGGBB`
+/// - `green_seed_hex` - Updated green base accent in `#RRGGBB`
+/// - `red_seed_hex` - Updated red base accent in `#RRGGBB`
+/// - `yellow_seed_hex` - Updated yellow base accent in `#RRGGBB`
+/// - `blue_seed_hex` - Updated blue base accent in `#RRGGBB`
+/// - `magenta_seed_hex` - Updated magenta base accent in `#RRGGBB`
+/// - `cyan_seed_hex` - Updated cyan base accent in `#RRGGBB`
+///
+/// # Response Body ([`UpdateCustomPaletteResponse`])
+///
+/// - `message` - Success message
+/// - `palette` - Updated custom palette
+///
+/// # Errors
+///
+/// - `Unauthorized` - If the request does not include a valid access token
+/// - `ValidationError` - If payload validation fails or palette name already exists
+/// - `NotFound` - If the custom palette does not exist for the authenticated user
+/// - `DatabaseError` - If palette update fails
+#[put("/appearance/palettes/{palette_id}")]
+pub async fn update_custom_palette(
+    state: web::Data<AppState>,
+    auth_user: AuthenticatedUser,
+    palette_id: web::Path<Uuid>,
+    body: ValidatedJson<UpdateCustomPaletteRequest>,
+) -> ApiResult<HttpResponse> {
+    let body = body.into_inner();
+    let normalized_name = body.name.trim();
+
+    if normalized_name.is_empty() {
+        return Err(ApiError::ValidationError(
+            "Palette name is required".to_string(),
+        ));
+    }
+
+    let background_seed_hex = body.background_seed_hex.trim().to_lowercase();
+    let text_seed_hex = body.text_seed_hex.trim().to_lowercase();
+    let primary_seed_hex = body.primary_seed_hex.trim().to_lowercase();
+    let secondary_seed_hex = body.secondary_seed_hex.trim().to_lowercase();
+    let green_seed_hex = body.green_seed_hex.trim().to_lowercase();
+    let red_seed_hex = body.red_seed_hex.trim().to_lowercase();
+    let yellow_seed_hex = body.yellow_seed_hex.trim().to_lowercase();
+    let blue_seed_hex = body.blue_seed_hex.trim().to_lowercase();
+    let magenta_seed_hex = body.magenta_seed_hex.trim().to_lowercase();
+    let cyan_seed_hex = body.cyan_seed_hex.trim().to_lowercase();
+
+    let normalized_seeds = PaletteSeedColors {
+        background_seed_hex: &background_seed_hex,
+        text_seed_hex: &text_seed_hex,
+        primary_seed_hex: &primary_seed_hex,
+        secondary_seed_hex: &secondary_seed_hex,
+        green_seed_hex: &green_seed_hex,
+        red_seed_hex: &red_seed_hex,
+        yellow_seed_hex: &yellow_seed_hex,
+        blue_seed_hex: &blue_seed_hex,
+        magenta_seed_hex: &magenta_seed_hex,
+        cyan_seed_hex: &cyan_seed_hex,
+    };
+    let generated_tokens = generate_palette_tokens(&normalized_seeds)?;
+
+    let updated_palette = AppearanceRepo::update_custom_palette_for_user(
+        &state.pool,
+        auth_user.user_id,
+        *palette_id,
+        normalized_name,
+        &background_seed_hex,
+        &text_seed_hex,
+        &primary_seed_hex,
+        &secondary_seed_hex,
+        &green_seed_hex,
+        &red_seed_hex,
+        &yellow_seed_hex,
+        &blue_seed_hex,
+        &magenta_seed_hex,
+        &cyan_seed_hex,
+        &generated_tokens,
+        PALETTE_GENERATION_VERSION,
+    )
+    .await
+    .map_err(map_create_palette_error)?
+    .ok_or(ApiError::NotFound("Custom palette not found".to_string()))?;
+
+    let palette = map_custom_palette(updated_palette)?;
+
+    Ok(HttpResponse::Ok().json(UpdateCustomPaletteResponse {
+        message: "Custom palette updated successfully.".to_string(),
+        palette,
     }))
 }
 
@@ -382,6 +489,7 @@ mod tests {
     //! - Auth guard rejects unauthenticated appearance requests.
     //! - Request validation rejects invalid color-seed payloads.
     //! - Active-palette updates reject inconsistent request bodies.
+    //! - Custom-palette update requests enforce auth and payload validation.
 
     use actix_web::{App, http::StatusCode, test, web};
     use async_trait::async_trait;
@@ -395,7 +503,7 @@ mod tests {
     use crate::core::error::ApiError;
     use crate::services::email::EmailSender;
 
-    use super::{create_custom_palette, get_appearance, set_active_palette};
+    use super::{create_custom_palette, get_appearance, set_active_palette, update_custom_palette};
     use std::sync::Arc;
 
     #[derive(Debug, Default)]
@@ -562,6 +670,85 @@ mod tests {
                 .and_then(|error| error.get("code"))
                 .and_then(|code| code.as_str()),
             Some("VALIDATION_ERROR")
+        );
+    }
+
+    #[actix_web::test]
+    // Verifies unauthenticated custom-palette update requests are rejected.
+    async fn update_custom_palette_without_access_cookie_returns_unauthorized() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_state()))
+                .service(update_custom_palette),
+        )
+        .await;
+
+        let request = test::TestRequest::put()
+            .uri(&format!("/appearance/palettes/{}", Uuid::new_v4()))
+            .set_json(json!({
+                "name": "Ocean",
+                "background_seed_hex": "#a9b1d6",
+                "text_seed_hex": "#1a1b26",
+                "primary_seed_hex": "#9ece6a",
+                "secondary_seed_hex": "#7aa2f7",
+                "green_seed_hex": "#66bb6a",
+                "red_seed_hex": "#e27d7c",
+                "yellow_seed_hex": "#d0a761",
+                "blue_seed_hex": "#5c93cd",
+                "magenta_seed_hex": "#a082ce",
+                "cyan_seed_hex": "#59b7aa"
+            }))
+            .to_request();
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    // Verifies malformed seed colors are rejected during palette updates.
+    async fn update_custom_palette_with_invalid_seed_hex_returns_bad_request() {
+        let state = test_state();
+        let access_token = create_access_token(
+            Uuid::new_v4(),
+            "appearance-handler@test.dev",
+            &state.env.jwt_secret,
+            state.env.jwt_access_token_expiry_seconds,
+        )
+        .expect("access token should be created for handler test");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(state))
+                .service(update_custom_palette),
+        )
+        .await;
+
+        let request = test::TestRequest::put()
+            .uri(&format!("/appearance/palettes/{}", Uuid::new_v4()))
+            .insert_header(("Cookie", format!("access_token={access_token}")))
+            .set_json(json!({
+                "name": "Ocean",
+                "background_seed_hex": "#a9b1d6",
+                "text_seed_hex": "#1a1b26",
+                "primary_seed_hex": "#9ece6a",
+                "secondary_seed_hex": "#7aa2f7",
+                "green_seed_hex": "not-a-hex",
+                "red_seed_hex": "#e27d7c",
+                "yellow_seed_hex": "#d0a761",
+                "blue_seed_hex": "#5c93cd",
+                "magenta_seed_hex": "#a082ce",
+                "cyan_seed_hex": "#59b7aa"
+            }))
+            .to_request();
+        let response = test::call_service(&app, request).await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let body: serde_json::Value = test::read_body_json(response).await;
+        assert!(
+            body.get("errors")
+                .and_then(|value| value.as_array())
+                .is_some()
         );
     }
 }

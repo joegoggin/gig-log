@@ -44,6 +44,15 @@ export type CreateCustomPaletteResponse = {
     active_palette: ActivePaletteSelection;
 };
 
+export type UpdateCustomPaletteRequest = {
+    name: string;
+} & PaletteSeedHexColors;
+
+export type UpdateCustomPaletteResponse = {
+    message: string;
+    palette: CustomPalette;
+};
+
 export type SetActivePaletteRequest =
     | {
           palette_type: "preset";

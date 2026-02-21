@@ -62,6 +62,57 @@ pub struct CreateCustomPaletteRequest {
     pub cyan_seed_hex: String,
 }
 
+/// Request body for updating an existing custom user color palette.
+///
+/// See [`update_custom_palette`](super::handlers::update_custom_palette) for
+/// the handler that processes this request.
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateCustomPaletteRequest {
+    /// Updated user-defined palette name.
+    #[validate(length(min = 1, max = 50, message = "Palette name is required"))]
+    pub name: String,
+
+    /// Updated background color seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub background_seed_hex: String,
+
+    /// Updated text color seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub text_seed_hex: String,
+
+    /// Updated primary action color seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub primary_seed_hex: String,
+
+    /// Updated secondary action color seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub secondary_seed_hex: String,
+
+    /// Updated green accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub green_seed_hex: String,
+
+    /// Updated red accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub red_seed_hex: String,
+
+    /// Updated yellow accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub yellow_seed_hex: String,
+
+    /// Updated blue accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub blue_seed_hex: String,
+
+    /// Updated magenta accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub magenta_seed_hex: String,
+
+    /// Updated cyan accent seed in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub cyan_seed_hex: String,
+}
+
 /// Request body for setting a user's active palette selection.
 ///
 /// See [`set_active_palette`](super::handlers::set_active_palette) for the
@@ -151,6 +202,18 @@ pub struct CreateCustomPaletteResponse {
     pub palette: CustomPaletteResponse,
     /// Updated active palette selection.
     pub active_palette: ActivePaletteSelectionResponse,
+}
+
+/// Response body for successful custom palette updates.
+///
+/// See [`update_custom_palette`](super::handlers::update_custom_palette) for
+/// the handler that produces this response.
+#[derive(Debug, Serialize)]
+pub struct UpdateCustomPaletteResponse {
+    /// Success message.
+    pub message: String,
+    /// Updated custom palette.
+    pub palette: CustomPaletteResponse,
 }
 
 /// Response body for successful active-palette updates.

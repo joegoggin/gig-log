@@ -9,7 +9,8 @@
 /// appearance payload fields.
 ///
 /// See [`create_custom_palette`](crate::routes::appearance::handlers::create_custom_palette)
-/// for the handler that uses this validation.
+/// and [`update_custom_palette`](crate::routes::appearance::handlers::update_custom_palette)
+/// for handlers that use this validation.
 pub fn validate_hex_color(value: &str) -> Result<(), validator::ValidationError> {
     let trimmed = value.trim();
 

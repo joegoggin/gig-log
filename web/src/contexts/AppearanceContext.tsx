@@ -14,6 +14,8 @@ import type {
     CreateCustomPaletteResponse,
     CustomPalette,
     SetActivePaletteResponse,
+    UpdateCustomPaletteRequest,
+    UpdateCustomPaletteResponse,
 } from "@/types/models/Appearance";
 import type {
     AppearancePreferences,
@@ -48,6 +50,10 @@ type AppearanceContextValue = {
     selectCustomPalette: (customPaletteId: string) => Promise<void>;
     createCustomPalette: (
         payload: CreateCustomPaletteRequest,
+    ) => Promise<CustomPalette>;
+    updateCustomPalette: (
+        customPaletteId: string,
+        payload: UpdateCustomPaletteRequest,
     ) => Promise<CustomPalette>;
     refreshPalettes: () => Promise<void>;
 };
@@ -403,6 +409,81 @@ export function AppearanceProvider({
         [isLoggedIn, persist],
     );
 
+    const updateCustomPalette = useCallback(
+        async (customPaletteId: string, payload: UpdateCustomPaletteRequest) => {
+            const normalizedPayload = normalizeCreatePalettePayload(payload);
+
+            if (!normalizedPayload.name) {
+                throw new Error("Palette name is required.");
+            }
+
+            const existingPalette = customPalettes.find(
+                (palette) => palette.id === customPaletteId,
+            );
+
+            if (!existingPalette) {
+                throw new Error("Custom palette not found.");
+            }
+
+            if (persist && isLoggedIn) {
+                const response = await api.put<UpdateCustomPaletteResponse>(
+                    `/appearance/palettes/${customPaletteId}`,
+                    normalizedPayload,
+                );
+                const updatedPalette = response.data.palette;
+
+                setCustomPalettes((previous) =>
+                    previous.map((palette) =>
+                        palette.id === updatedPalette.id ? updatedPalette : palette,
+                    ),
+                );
+
+                return updatedPalette;
+            }
+
+            const duplicatePaletteName = customPalettes.some((palette) => {
+                return (
+                    palette.id !== customPaletteId &&
+                    palette.name.toLowerCase() ===
+                        normalizedPayload.name.toLowerCase()
+                );
+            });
+
+            if (duplicatePaletteName) {
+                throw new Error("You already have a custom palette with this name.");
+            }
+
+            const nowIso = new Date().toISOString();
+            const updatedPalette: CustomPalette = {
+                ...existingPalette,
+                name: normalizedPayload.name,
+                background_seed_hex: normalizedPayload.background_seed_hex,
+                text_seed_hex: normalizedPayload.text_seed_hex,
+                primary_seed_hex: normalizedPayload.primary_seed_hex,
+                secondary_seed_hex: normalizedPayload.secondary_seed_hex,
+                green_seed_hex: normalizedPayload.green_seed_hex,
+                red_seed_hex: normalizedPayload.red_seed_hex,
+                yellow_seed_hex: normalizedPayload.yellow_seed_hex,
+                blue_seed_hex: normalizedPayload.blue_seed_hex,
+                magenta_seed_hex: normalizedPayload.magenta_seed_hex,
+                cyan_seed_hex: normalizedPayload.cyan_seed_hex,
+                generated_tokens:
+                    generatePaletteTokensFromSeeds(normalizedPayload),
+                generation_version: 2,
+                updated_at: nowIso,
+            };
+
+            setCustomPalettes((previous) =>
+                previous.map((palette) =>
+                    palette.id === updatedPalette.id ? updatedPalette : palette,
+                ),
+            );
+
+            return updatedPalette;
+        },
+        [customPalettes, isLoggedIn, persist],
+    );
+
     const value = useMemo(
         () => ({
             mode: preferences.mode,
@@ -413,6 +494,7 @@ export function AppearanceProvider({
             selectPresetPalette,
             selectCustomPalette,
             createCustomPalette,
+            updateCustomPalette,
             refreshPalettes,
         }),
         [
@@ -425,6 +507,7 @@ export function AppearanceProvider({
             selectCustomPalette,
             selectPresetPalette,
             setMode,
+            updateCustomPalette,
         ],
     );
 

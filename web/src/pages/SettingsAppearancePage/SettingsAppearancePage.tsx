@@ -1,5 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
     ColorPalette,
     PaletteRgbTokens,
@@ -8,11 +8,13 @@ import type {
 import type {
     CreateCustomPaletteRequest,
     CustomPalette,
+    UpdateCustomPaletteRequest,
 } from "@/types/models/Appearance";
 import styles from "@/pages/SettingsPage/SettingsPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import EditIcon from "@/components/icons/EditIcon";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
 import TextInput from "@/components/core/TextInput/TextInput";
@@ -166,10 +168,26 @@ const toRgbColor = (rgbTriplet: string): string => {
     return `rgb(${rgbTriplet})`;
 };
 
+const toPaletteFormData = (palette: CustomPalette): UpdateCustomPaletteRequest => {
+    return {
+        name: palette.name,
+        background_seed_hex: palette.background_seed_hex,
+        text_seed_hex: palette.text_seed_hex,
+        primary_seed_hex: palette.primary_seed_hex,
+        secondary_seed_hex: palette.secondary_seed_hex,
+        green_seed_hex: palette.green_seed_hex,
+        red_seed_hex: palette.red_seed_hex,
+        yellow_seed_hex: palette.yellow_seed_hex,
+        blue_seed_hex: palette.blue_seed_hex,
+        magenta_seed_hex: palette.magenta_seed_hex,
+        cyan_seed_hex: palette.cyan_seed_hex,
+    };
+};
+
 /**
  * The authenticated appearance settings page.
  * Lets users configure persisted theme mode, choose built-in palettes,
- * and create DB-backed custom palettes generated from base seed colors.
+ * and create or edit DB-backed custom palettes generated from base seed colors.
  *
  * Route: `/settings/appearance`
  *
@@ -180,7 +198,7 @@ const toRgbColor = (rgbTriplet: string): string => {
  * ## Related Components
  *
  * - `Button` - Navigates settings sections and submits palette actions.
- * - `Form` - Handles custom palette creation submission.
+ * - `Form` - Handles custom palette create/edit submissions.
  * - `TextInput` - Captures custom palette naming input.
  * - `AppearanceProvider` - Syncs palette preferences and custom palettes.
  */
@@ -197,14 +215,24 @@ function SettingsAppearancePage() {
         selectPresetPalette,
         selectCustomPalette,
         createCustomPalette,
+        updateCustomPalette,
     } = useAppearance();
     const [isSelectingPalette, setIsSelectingPalette] = useState(false);
+    const [editingPaletteId, setEditingPaletteId] = useState<string | null>(
+        null,
+    );
     const {
         data: customPaletteData,
         errors: customPaletteErrors,
         setData: setCustomPaletteData,
         setErrors: setCustomPaletteErrors,
     } = useForm<CreateCustomPaletteRequest>(initialPaletteFormData);
+    const {
+        data: editPaletteData,
+        errors: editPaletteErrors,
+        setData: setEditPaletteData,
+        setErrors: setEditPaletteErrors,
+    } = useForm<UpdateCustomPaletteRequest>(initialPaletteFormData);
 
     const createPaletteMutation = useFormMutation<CustomPalette, void>({
         mutationFn: async () => {
@@ -221,6 +249,42 @@ function SettingsAppearancePage() {
         onError: setCustomPaletteErrors,
         fallbackError: "Failed to create custom palette",
     });
+
+    const updatePaletteMutation = useFormMutation<CustomPalette, void>({
+        mutationFn: async () => {
+            if (!editingPaletteId) {
+                throw new Error("No custom palette selected for editing.");
+            }
+
+            return updateCustomPalette(editingPaletteId, editPaletteData);
+        },
+        onSuccess: (palette) => {
+            setEditingPaletteId(null);
+            setEditPaletteErrors({});
+            addNotification({
+                type: NotificationType.SUCCESS,
+                title: "Palette Updated",
+                message: `${palette.name} was updated successfully.`,
+            });
+        },
+        onError: setEditPaletteErrors,
+        fallbackError: "Failed to update custom palette",
+    });
+
+    useEffect(() => {
+        if (!editingPaletteId) {
+            return;
+        }
+
+        const exists = customPalettes.some(
+            (palette) => palette.id === editingPaletteId,
+        );
+
+        if (!exists) {
+            setEditingPaletteId(null);
+            setEditPaletteErrors({});
+        }
+    }, [customPalettes, editingPaletteId, setEditPaletteErrors]);
 
     const handlePresetPaletteSelection = (palette: ColorPalette) => {
         if (isSelectingPalette) {
@@ -260,6 +324,52 @@ function SettingsAppearancePage() {
             });
     };
 
+    const handleEditPaletteClick = (palette: CustomPalette) => {
+        if (updatePaletteMutation.isPending) {
+            return;
+        }
+
+        const formData = toPaletteFormData(palette);
+
+        setEditingPaletteId(palette.id);
+        setEditPaletteErrors({});
+        setEditPaletteData("name", formData.name);
+        setEditPaletteData("background_seed_hex", formData.background_seed_hex);
+        setEditPaletteData("text_seed_hex", formData.text_seed_hex);
+        setEditPaletteData("primary_seed_hex", formData.primary_seed_hex);
+        setEditPaletteData("secondary_seed_hex", formData.secondary_seed_hex);
+        setEditPaletteData("green_seed_hex", formData.green_seed_hex);
+        setEditPaletteData("red_seed_hex", formData.red_seed_hex);
+        setEditPaletteData("yellow_seed_hex", formData.yellow_seed_hex);
+        setEditPaletteData("blue_seed_hex", formData.blue_seed_hex);
+        setEditPaletteData("magenta_seed_hex", formData.magenta_seed_hex);
+        setEditPaletteData("cyan_seed_hex", formData.cyan_seed_hex);
+    };
+
+    const handleCancelEditPalette = () => {
+        if (updatePaletteMutation.isPending) {
+            return;
+        }
+
+        setEditingPaletteId(null);
+        setEditPaletteErrors({});
+    };
+
+    const handleUpdatePaletteSubmit = () => {
+        if (!editingPaletteId || updatePaletteMutation.isPending) {
+            return;
+        }
+
+        if (!editPaletteData.name.trim()) {
+            setEditPaletteErrors({
+                name: "Palette name is required",
+            });
+            return;
+        }
+
+        updatePaletteMutation.mutate();
+    };
+
     const handleCreatePaletteSubmit = () => {
         if (!customPaletteData.name.trim()) {
             setCustomPaletteErrors({
@@ -277,6 +387,9 @@ function SettingsAppearancePage() {
             : (customPalettes.find(
                   (palette) => palette.id === activePalette.custom_palette_id,
               )?.name ?? "Custom");
+    const editingPaletteName =
+        customPalettes.find((palette) => palette.id === editingPaletteId)?.name ??
+        null;
 
     return (
         <section className={styles["settings-page"]}>
@@ -502,11 +615,46 @@ function SettingsAppearancePage() {
                                         <span
                                             className={
                                                 styles[
-                                                    "settings-page__palette-option-badge"
+                                                    "settings-page__palette-option-actions"
                                                 ]
                                             }
                                         >
-                                            Custom
+                                            <span
+                                                className={
+                                                    styles[
+                                                        "settings-page__palette-option-badge"
+                                                    ]
+                                                }
+                                            >
+                                                Custom
+                                            </span>
+                                            <button
+                                                aria-label={`Edit ${palette.name} palette`}
+                                                className={`${styles["settings-page__palette-option-edit"]} ${
+                                                    editingPaletteId ===
+                                                    palette.id
+                                                        ? styles[
+                                                              "settings-page__palette-option-edit--active"
+                                                          ]
+                                                        : ""
+                                                }`}
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    handleEditPaletteClick(
+                                                        palette,
+                                                    );
+                                                }}
+                                                type="button"
+                                            >
+                                                <EditIcon />
+                                                <span>
+                                                    {editingPaletteId ===
+                                                    palette.id
+                                                        ? "Editing"
+                                                        : "Edit"}
+                                                </span>
+                                            </button>
                                         </span>
                                     </span>
                                     <span
@@ -569,6 +717,105 @@ function SettingsAppearancePage() {
                 <p className={styles["settings-page__palette-status"]}>
                     Active palette: <strong>{activePaletteLabel}</strong>.
                 </p>
+
+                {editingPaletteId && editingPaletteName && (
+                    <section
+                        className={styles["settings-page__custom-palette-editor"]}
+                    >
+                        <h3>Edit custom palette</h3>
+                        <p className={styles["settings-page__step-note"]}>
+                            Updating a palette refreshes generated shades while
+                            keeping your current active selection.
+                        </p>
+
+                        <Form onSubmit={handleUpdatePaletteSubmit}>
+                            <TextInput
+                                name="name"
+                                label="Palette Name"
+                                placeholder="Ocean Mist"
+                                data={editPaletteData}
+                                setData={setEditPaletteData}
+                                errors={editPaletteErrors}
+                            />
+
+                            <div
+                                className={
+                                    styles["settings-page__custom-palette-grid"]
+                                }
+                            >
+                                {paletteSeedOptions.map((option) => {
+                                    const value = editPaletteData[option.name];
+                                    const errorMessage =
+                                        editPaletteErrors[option.name];
+
+                                    return (
+                                        <label
+                                            key={option.name}
+                                            className={
+                                                styles[
+                                                    "settings-page__custom-palette-color"
+                                                ]
+                                            }
+                                        >
+                                            <span>{option.label}</span>
+                                            <input
+                                                className={
+                                                    styles[
+                                                        "settings-page__custom-palette-color-input"
+                                                    ]
+                                                }
+                                                type="color"
+                                                value={value}
+                                                onChange={(event) =>
+                                                    setEditPaletteData(
+                                                        option.name,
+                                                        event.currentTarget
+                                                            .value,
+                                                    )
+                                                }
+                                            />
+                                            <span
+                                                className={
+                                                    styles[
+                                                        "settings-page__custom-palette-color-value"
+                                                    ]
+                                                }
+                                            >
+                                                {value.toUpperCase()}
+                                            </span>
+                                            {errorMessage && (
+                                                <p
+                                                    className={
+                                                        styles[
+                                                            "settings-page__field-error"
+                                                        ]
+                                                    }
+                                                >
+                                                    {errorMessage}
+                                                </p>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+
+                            <div className={styles["settings-page__form-actions"]}>
+                                <Button type="submit">
+                                    {updatePaletteMutation.isPending
+                                        ? "Saving Changes..."
+                                        : "Save Palette Changes"}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={ButtonVariant.SECONDARY}
+                                    onClick={handleCancelEditPalette}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </Form>
+                    </section>
+                )}
 
                 <section
                     className={styles["settings-page__custom-palette-creator"]}

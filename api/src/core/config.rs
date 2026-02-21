@@ -4,7 +4,9 @@
 
 use actix_web::web::ServiceConfig;
 
-use crate::routes::appearance::{create_custom_palette, get_appearance, set_active_palette};
+use crate::routes::appearance::{
+    create_custom_palette, get_appearance, set_active_palette, update_custom_palette,
+};
 use crate::routes::auth::{
     change_password, confirm_email, confirm_email_change, current_user, forgot_password, log_in,
     log_out, refresh_session, request_email_change, set_password, sign_up, verify_forgot_password,
@@ -34,6 +36,7 @@ pub fn configure_routes(config: &mut ServiceConfig) {
         // Appearance routes
         .service(get_appearance)
         .service(create_custom_palette)
+        .service(update_custom_palette)
         .service(set_active_palette)
         // Auth routes
         .service(sign_up)

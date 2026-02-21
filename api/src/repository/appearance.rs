@@ -170,6 +170,106 @@ impl AppearanceRepo {
         .await
     }
 
+    /// Updates a custom palette for a user and returns the updated record.
+    ///
+    /// # Arguments
+    ///
+    /// - `pool` - Database connection pool
+    /// - `user_id` - Owner user identifier
+    /// - `palette_id` - Custom palette identifier
+    /// - `name` - User-provided palette name
+    /// - `background_seed_hex` - Background seed color in hex format
+    /// - `text_seed_hex` - Text seed color in hex format
+    /// - `primary_seed_hex` - Primary seed color in hex format
+    /// - `secondary_seed_hex` - Secondary seed color in hex format
+    /// - `green_seed_hex` - Green seed color in hex format
+    /// - `red_seed_hex` - Red seed color in hex format
+    /// - `yellow_seed_hex` - Yellow seed color in hex format
+    /// - `blue_seed_hex` - Blue seed color in hex format
+    /// - `magenta_seed_hex` - Magenta seed color in hex format
+    /// - `cyan_seed_hex` - Cyan seed color in hex format
+    /// - `generated_tokens` - Derived palette token map
+    /// - `generation_version` - Generator algorithm version
+    ///
+    /// # Errors
+    ///
+    /// Returns `sqlx::Error` if the update fails.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_custom_palette_for_user(
+        pool: &Pool<Postgres>,
+        user_id: Uuid,
+        palette_id: Uuid,
+        name: &str,
+        background_seed_hex: &str,
+        text_seed_hex: &str,
+        primary_seed_hex: &str,
+        secondary_seed_hex: &str,
+        green_seed_hex: &str,
+        red_seed_hex: &str,
+        yellow_seed_hex: &str,
+        blue_seed_hex: &str,
+        magenta_seed_hex: &str,
+        cyan_seed_hex: &str,
+        generated_tokens: &GeneratedPaletteTokens,
+        generation_version: i32,
+    ) -> Result<Option<UserColorPalette>, sqlx::Error> {
+        sqlx::query_as::<_, UserColorPalette>(
+            r#"
+            UPDATE user_color_palettes
+            SET name = $1,
+                background_seed_hex = $2,
+                text_seed_hex = $3,
+                primary_seed_hex = $4,
+                secondary_seed_hex = $5,
+                green_seed_hex = $6,
+                red_seed_hex = $7,
+                yellow_seed_hex = $8,
+                blue_seed_hex = $9,
+                magenta_seed_hex = $10,
+                cyan_seed_hex = $11,
+                generated_tokens = $12,
+                generation_version = $13,
+                updated_at = NOW()
+            WHERE id = $14 AND user_id = $15
+            RETURNING
+                id,
+                user_id,
+                name,
+                background_seed_hex,
+                text_seed_hex,
+                primary_seed_hex,
+                secondary_seed_hex,
+                green_seed_hex,
+                red_seed_hex,
+                yellow_seed_hex,
+                blue_seed_hex,
+                magenta_seed_hex,
+                cyan_seed_hex,
+                generated_tokens,
+                generation_version,
+                created_at,
+                updated_at
+            "#,
+        )
+        .bind(name)
+        .bind(background_seed_hex)
+        .bind(text_seed_hex)
+        .bind(primary_seed_hex)
+        .bind(secondary_seed_hex)
+        .bind(green_seed_hex)
+        .bind(red_seed_hex)
+        .bind(yellow_seed_hex)
+        .bind(blue_seed_hex)
+        .bind(magenta_seed_hex)
+        .bind(cyan_seed_hex)
+        .bind(Json(generated_tokens.clone()))
+        .bind(generation_version)
+        .bind(palette_id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Finds a custom palette by ID scoped to the owner user.
     ///
     /// # Arguments
