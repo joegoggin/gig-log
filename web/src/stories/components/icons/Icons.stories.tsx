@@ -1,4 +1,12 @@
+/**
+ * Storybook documentation and interaction coverage for icon components.
+ *
+ * Covered scenarios:
+ * - Renders all icons in gallery and standalone stories.
+ * - Verifies GigLog logo mark colors respond to theme changes.
+ */
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import AddIcon from "@/components/icons/AddIcon";
 import BackIcon from "@/components/icons/BackIcon";
 import CheckIcon from "@/components/icons/CheckIcon";
@@ -164,6 +172,48 @@ export const GigLogLogo: StoryObj<typeof GigLogLogoIcon> = {
             <GigLogLogoIcon />
         </IconWrapper>
     ),
+};
+
+export const GigLogLogoThemeResponsive: StoryObj<typeof GigLogLogoIcon> = {
+    render: () => (
+        <IconWrapper>
+            <GigLogLogoIcon />
+        </IconWrapper>
+    ),
+    play: async ({ canvasElement }) => {
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        const logoMarkPath = canvasElement.querySelector(
+            ".giglog-logo__mark path",
+        );
+
+        if (!logoMarkPath) {
+            throw new globalThis.Error(
+                "Expected GigLog logo mark path to be rendered.",
+            );
+        }
+
+        const initialTheme = rootElement.getAttribute("data-theme");
+
+        try {
+            rootElement.setAttribute("data-theme", "light");
+            const lightFillColor = getComputedStyle(logoMarkPath).fill;
+
+            rootElement.setAttribute("data-theme", "dark");
+
+            await waitFor(() => {
+                expect(getComputedStyle(logoMarkPath).fill).not.toBe(
+                    lightFillColor,
+                );
+            });
+        } finally {
+            if (initialTheme === "light" || initialTheme === "dark") {
+                rootElement.setAttribute("data-theme", initialTheme);
+                return;
+            }
+
+            rootElement.removeAttribute("data-theme");
+        }
+    },
 };
 
 export const Hamburger: StoryObj<typeof HamburgerIcon> = {
