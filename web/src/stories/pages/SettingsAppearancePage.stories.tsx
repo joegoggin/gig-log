@@ -4,6 +4,7 @@
  * Covered scenarios:
  * - Theme mode controls switch appearance and update `data-theme`.
  * - Palette controls restore persisted state and update `data-palette`.
+ * - Custom role-color controls apply background/text/primary/secondary tokens.
  * - Custom palette creation adds a selectable palette and activates it.
  * - Custom palette creation requires a non-empty palette name.
  * - Contrast checks verify readable text/surface pairs across palette and theme combinations.
@@ -67,6 +68,15 @@ const clickOptionLabel = async (radioInput: HTMLElement) => {
     }
 
     await userEvent.click(label);
+};
+
+const hexToRgbTriplet = (hex: string): string => {
+    const normalized = hex.trim().replace(/^#/, "");
+    const red = Number.parseInt(normalized.slice(0, 2), 16);
+    const green = Number.parseInt(normalized.slice(2, 4), 16);
+    const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+    return `${red}, ${green}, ${blue}`;
 };
 
 const meta: Meta<typeof SettingsAppearancePage> = {
@@ -305,6 +315,15 @@ export const CreatesCustomPaletteAndActivatesIt: Story = {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
         const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
+        const backgroundHex = "#a9b1d6";
+        const textHex = "#1a1b26";
+        const primaryHex = "#9ece6a";
+        const secondaryHex = "#7aa2f7";
+
+        await expect(canvas.getByText("Background")).toBeVisible();
+        await expect(canvas.getByText("Text")).toBeVisible();
+        await expect(canvas.getByText("Primary")).toBeVisible();
+        await expect(canvas.getByText("Secondary")).toBeVisible();
 
         await userEvent.type(paletteNameInput, "Ocean Mist");
         await userEvent.click(
@@ -319,6 +338,18 @@ export const CreatesCustomPaletteAndActivatesIt: Story = {
             expect(rootElement.getAttribute("data-palette")).toBe("custom");
         });
         await expect(oceanMistRadio).toBeChecked();
+        await expect(
+            rootElement.style.getPropertyValue("--color-background-rgb").trim(),
+        ).toBe(hexToRgbTriplet(backgroundHex));
+        await expect(
+            rootElement.style.getPropertyValue("--color-text-rgb").trim(),
+        ).toBe(hexToRgbTriplet(textHex));
+        await expect(
+            rootElement.style.getPropertyValue("--color-primary-100-rgb").trim(),
+        ).toBe(hexToRgbTriplet(primaryHex));
+        await expect(
+            rootElement.style.getPropertyValue("--color-secondary-100-rgb").trim(),
+        ).toBe(hexToRgbTriplet(secondaryHex));
     },
 };
 

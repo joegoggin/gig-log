@@ -2,29 +2,29 @@
 @use "@sass/variables/colors" as colors;
 
 [data-theme="light"] .settings-page {
-    --page-surface: rgba(255, 255, 255, 0.62);
-    --page-border: rgba(26, 27, 38, 0.14);
-    --page-muted: rgba(26, 27, 38, 0.78);
-    --page-step: rgba(255, 255, 255, 0.38);
-    --page-theme-option-surface: rgba(255, 255, 255, 0.52);
-    --page-theme-option-border-active: rgba(colors.$blue-100-rgb, 0.72);
-    --page-theme-option-shadow: rgba(colors.$blue-100-rgb, 0.18);
-    --page-palette-option-surface: rgba(255, 255, 255, 0.56);
-    --page-palette-option-border-active: rgba(colors.$green-100-rgb, 0.72);
-    --page-palette-option-shadow: rgba(colors.$green-100-rgb, 0.18);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.62);
+    --page-border: rgba(var(--auth-border-rgb), 0.14);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.78);
+    --page-step: rgba(var(--auth-surface-rgb), 0.38);
+    --page-theme-option-surface: rgba(var(--auth-surface-rgb), 0.52);
+    --page-theme-option-border-active: rgba(var(--auth-secondary-rgb), 0.72);
+    --page-theme-option-shadow: rgba(var(--auth-secondary-rgb), 0.18);
+    --page-palette-option-surface: rgba(var(--auth-surface-rgb), 0.56);
+    --page-palette-option-border-active: rgba(var(--auth-primary-rgb), 0.72);
+    --page-palette-option-shadow: rgba(var(--auth-primary-rgb), 0.18);
 }
 
 [data-theme="dark"] .settings-page {
-    --page-surface: rgba(169, 177, 214, 0.1);
-    --page-border: rgba(169, 177, 214, 0.2);
-    --page-muted: rgba(169, 177, 214, 0.88);
-    --page-step: rgba(26, 27, 38, 0.32);
-    --page-theme-option-surface: rgba(26, 27, 38, 0.3);
-    --page-theme-option-border-active: rgba(colors.$cyan-100-rgb, 0.7);
-    --page-theme-option-shadow: rgba(colors.$cyan-100-rgb, 0.15);
-    --page-palette-option-surface: rgba(26, 27, 38, 0.34);
-    --page-palette-option-border-active: rgba(colors.$green-100-rgb, 0.68);
-    --page-palette-option-shadow: rgba(colors.$green-100-rgb, 0.15);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.1);
+    --page-border: rgba(var(--auth-border-rgb), 0.2);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.88);
+    --page-step: rgba(var(--auth-surface-rgb), 0.32);
+    --page-theme-option-surface: rgba(var(--auth-surface-rgb), 0.3);
+    --page-theme-option-border-active: rgba(var(--auth-secondary-rgb), 0.7);
+    --page-theme-option-shadow: rgba(var(--auth-secondary-rgb), 0.15);
+    --page-palette-option-surface: rgba(var(--auth-surface-rgb), 0.34);
+    --page-palette-option-border-active: rgba(var(--auth-primary-rgb), 0.68);
+    --page-palette-option-shadow: rgba(var(--auth-primary-rgb), 0.15);
 }
 
 .settings-page {
@@ -134,7 +134,7 @@
         margin-bottom: 8px;
         padding: 6px 12px;
         border-radius: 999px;
-        background: rgba(colors.$blue-100-rgb, 0.2);
+        background: rgba(var(--auth-secondary-rgb), 0.2);
         color: var(--page-muted);
         font-size: 12px;
         font-weight: 600;

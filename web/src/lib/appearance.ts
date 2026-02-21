@@ -12,6 +12,10 @@ export type AppearancePreferences = {
 };
 
 export type PaletteSeedHexColors = {
+    background_seed_hex: string;
+    text_seed_hex: string;
+    primary_seed_hex: string;
+    secondary_seed_hex: string;
     green_seed_hex: string;
     red_seed_hex: string;
     yellow_seed_hex: string;
@@ -21,6 +25,14 @@ export type PaletteSeedHexColors = {
 };
 
 export type PaletteRgbTokens = {
+    background: string;
+    text: string;
+    primary_100: string;
+    primary_80: string;
+    primary_60: string;
+    secondary_100: string;
+    secondary_80: string;
+    secondary_60: string;
     black: string;
     white: string;
     green_100: string;
@@ -56,10 +68,15 @@ export const DEFAULT_APPEARANCE_PREFERENCES: AppearancePreferences = {
     palette: "default",
 };
 
-const DEFAULT_BLACK_RGB = "26, 27, 38";
-const DEFAULT_WHITE_RGB = "169, 177, 214";
-
 const PALETTE_TOKEN_VARIABLE_NAMES: Record<keyof PaletteRgbTokens, string> = {
+    background: "--color-background-rgb",
+    text: "--color-text-rgb",
+    primary_100: "--color-primary-100-rgb",
+    primary_80: "--color-primary-80-rgb",
+    primary_60: "--color-primary-60-rgb",
+    secondary_100: "--color-secondary-100-rgb",
+    secondary_80: "--color-secondary-80-rgb",
+    secondary_60: "--color-secondary-60-rgb",
     black: "--color-black-rgb",
     white: "--color-white-rgb",
     green_100: "--color-green-100-rgb",
@@ -267,9 +284,20 @@ export function applyPalette(
 export function generatePaletteTokensFromSeeds(
     seedColors: PaletteSeedHexColors,
 ): PaletteRgbTokens {
+    const background = shadeHexColor(seedColors.background_seed_hex, 0);
+    const text = shadeHexColor(seedColors.text_seed_hex, 0);
+
     return {
-        black: DEFAULT_BLACK_RGB,
-        white: DEFAULT_WHITE_RGB,
+        background,
+        text,
+        primary_100: shadeHexColor(seedColors.primary_seed_hex, 0),
+        primary_80: shadeHexColor(seedColors.primary_seed_hex, 0.2),
+        primary_60: shadeHexColor(seedColors.primary_seed_hex, 0.4),
+        secondary_100: shadeHexColor(seedColors.secondary_seed_hex, 0),
+        secondary_80: shadeHexColor(seedColors.secondary_seed_hex, 0.2),
+        secondary_60: shadeHexColor(seedColors.secondary_seed_hex, 0.4),
+        black: text,
+        white: background,
         green_100: shadeHexColor(seedColors.green_seed_hex, 0),
         green_80: shadeHexColor(seedColors.green_seed_hex, 0.2),
         green_60: shadeHexColor(seedColors.green_seed_hex, 0.4),

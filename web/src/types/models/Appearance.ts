@@ -13,6 +13,10 @@ export type ActivePaletteSelection = {
 export type CustomPalette = {
     id: string;
     name: string;
+    background_seed_hex: string;
+    text_seed_hex: string;
+    primary_seed_hex: string;
+    secondary_seed_hex: string;
     green_seed_hex: string;
     red_seed_hex: string;
     yellow_seed_hex: string;

@@ -11,6 +11,22 @@ use uuid::Uuid;
 /// These values map directly to the CSS variables consumed by the web client.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedPaletteTokens {
+    /// Base interface background color as `r, g, b`.
+    pub background: String,
+    /// Base interface text color as `r, g, b`.
+    pub text: String,
+    /// Strong primary action color as `r, g, b`.
+    pub primary_100: String,
+    /// Medium primary action color as `r, g, b`.
+    pub primary_80: String,
+    /// Soft primary action color as `r, g, b`.
+    pub primary_60: String,
+    /// Strong secondary action color as `r, g, b`.
+    pub secondary_100: String,
+    /// Medium secondary action color as `r, g, b`.
+    pub secondary_80: String,
+    /// Soft secondary action color as `r, g, b`.
+    pub secondary_60: String,
     /// Base dark neutral color as `r, g, b`.
     pub black: String,
     /// Base light neutral color as `r, g, b`.
@@ -63,6 +79,14 @@ pub struct UserColorPalette {
     pub user_id: Uuid,
     /// Human-readable palette name.
     pub name: String,
+    /// Seed background color in 6-digit hex format.
+    pub background_seed_hex: String,
+    /// Seed text color in 6-digit hex format.
+    pub text_seed_hex: String,
+    /// Seed primary color in 6-digit hex format.
+    pub primary_seed_hex: String,
+    /// Seed secondary color in 6-digit hex format.
+    pub secondary_seed_hex: String,
     /// Seed green color in 6-digit hex format.
     pub green_seed_hex: String,
     /// Seed red color in 6-digit hex format.

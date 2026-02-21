@@ -156,6 +156,10 @@ async fn create_custom_palette_persists_palette_and_sets_active_selection() {
         .insert_header(("Cookie", format!("access_token={access_token}")))
         .set_json(json!({
             "name": "Ocean",
+            "background_seed_hex": "#a9b1d6",
+            "text_seed_hex": "#1a1b26",
+            "primary_seed_hex": "#9ece6a",
+            "secondary_seed_hex": "#7aa2f7",
             "green_seed_hex": "#66bb6a",
             "red_seed_hex": "#e27d7c",
             "yellow_seed_hex": "#d0a761",
@@ -228,6 +232,10 @@ async fn set_active_palette_to_preset_updates_preference_row() {
         .insert_header(("Cookie", format!("access_token={access_token}")))
         .set_json(json!({
             "name": "Meadow",
+            "background_seed_hex": "#a9b1d6",
+            "text_seed_hex": "#1a1b26",
+            "primary_seed_hex": "#9ece6a",
+            "secondary_seed_hex": "#7aa2f7",
             "green_seed_hex": "#66bb6a",
             "red_seed_hex": "#e27d7c",
             "yellow_seed_hex": "#d0a761",
@@ -300,6 +308,10 @@ async fn set_active_palette_rejects_custom_palette_from_another_user() {
         .insert_header(("Cookie", format!("access_token={owner_access_token}")))
         .set_json(json!({
             "name": "Owner Palette",
+            "background_seed_hex": "#a9b1d6",
+            "text_seed_hex": "#1a1b26",
+            "primary_seed_hex": "#9ece6a",
+            "secondary_seed_hex": "#7aa2f7",
             "green_seed_hex": "#66bb6a",
             "red_seed_hex": "#e27d7c",
             "yellow_seed_hex": "#d0a761",

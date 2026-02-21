@@ -2,15 +2,15 @@
 @use "@sass/variables/colors" as colors;
 
 [data-theme="light"] .edit-company-page {
-    --page-surface: rgba(255, 255, 255, 0.62);
-    --page-border: rgba(26, 27, 38, 0.14);
-    --page-muted: rgba(26, 27, 38, 0.78);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.62);
+    --page-border: rgba(var(--auth-border-rgb), 0.14);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.78);
 }
 
 [data-theme="dark"] .edit-company-page {
-    --page-surface: rgba(169, 177, 214, 0.1);
-    --page-border: rgba(169, 177, 214, 0.2);
-    --page-muted: rgba(169, 177, 214, 0.88);
+    --page-surface: rgba(var(--auth-surface-rgb), 0.1);
+    --page-border: rgba(var(--auth-border-rgb), 0.2);
+    --page-muted: rgba(var(--auth-muted-rgb), 0.88);
 }
 
 .edit-company-page {

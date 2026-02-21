@@ -168,6 +168,10 @@ describe("appearance helpers", () => {
 
     it("generates deterministic accent shades from seed colors", () => {
         const tokens = generatePaletteTokensFromSeeds({
+            background_seed_hex: "#a9b1d6",
+            text_seed_hex: "#1a1b26",
+            primary_seed_hex: "#9ece6a",
+            secondary_seed_hex: "#7aa2f7",
             green_seed_hex: "#336699",
             red_seed_hex: "#e65100",
             yellow_seed_hex: "#f9a825",
@@ -179,12 +183,20 @@ describe("appearance helpers", () => {
         expect(tokens.green_100).toBe("51, 102, 153");
         expect(tokens.green_80).toBe("92, 133, 173");
         expect(tokens.green_60).toBe("133, 163, 194");
+        expect(tokens.background).toBe("169, 177, 214");
+        expect(tokens.text).toBe("26, 27, 38");
+        expect(tokens.primary_100).toBe("158, 206, 106");
+        expect(tokens.secondary_100).toBe("122, 162, 247");
         expect(tokens.black).toBe("26, 27, 38");
         expect(tokens.white).toBe("169, 177, 214");
     });
 
     it("applies and clears custom palette css variables", () => {
         const tokens = generatePaletteTokensFromSeeds({
+            background_seed_hex: "#a9b1d6",
+            text_seed_hex: "#1a1b26",
+            primary_seed_hex: "#9ece6a",
+            secondary_seed_hex: "#7aa2f7",
             green_seed_hex: "#66bb6a",
             red_seed_hex: "#e27d7c",
             yellow_seed_hex: "#d0a761",

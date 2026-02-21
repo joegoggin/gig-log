@@ -1,4 +1,3 @@
-@use "@sass/variables/colors" as colors;
 @use "@sass/mixins/media" as media;
 
 @mixin mobile-nav {
@@ -12,18 +11,28 @@
 }
 
 [data-theme="light"] .main-layout {
-    --layout-sidebar-surface: rgba(70, 115, 176, 0.82);
-    --layout-sidebar-border: rgba(255, 255, 255, 0.24);
-    --layout-nav-item-color: rgba(201, 221, 247, 0.88);
-    --layout-mobile-shadow: rgba(26, 27, 38, 0.34);
+    --layout-sidebar-surface: rgba(var(--auth-secondary-rgb), 0.82);
+    --layout-sidebar-border: rgba(var(--auth-border-rgb), 0.24);
+    --layout-nav-item-color: rgba(var(--text-rgb), 0.88);
+    --layout-mobile-shadow: rgba(var(--auth-overlay-rgb), 0.34);
+    --layout-interactive-overlay: rgba(var(--auth-primary-rgb), 0.22);
+    --layout-interactive-foreground: rgb(var(--text-rgb));
+    --layout-focus-ring: rgba(var(--auth-focus-ring-rgb), 0.8);
+    --layout-backdrop: rgba(var(--auth-overlay-rgb), 0.46);
+    --layout-logo-color: rgb(var(--text-rgb));
     --layout-top-bar-height: 80px;
 }
 
 [data-theme="dark"] .main-layout {
-    --layout-sidebar-surface: rgba(35, 60, 94, 0.82);
-    --layout-sidebar-border: rgba(169, 177, 214, 0.24);
-    --layout-nav-item-color: rgba(173, 197, 229, 0.86);
-    --layout-mobile-shadow: rgba(5, 9, 18, 0.56);
+    --layout-sidebar-surface: rgba(var(--auth-secondary-rgb), 0.72);
+    --layout-sidebar-border: rgba(var(--auth-border-rgb), 0.26);
+    --layout-nav-item-color: rgba(var(--text-rgb), 0.86);
+    --layout-mobile-shadow: rgba(var(--auth-overlay-rgb), 0.56);
+    --layout-interactive-overlay: rgba(var(--auth-primary-rgb), 0.24);
+    --layout-interactive-foreground: rgb(var(--text-rgb));
+    --layout-focus-ring: rgba(var(--auth-focus-ring-rgb), 0.8);
+    --layout-backdrop: rgba(var(--auth-overlay-rgb), 0.46);
+    --layout-logo-color: rgb(var(--text-rgb));
     --layout-top-bar-height: 80px;
 }
 
@@ -134,7 +143,7 @@
         width: 100%;
         padding: 8px;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--layout-interactive-overlay);
         transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
         &:hover {
@@ -162,13 +171,13 @@
         padding: 0;
         border: none;
         background: transparent;
-        color: colors.$black;
+        color: var(--layout-logo-color);
         cursor: pointer;
         overflow: hidden;
         transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 
         &:focus-visible {
-            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline: 2px solid var(--layout-focus-ring);
             outline-offset: 2px;
         }
 
@@ -188,7 +197,7 @@
         transition: opacity 0.2s ease;
 
         svg {
-            color: #ffffff;
+            color: var(--layout-logo-color);
         }
     }
 
@@ -218,8 +227,8 @@
         height: 44px;
         border: none;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.2);
-        color: #ffffff;
+        background: var(--layout-interactive-overlay);
+        color: var(--layout-logo-color);
         cursor: pointer;
 
         svg {
@@ -230,7 +239,7 @@
         }
 
         &:focus-visible {
-            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline: 2px solid var(--layout-focus-ring);
             outline-offset: 2px;
         }
 
@@ -319,7 +328,7 @@
             position: absolute;
             inset: 0;
             border-radius: inherit;
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--layout-interactive-overlay);
             transform: scaleX(0.25);
             transform-origin: left center;
             opacity: 0;
@@ -363,8 +372,8 @@
 
             p,
             svg {
-                color: #ffffff;
-                fill: #ffffff;
+                color: var(--layout-interactive-foreground);
+                fill: var(--layout-interactive-foreground);
             }
 
             svg {
@@ -377,7 +386,7 @@
         }
 
         &:focus-visible {
-            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline: 2px solid var(--layout-focus-ring);
             outline-offset: 2px;
 
             &::before {
@@ -387,8 +396,8 @@
 
             p,
             svg {
-                color: #ffffff;
-                fill: #ffffff;
+                color: var(--layout-interactive-foreground);
+                fill: var(--layout-interactive-foreground);
             }
         }
 
@@ -400,8 +409,8 @@
 
             p,
             svg {
-                color: #ffffff;
-                fill: #ffffff;
+                color: var(--layout-interactive-foreground);
+                fill: var(--layout-interactive-foreground);
             }
         }
 
@@ -434,7 +443,7 @@
         position: fixed;
         inset: 0;
         border: none;
-        background: rgba(9, 14, 27, 0.46);
+        background: var(--layout-backdrop);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.2s ease;

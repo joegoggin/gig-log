@@ -7,13 +7,18 @@ use crate::core::error::ApiError;
 use crate::models::color_palette::GeneratedPaletteTokens;
 
 /// Current algorithm version for generated palette tokens.
-pub const PALETTE_GENERATION_VERSION: i32 = 1;
-
-const DEFAULT_BLACK_RGB: &str = "26, 27, 38";
-const DEFAULT_WHITE_RGB: &str = "169, 177, 214";
+pub const PALETTE_GENERATION_VERSION: i32 = 2;
 
 /// Base accent colors used to derive full palette token sets.
 pub struct PaletteSeedColors<'a> {
+    /// Base background color in `#RRGGBB` format.
+    pub background_seed_hex: &'a str,
+    /// Base text color in `#RRGGBB` format.
+    pub text_seed_hex: &'a str,
+    /// Base primary action color in `#RRGGBB` format.
+    pub primary_seed_hex: &'a str,
+    /// Base secondary action color in `#RRGGBB` format.
+    pub secondary_seed_hex: &'a str,
     /// Base green accent in `#RRGGBB` format.
     pub green_seed_hex: &'a str,
     /// Base red accent in `#RRGGBB` format.
@@ -35,8 +40,9 @@ pub struct PaletteSeedColors<'a> {
 /// - `80`: a lighter shade mixed 20% toward white
 /// - `60`: a lighter shade mixed 40% toward white
 ///
-/// Neutral `black` and `white` tokens remain fixed to maintain readable base
-/// contrast across generated palettes.
+/// Core interface roles (`background`, `text`, `primary`, `secondary`) are
+/// generated from their corresponding seed colors and also backfill legacy
+/// neutral tokens (`black`, `white`) for compatibility with existing styles.
 ///
 /// # Arguments
 ///
@@ -49,9 +55,20 @@ pub struct PaletteSeedColors<'a> {
 pub fn generate_palette_tokens(
     seed_colors: &PaletteSeedColors<'_>,
 ) -> Result<GeneratedPaletteTokens, ApiError> {
+    let background = shade_triplet(seed_colors.background_seed_hex, 0.0)?;
+    let text = shade_triplet(seed_colors.text_seed_hex, 0.0)?;
+
     Ok(GeneratedPaletteTokens {
-        black: DEFAULT_BLACK_RGB.to_string(),
-        white: DEFAULT_WHITE_RGB.to_string(),
+        background: background.clone(),
+        text: text.clone(),
+        primary_100: shade_triplet(seed_colors.primary_seed_hex, 0.0)?,
+        primary_80: shade_triplet(seed_colors.primary_seed_hex, 0.2)?,
+        primary_60: shade_triplet(seed_colors.primary_seed_hex, 0.4)?,
+        secondary_100: shade_triplet(seed_colors.secondary_seed_hex, 0.0)?,
+        secondary_80: shade_triplet(seed_colors.secondary_seed_hex, 0.2)?,
+        secondary_60: shade_triplet(seed_colors.secondary_seed_hex, 0.4)?,
+        black: text,
+        white: background,
         green_100: shade_triplet(seed_colors.green_seed_hex, 0.0)?,
         green_80: shade_triplet(seed_colors.green_seed_hex, 0.2)?,
         green_60: shade_triplet(seed_colors.green_seed_hex, 0.4)?,
@@ -152,6 +169,10 @@ mod tests {
     // Verifies generated shades follow the expected white-mix algorithm.
     fn generate_palette_tokens_builds_expected_shades() {
         let seeds = PaletteSeedColors {
+            background_seed_hex: "#a9b1d6",
+            text_seed_hex: "#1a1b26",
+            primary_seed_hex: "#9ece6a",
+            secondary_seed_hex: "#7aa2f7",
             green_seed_hex: "#336699",
             red_seed_hex: "#e65100",
             yellow_seed_hex: "#f9a825",
@@ -165,6 +186,10 @@ mod tests {
         assert_eq!(tokens.green_100, "51, 102, 153");
         assert_eq!(tokens.green_80, "92, 133, 173");
         assert_eq!(tokens.green_60, "133, 163, 194");
+        assert_eq!(tokens.background, "169, 177, 214");
+        assert_eq!(tokens.text, "26, 27, 38");
+        assert_eq!(tokens.primary_100, "158, 206, 106");
+        assert_eq!(tokens.secondary_100, "122, 162, 247");
         assert_eq!(tokens.black, "26, 27, 38");
         assert_eq!(tokens.white, "169, 177, 214");
     }
@@ -173,6 +198,10 @@ mod tests {
     // Verifies malformed hex values are rejected.
     fn generate_palette_tokens_rejects_invalid_hex_values() {
         let seeds = PaletteSeedColors {
+            background_seed_hex: "#a9b1d6",
+            text_seed_hex: "#1a1b26",
+            primary_seed_hex: "#9ece6a",
+            secondary_seed_hex: "#7aa2f7",
             green_seed_hex: "336699",
             red_seed_hex: "#e65100",
             yellow_seed_hex: "#f9a825",

@@ -21,6 +21,22 @@ pub struct CreateCustomPaletteRequest {
     #[validate(length(min = 1, max = 50, message = "Palette name is required"))]
     pub name: String,
 
+    /// Base background color in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub background_seed_hex: String,
+
+    /// Base text color in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub text_seed_hex: String,
+
+    /// Base primary action color in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub primary_seed_hex: String,
+
+    /// Base secondary action color in `#RRGGBB` format.
+    #[validate(custom(function = "validate_hex_color"))]
+    pub secondary_seed_hex: String,
+
     /// Base green accent in `#RRGGBB` format.
     #[validate(custom(function = "validate_hex_color"))]
     pub green_seed_hex: String,
@@ -81,6 +97,14 @@ pub struct CustomPaletteResponse {
     pub id: Uuid,
     /// User-defined palette name.
     pub name: String,
+    /// Base background color in `#RRGGBB` format.
+    pub background_seed_hex: String,
+    /// Base text color in `#RRGGBB` format.
+    pub text_seed_hex: String,
+    /// Base primary action color in `#RRGGBB` format.
+    pub primary_seed_hex: String,
+    /// Base secondary action color in `#RRGGBB` format.
+    pub secondary_seed_hex: String,
     /// Base green accent in `#RRGGBB` format.
     pub green_seed_hex: String,
     /// Base red accent in `#RRGGBB` format.

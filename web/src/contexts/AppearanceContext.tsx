@@ -7,8 +7,14 @@ import {
     useState,
 } from "react";
 import type { ReactNode } from "react";
-import api from "@/lib/axios";
-import { useAuth } from "@/contexts/AuthContext";
+import type {
+    ActivePaletteSelection,
+    AppearanceSettingsResponse,
+    CreateCustomPaletteRequest,
+    CreateCustomPaletteResponse,
+    CustomPalette,
+    SetActivePaletteResponse,
+} from "@/types/models/Appearance";
 import type {
     AppearancePreferences,
     AppearanceStorage,
@@ -29,14 +35,8 @@ import {
     resolveThemeMode,
     subscribeToSystemTheme,
 } from "@/lib/appearance";
-import type {
-    ActivePaletteSelection,
-    AppearanceSettingsResponse,
-    CreateCustomPaletteRequest,
-    CreateCustomPaletteResponse,
-    CustomPalette,
-    SetActivePaletteResponse,
-} from "@/types/models/Appearance";
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/lib/axios";
 
 type AppearanceContextValue = {
     mode: ThemeMode;
@@ -124,6 +124,10 @@ const normalizeCreatePalettePayload = (
 ): CreateCustomPaletteRequest => {
     return {
         name: payload.name.trim(),
+        background_seed_hex: payload.background_seed_hex.trim().toLowerCase(),
+        text_seed_hex: payload.text_seed_hex.trim().toLowerCase(),
+        primary_seed_hex: payload.primary_seed_hex.trim().toLowerCase(),
+        secondary_seed_hex: payload.secondary_seed_hex.trim().toLowerCase(),
         green_seed_hex: payload.green_seed_hex.trim().toLowerCase(),
         red_seed_hex: payload.red_seed_hex.trim().toLowerCase(),
         yellow_seed_hex: payload.yellow_seed_hex.trim().toLowerCase(),
@@ -370,6 +374,10 @@ export function AppearanceProvider({
             const localPalette: CustomPalette = {
                 id: createLocalPaletteId(),
                 name: normalizedPayload.name,
+                background_seed_hex: normalizedPayload.background_seed_hex,
+                text_seed_hex: normalizedPayload.text_seed_hex,
+                primary_seed_hex: normalizedPayload.primary_seed_hex,
+                secondary_seed_hex: normalizedPayload.secondary_seed_hex,
                 green_seed_hex: normalizedPayload.green_seed_hex,
                 red_seed_hex: normalizedPayload.red_seed_hex,
                 yellow_seed_hex: normalizedPayload.yellow_seed_hex,
@@ -378,7 +386,7 @@ export function AppearanceProvider({
                 cyan_seed_hex: normalizedPayload.cyan_seed_hex,
                 generated_tokens:
                     generatePaletteTokensFromSeeds(normalizedPayload),
-                generation_version: 1,
+                generation_version: 2,
                 created_at: nowIso,
                 updated_at: nowIso,
             };

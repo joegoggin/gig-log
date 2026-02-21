@@ -5,6 +5,10 @@ import type {
     PaletteRgbTokens,
     ThemeMode,
 } from "@/lib/appearance";
+import type {
+    CreateCustomPaletteRequest,
+    CustomPalette,
+} from "@/types/models/Appearance";
 import styles from "@/pages/SettingsPage/SettingsPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
@@ -16,10 +20,6 @@ import { useAppearance } from "@/contexts/AppearanceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import { settingsSections } from "@/pages/SettingsPage/settingsSections";
-import type {
-    CreateCustomPaletteRequest,
-    CustomPalette,
-} from "@/types/models/Appearance";
 
 type ThemeModeOption = {
     /** Theme mode value applied when selected */
@@ -94,20 +94,36 @@ const colorPaletteLabels: Record<ColorPalette, string> = {
 
 const paletteSeedOptions: Array<PaletteSeedOption> = [
     {
+        name: "background_seed_hex",
+        label: "Background",
+    },
+    {
+        name: "text_seed_hex",
+        label: "Text",
+    },
+    {
+        name: "primary_seed_hex",
+        label: "Primary",
+    },
+    {
+        name: "secondary_seed_hex",
+        label: "Secondary",
+    },
+    {
         name: "green_seed_hex",
-        label: "Green Accent",
+        label: "Success Accent",
     },
     {
         name: "red_seed_hex",
-        label: "Red Accent",
+        label: "Danger Accent",
     },
     {
         name: "yellow_seed_hex",
-        label: "Yellow Accent",
+        label: "Warning Accent",
     },
     {
         name: "blue_seed_hex",
-        label: "Blue Accent",
+        label: "Info Accent",
     },
     {
         name: "magenta_seed_hex",
@@ -121,6 +137,10 @@ const paletteSeedOptions: Array<PaletteSeedOption> = [
 
 const initialPaletteFormData: CreateCustomPaletteRequest = {
     name: "",
+    background_seed_hex: "#a9b1d6",
+    text_seed_hex: "#1a1b26",
+    primary_seed_hex: "#9ece6a",
+    secondary_seed_hex: "#7aa2f7",
     green_seed_hex: "#66bb6a",
     red_seed_hex: "#e27d7c",
     yellow_seed_hex: "#d0a761",
@@ -130,6 +150,10 @@ const initialPaletteFormData: CreateCustomPaletteRequest = {
 };
 
 const customPalettePreviewTokens: Array<keyof PaletteRgbTokens> = [
+    "background",
+    "text",
+    "primary_100",
+    "secondary_100",
     "green_100",
     "red_100",
     "yellow_100",
@@ -263,7 +287,7 @@ function SettingsAppearancePage() {
                 <h1>Appearance settings</h1>
                 <p className={styles["settings-page__lead"]}>
                     Choose how GigLog handles light and dark surfaces, then pick
-                    or create a color palette for the interface.
+                    or create a color palette for interface roles and accents.
                 </p>
                 {user?.email && (
                     <p className={styles["settings-page__current-email"]}>
@@ -551,8 +575,9 @@ function SettingsAppearancePage() {
                 >
                     <h3>Create custom palette</h3>
                     <p className={styles["settings-page__step-note"]}>
-                        Pick six base accents and GigLog generates lighter
-                        shades automatically.
+                        Pick base background/text plus primary/secondary and
+                        accent colors. GigLog generates lighter shades
+                        automatically.
                     </p>
 
                     <Form onSubmit={handleCreatePaletteSubmit}>

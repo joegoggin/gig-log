@@ -4,6 +4,14 @@ $palette-values: (
     default: (
         black: "26, 27, 38",
         white: "169, 177, 214",
+        background: "169, 177, 214",
+        text: "26, 27, 38",
+        primary-100: "158, 206, 106",
+        primary-80: "177, 216, 136",
+        primary-60: "197, 226, 166",
+        secondary-100: "122, 162, 247",
+        secondary-80: "149, 181, 249",
+        secondary-60: "175, 199, 250",
         green-100: "158, 206, 106",
         green-80: "177, 216, 136",
         green-60: "197, 226, 166",
@@ -26,6 +34,14 @@ $palette-values: (
     sunset: (
         black: "26, 27, 38",
         white: "169, 177, 214",
+        background: "169, 177, 214",
+        text: "26, 27, 38",
+        primary-100: "143, 201, 122",
+        primary-80: "168, 213, 150",
+        primary-60: "193, 225, 179",
+        secondary-100: "103, 154, 245",
+        secondary-80: "134, 174, 248",
+        secondary-60: "165, 194, 250",
         green-100: "143, 201, 122",
         green-80: "168, 213, 150",
         green-60: "193, 225, 179",
@@ -48,6 +64,14 @@ $palette-values: (
     forest: (
         black: "26, 27, 38",
         white: "169, 177, 214",
+        background: "169, 177, 214",
+        text: "26, 27, 38",
+        primary-100: "102, 187, 106",
+        primary-80: "132, 202, 136",
+        primary-60: "162, 217, 166",
+        secondary-100: "92, 147, 205",
+        secondary-80: "123, 167, 217",
+        secondary-60: "154, 187, 229",
         green-100: "102, 187, 106",
         green-80: "132, 202, 136",
         green-60: "162, 217, 166",
@@ -88,6 +112,14 @@ $palette-values: (
 @mixin palette-css-variables($palette) {
     --color-black-rgb: #{palette-value($palette, black)};
     --color-white-rgb: #{palette-value($palette, white)};
+    --color-background-rgb: #{palette-value($palette, background)};
+    --color-text-rgb: #{palette-value($palette, text)};
+    --color-primary-100-rgb: #{palette-value($palette, primary-100)};
+    --color-primary-80-rgb: #{palette-value($palette, primary-80)};
+    --color-primary-60-rgb: #{palette-value($palette, primary-60)};
+    --color-secondary-100-rgb: #{palette-value($palette, secondary-100)};
+    --color-secondary-80-rgb: #{palette-value($palette, secondary-80)};
+    --color-secondary-60-rgb: #{palette-value($palette, secondary-60)};
     --color-green-100-rgb: #{palette-value($palette, green-100)};
     --color-green-80-rgb: #{palette-value($palette, green-80)};
     --color-green-60-rgb: #{palette-value($palette, green-60)};
@@ -123,6 +155,17 @@ $palette-values: (
 $black-rgb: var(--color-black-rgb);
 $white-rgb: var(--color-white-rgb);
 
+$background-rgb: var(--color-background-rgb);
+$text-rgb: var(--color-text-rgb);
+
+$primary-100-rgb: var(--color-primary-100-rgb);
+$primary-80-rgb: var(--color-primary-80-rgb);
+$primary-60-rgb: var(--color-primary-60-rgb);
+
+$secondary-100-rgb: var(--color-secondary-100-rgb);
+$secondary-80-rgb: var(--color-secondary-80-rgb);
+$secondary-60-rgb: var(--color-secondary-60-rgb);
+
 $green-100-rgb: var(--color-green-100-rgb);
 $green-80-rgb: var(--color-green-80-rgb);
 $green-60-rgb: var(--color-green-60-rgb);
@@ -149,6 +192,17 @@ $cyan-60-rgb: var(--color-cyan-60-rgb);
 
 $black: rgb(var(--color-black-rgb));
 $white: rgb(var(--color-white-rgb));
+
+$background: rgb(var(--color-background-rgb));
+$text: rgb(var(--color-text-rgb));
+
+$primary-100: rgb(var(--color-primary-100-rgb));
+$primary-80: rgb(var(--color-primary-80-rgb));
+$primary-60: rgb(var(--color-primary-60-rgb));
+
+$secondary-100: rgb(var(--color-secondary-100-rgb));
+$secondary-80: rgb(var(--color-secondary-80-rgb));
+$secondary-60: rgb(var(--color-secondary-60-rgb));
 
 $green-100: rgb(var(--color-green-100-rgb));
 $green-80: rgb(var(--color-green-80-rgb));

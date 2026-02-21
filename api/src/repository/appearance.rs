@@ -33,6 +33,10 @@ impl AppearanceRepo {
                 id,
                 user_id,
                 name,
+                background_seed_hex,
+                text_seed_hex,
+                primary_seed_hex,
+                secondary_seed_hex,
                 green_seed_hex,
                 red_seed_hex,
                 yellow_seed_hex,
@@ -60,6 +64,10 @@ impl AppearanceRepo {
     /// - `pool` - Database connection pool
     /// - `user_id` - Owner user identifier
     /// - `name` - User-provided palette name
+    /// - `background_seed_hex` - Background seed color in hex format
+    /// - `text_seed_hex` - Text seed color in hex format
+    /// - `primary_seed_hex` - Primary seed color in hex format
+    /// - `secondary_seed_hex` - Secondary seed color in hex format
     /// - `green_seed_hex` - Green seed color in hex format
     /// - `red_seed_hex` - Red seed color in hex format
     /// - `yellow_seed_hex` - Yellow seed color in hex format
@@ -77,6 +85,10 @@ impl AppearanceRepo {
         pool: &Pool<Postgres>,
         user_id: Uuid,
         name: &str,
+        background_seed_hex: &str,
+        text_seed_hex: &str,
+        primary_seed_hex: &str,
+        secondary_seed_hex: &str,
         green_seed_hex: &str,
         red_seed_hex: &str,
         yellow_seed_hex: &str,
@@ -91,6 +103,10 @@ impl AppearanceRepo {
             INSERT INTO user_color_palettes (
                 user_id,
                 name,
+                background_seed_hex,
+                text_seed_hex,
+                primary_seed_hex,
+                secondary_seed_hex,
                 green_seed_hex,
                 red_seed_hex,
                 yellow_seed_hex,
@@ -100,11 +116,30 @@ impl AppearanceRepo {
                 generated_tokens,
                 generation_version
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12,
+                $13,
+                $14
+            )
             RETURNING
                 id,
                 user_id,
                 name,
+                background_seed_hex,
+                text_seed_hex,
+                primary_seed_hex,
+                secondary_seed_hex,
                 green_seed_hex,
                 red_seed_hex,
                 yellow_seed_hex,
@@ -119,6 +154,10 @@ impl AppearanceRepo {
         )
         .bind(user_id)
         .bind(name)
+        .bind(background_seed_hex)
+        .bind(text_seed_hex)
+        .bind(primary_seed_hex)
+        .bind(secondary_seed_hex)
         .bind(green_seed_hex)
         .bind(red_seed_hex)
         .bind(yellow_seed_hex)
@@ -153,6 +192,10 @@ impl AppearanceRepo {
                 id,
                 user_id,
                 name,
+                background_seed_hex,
+                text_seed_hex,
+                primary_seed_hex,
+                secondary_seed_hex,
                 green_seed_hex,
                 red_seed_hex,
                 yellow_seed_hex,

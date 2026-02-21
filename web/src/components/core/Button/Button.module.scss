@@ -1,5 +1,3 @@
-@use "@sass/variables/colors" as colors;
-
 .button {
     padding: 10px 20px;
     font-family: Roboto, sans-serif;
@@ -7,27 +5,27 @@
     font-size: 16px;
     border-radius: 8px;
     border: none;
-    color: colors.$black;
+    color: rgb(var(--color-text-rgb));
     letter-spacing: 0.02em;
-    box-shadow: 0 1px 3px rgba(colors.$black-rgb, 0.3);
+    box-shadow: 0 1px 3px rgba(var(--auth-overlay-rgb), 0.3);
     transition: all ease-in-out 0.3s;
     cursor: pointer;
 
     &--primary {
-        background: colors.$green-100;
+        background: rgb(var(--auth-primary-rgb));
 
         &:hover {
-            background: colors.$green-80;
-            box-shadow: 0 2px 8px rgba(colors.$green-100-rgb, 0.35);
+            background: rgb(var(--auth-primary-hover-rgb));
+            box-shadow: 0 2px 8px rgba(var(--auth-primary-rgb), 0.35);
         }
     }
 
     &--secondary {
-        background: colors.$blue-100;
+        background: rgb(var(--auth-secondary-rgb));
 
         &:hover {
-            background: colors.$blue-80;
-            box-shadow: 0 2px 8px rgba(colors.$blue-100-rgb, 0.35);
+            background: rgb(var(--auth-secondary-hover-rgb));
+            box-shadow: 0 2px 8px rgba(var(--auth-secondary-rgb), 0.35);
         }
     }
 }

@@ -78,6 +78,10 @@ pub async fn get_appearance(
 /// # Request Body ([`CreateCustomPaletteRequest`])
 ///
 /// - `name` - User-defined palette name
+/// - `background_seed_hex` - Background base color in `#RRGGBB`
+/// - `text_seed_hex` - Text base color in `#RRGGBB`
+/// - `primary_seed_hex` - Primary action base color in `#RRGGBB`
+/// - `secondary_seed_hex` - Secondary action base color in `#RRGGBB`
 /// - `green_seed_hex` - Green base accent in `#RRGGBB`
 /// - `red_seed_hex` - Red base accent in `#RRGGBB`
 /// - `yellow_seed_hex` - Yellow base accent in `#RRGGBB`
@@ -111,6 +115,10 @@ pub async fn create_custom_palette(
         ));
     }
 
+    let background_seed_hex = body.background_seed_hex.trim().to_lowercase();
+    let text_seed_hex = body.text_seed_hex.trim().to_lowercase();
+    let primary_seed_hex = body.primary_seed_hex.trim().to_lowercase();
+    let secondary_seed_hex = body.secondary_seed_hex.trim().to_lowercase();
     let green_seed_hex = body.green_seed_hex.trim().to_lowercase();
     let red_seed_hex = body.red_seed_hex.trim().to_lowercase();
     let yellow_seed_hex = body.yellow_seed_hex.trim().to_lowercase();
@@ -119,6 +127,10 @@ pub async fn create_custom_palette(
     let cyan_seed_hex = body.cyan_seed_hex.trim().to_lowercase();
 
     let normalized_seeds = PaletteSeedColors {
+        background_seed_hex: &background_seed_hex,
+        text_seed_hex: &text_seed_hex,
+        primary_seed_hex: &primary_seed_hex,
+        secondary_seed_hex: &secondary_seed_hex,
         green_seed_hex: &green_seed_hex,
         red_seed_hex: &red_seed_hex,
         yellow_seed_hex: &yellow_seed_hex,
@@ -132,6 +144,10 @@ pub async fn create_custom_palette(
         &state.pool,
         auth_user.user_id,
         normalized_name,
+        &background_seed_hex,
+        &text_seed_hex,
+        &primary_seed_hex,
+        &secondary_seed_hex,
         &green_seed_hex,
         &red_seed_hex,
         &yellow_seed_hex,
@@ -329,6 +345,10 @@ fn map_custom_palette(palette: UserColorPalette) -> ApiResult<CustomPaletteRespo
     Ok(CustomPaletteResponse {
         id: palette.id,
         name: palette.name,
+        background_seed_hex: palette.background_seed_hex,
+        text_seed_hex: palette.text_seed_hex,
+        primary_seed_hex: palette.primary_seed_hex,
+        secondary_seed_hex: palette.secondary_seed_hex,
         green_seed_hex: palette.green_seed_hex,
         red_seed_hex: palette.red_seed_hex,
         yellow_seed_hex: palette.yellow_seed_hex,
@@ -482,6 +502,10 @@ mod tests {
             .insert_header(("Cookie", format!("access_token={access_token}")))
             .set_json(json!({
                 "name": "Ocean",
+                "background_seed_hex": "#a9b1d6",
+                "text_seed_hex": "#1a1b26",
+                "primary_seed_hex": "#9ece6a",
+                "secondary_seed_hex": "#7aa2f7",
                 "green_seed_hex": "not-a-hex",
                 "red_seed_hex": "#e27d7c",
                 "yellow_seed_hex": "#d0a761",
