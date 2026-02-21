@@ -14,6 +14,7 @@ import styles from "@/pages/SettingsPage/SettingsPage.module.scss";
 import useForm from "@/hooks/useForm";
 import useFormMutation from "@/hooks/useFormMutation";
 import Button, { ButtonVariant } from "@/components/core/Button/Button";
+import AddIcon from "@/components/icons/AddIcon";
 import EditIcon from "@/components/icons/EditIcon";
 import Form from "@/components/core/Form/Form";
 import { NotificationType } from "@/components/core/Notification/Notification";
@@ -218,6 +219,7 @@ function SettingsAppearancePage() {
         updateCustomPalette,
     } = useAppearance();
     const [isSelectingPalette, setIsSelectingPalette] = useState(false);
+    const [isCreatingPalette, setIsCreatingPalette] = useState(false);
     const [editingPaletteId, setEditingPaletteId] = useState<string | null>(
         null,
     );
@@ -239,7 +241,9 @@ function SettingsAppearancePage() {
             return createCustomPalette(customPaletteData);
         },
         onSuccess: (palette) => {
+            setIsCreatingPalette(false);
             setCustomPaletteData("name", "");
+            setCustomPaletteErrors({});
             addNotification({
                 type: NotificationType.SUCCESS,
                 title: "Palette Created",
@@ -325,12 +329,14 @@ function SettingsAppearancePage() {
     };
 
     const handleEditPaletteClick = (palette: CustomPalette) => {
-        if (updatePaletteMutation.isPending) {
+        if (updatePaletteMutation.isPending || createPaletteMutation.isPending) {
             return;
         }
 
         const formData = toPaletteFormData(palette);
 
+        setIsCreatingPalette(false);
+        setCustomPaletteErrors({});
         setEditingPaletteId(palette.id);
         setEditPaletteErrors({});
         setEditPaletteData("name", formData.name);
@@ -355,6 +361,27 @@ function SettingsAppearancePage() {
         setEditPaletteErrors({});
     };
 
+    const handleCreatePaletteClick = () => {
+        if (createPaletteMutation.isPending || updatePaletteMutation.isPending) {
+            return;
+        }
+
+        setEditingPaletteId(null);
+        setEditPaletteErrors({});
+        setCustomPaletteErrors({});
+        setIsCreatingPalette(true);
+    };
+
+    const handleCancelCreatePalette = () => {
+        if (createPaletteMutation.isPending) {
+            return;
+        }
+
+        setIsCreatingPalette(false);
+        setCustomPaletteErrors({});
+        setCustomPaletteData("name", "");
+    };
+
     const handleUpdatePaletteSubmit = () => {
         if (!editingPaletteId || updatePaletteMutation.isPending) {
             return;
@@ -371,6 +398,10 @@ function SettingsAppearancePage() {
     };
 
     const handleCreatePaletteSubmit = () => {
+        if (createPaletteMutation.isPending) {
+            return;
+        }
+
         if (!customPaletteData.name.trim()) {
             setCustomPaletteErrors({
                 name: "Palette name is required",
@@ -708,8 +739,8 @@ function SettingsAppearancePage() {
                                 styles["settings-page__custom-palette-empty"]
                             }
                         >
-                            No custom palettes yet. Create one below to
-                            personalize the interface.
+                            No custom palettes yet. Use Create to personalize
+                            the interface.
                         </p>
                     )}
                 </fieldset>
@@ -717,6 +748,25 @@ function SettingsAppearancePage() {
                 <p className={styles["settings-page__palette-status"]}>
                     Active palette: <strong>{activePaletteLabel}</strong>.
                 </p>
+
+                <div className={styles["settings-page__palette-actions"]}>
+                    <button
+                        aria-controls="settings-custom-palette-creator"
+                        aria-expanded={isCreatingPalette}
+                        className={`${styles["settings-page__palette-option-edit"]} ${
+                            isCreatingPalette
+                                ? styles[
+                                      "settings-page__palette-option-edit--active"
+                                  ]
+                                : ""
+                        }`}
+                        onClick={handleCreatePaletteClick}
+                        type="button"
+                    >
+                        <AddIcon />
+                        <span>Create</span>
+                    </button>
+                </div>
 
                 {editingPaletteId && editingPaletteName && (
                     <section
@@ -817,93 +867,108 @@ function SettingsAppearancePage() {
                     </section>
                 )}
 
-                <section
-                    className={styles["settings-page__custom-palette-creator"]}
-                >
-                    <h3>Create custom palette</h3>
-                    <p className={styles["settings-page__step-note"]}>
-                        Pick base background/text plus primary/secondary and
-                        accent colors. GigLog generates lighter shades
-                        automatically.
-                    </p>
+                {isCreatingPalette && (
+                    <section
+                        id="settings-custom-palette-creator"
+                        className={styles["settings-page__custom-palette-creator"]}
+                    >
+                        <h3>Create custom palette</h3>
+                        <p className={styles["settings-page__step-note"]}>
+                            Pick base background/text plus primary/secondary and
+                            accent colors. GigLog generates lighter shades
+                            automatically.
+                        </p>
 
-                    <Form onSubmit={handleCreatePaletteSubmit}>
-                        <TextInput
-                            name="name"
-                            label="Palette Name"
-                            placeholder="Ocean Mist"
-                            data={customPaletteData}
-                            setData={setCustomPaletteData}
-                            errors={customPaletteErrors}
-                        />
+                        <Form onSubmit={handleCreatePaletteSubmit}>
+                            <TextInput
+                                name="name"
+                                label="Palette Name"
+                                placeholder="Ocean Mist"
+                                data={customPaletteData}
+                                setData={setCustomPaletteData}
+                                errors={customPaletteErrors}
+                            />
 
-                        <div
-                            className={
-                                styles["settings-page__custom-palette-grid"]
-                            }
-                        >
-                            {paletteSeedOptions.map((option) => {
-                                const value = customPaletteData[option.name];
-                                const errorMessage =
-                                    customPaletteErrors[option.name];
+                            <div
+                                className={
+                                    styles["settings-page__custom-palette-grid"]
+                                }
+                            >
+                                {paletteSeedOptions.map((option) => {
+                                    const value = customPaletteData[option.name];
+                                    const errorMessage =
+                                        customPaletteErrors[option.name];
 
-                                return (
-                                    <label
-                                        key={option.name}
-                                        className={
-                                            styles[
-                                                "settings-page__custom-palette-color"
-                                            ]
-                                        }
-                                    >
-                                        <span>{option.label}</span>
-                                        <input
+                                    return (
+                                        <label
+                                            key={option.name}
                                             className={
                                                 styles[
-                                                    "settings-page__custom-palette-color-input"
-                                                ]
-                                            }
-                                            type="color"
-                                            value={value}
-                                            onChange={(event) =>
-                                                setCustomPaletteData(
-                                                    option.name,
-                                                    event.currentTarget.value,
-                                                )
-                                            }
-                                        />
-                                        <span
-                                            className={
-                                                styles[
-                                                    "settings-page__custom-palette-color-value"
+                                                    "settings-page__custom-palette-color"
                                                 ]
                                             }
                                         >
-                                            {value.toUpperCase()}
-                                        </span>
-                                        {errorMessage && (
-                                            <p
+                                            <span>{option.label}</span>
+                                            <input
                                                 className={
                                                     styles[
-                                                        "settings-page__field-error"
+                                                        "settings-page__custom-palette-color-input"
+                                                    ]
+                                                }
+                                                type="color"
+                                                value={value}
+                                                onChange={(event) =>
+                                                    setCustomPaletteData(
+                                                        option.name,
+                                                        event.currentTarget
+                                                            .value,
+                                                    )
+                                                }
+                                            />
+                                            <span
+                                                className={
+                                                    styles[
+                                                        "settings-page__custom-palette-color-value"
                                                     ]
                                                 }
                                             >
-                                                {errorMessage}
-                                            </p>
-                                        )}
-                                    </label>
-                                );
-                            })}
-                        </div>
+                                                {value.toUpperCase()}
+                                            </span>
+                                            {errorMessage && (
+                                                <p
+                                                    className={
+                                                        styles[
+                                                            "settings-page__field-error"
+                                                        ]
+                                                    }
+                                                >
+                                                    {errorMessage}
+                                                </p>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
 
-                        <Button type="submit">
-                            {createPaletteMutation.isPending
-                                ? "Creating Palette..."
-                                : "Create Custom Palette"}
-                        </Button>
-                    </Form>
-                </section>
+                            <div
+                                className={styles["settings-page__form-actions"]}
+                            >
+                                <Button type="submit">
+                                    {createPaletteMutation.isPending
+                                        ? "Creating Palette..."
+                                        : "Create Custom Palette"}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={ButtonVariant.SECONDARY}
+                                    onClick={handleCancelCreatePalette}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </Form>
+                    </section>
+                )}
             </article>
         </section>
     );

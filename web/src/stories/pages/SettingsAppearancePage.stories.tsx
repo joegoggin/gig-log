@@ -5,6 +5,7 @@
  * - Theme mode controls switch appearance and update `data-theme`.
  * - Palette controls restore persisted state and update `data-palette`.
  * - Custom role-color controls apply background/text/primary/secondary tokens.
+ * - Custom palette creation form remains hidden until the Create button is selected.
  * - Custom palette creation adds a selectable palette and activates it.
  * - Custom palette editing updates palette metadata and active CSS tokens.
  * - Custom palette editing supports validation and cancel paths.
@@ -70,6 +71,18 @@ const clickOptionLabel = async (radioInput: HTMLElement) => {
     }
 
     await userEvent.click(label);
+};
+
+const openCreatePaletteCreator = async (
+    canvas: ReturnType<typeof within>,
+) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await expect(
+        canvas.getByRole("heading", {
+            level: 3,
+            name: "Create custom palette",
+        }),
+    ).toBeVisible();
 };
 
 const hexToRgbTriplet = (hex: string): string => {
@@ -316,6 +329,15 @@ export const CreatesCustomPaletteAndActivatesIt: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
+        await expect(
+            canvas.queryByRole("heading", {
+                level: 3,
+                name: "Create custom palette",
+            }),
+        ).toBeNull();
+
+        await openCreatePaletteCreator(canvas);
+
         const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
         const backgroundHex = "#a9b1d6";
         const textHex = "#1a1b26";
@@ -355,10 +377,30 @@ export const CreatesCustomPaletteAndActivatesIt: Story = {
     },
 };
 
+export const ShowsCreateFormOnlyAfterTrigger: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await expect(
+            canvas.queryByRole("heading", {
+                level: 3,
+                name: "Create custom palette",
+            }),
+        ).toBeNull();
+
+        await openCreatePaletteCreator(canvas);
+
+        await expect(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        ).toBeVisible();
+    },
+};
+
 export const EditsCustomPaletteAndAppliesUpdatedTokens: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
+        await openCreatePaletteCreator(canvas);
         const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
         const updatedPrimaryHex = "#336699";
 
@@ -436,6 +478,7 @@ export const EditsCustomPaletteAndAppliesUpdatedTokens: Story = {
 export const RequiresPaletteNameWhenEditingCustomPalette: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+        await openCreatePaletteCreator(canvas);
         const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
 
         await userEvent.type(paletteNameInput, "Sea Glass");
@@ -477,6 +520,7 @@ export const RequiresPaletteNameWhenEditingCustomPalette: Story = {
 export const CancelsCustomPaletteEditingWithoutSaving: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+        await openCreatePaletteCreator(canvas);
         const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
 
         await userEvent.type(paletteNameInput, "Evening Sky");
@@ -527,6 +571,8 @@ export const CancelsCustomPaletteEditingWithoutSaving: Story = {
 export const RequiresPaletteNameBeforeCreatingCustomPalette: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+
+        await openCreatePaletteCreator(canvas);
 
         await userEvent.click(
             canvas.getByRole("button", { name: "Create Custom Palette" }),

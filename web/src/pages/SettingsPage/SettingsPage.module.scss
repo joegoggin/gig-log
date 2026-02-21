@@ -418,6 +418,10 @@
         font-size: 14px;
     }
 
+    &__palette-actions {
+        margin-top: 14px;
+    }
+
     &__custom-palette-editor,
     &__custom-palette-creator {
         margin-top: 24px;
@@ -500,10 +504,6 @@
 
     form :global(button) {
         min-width: 220px;
-    }
-
-    &__custom-palette-creator form :global(button):first-of-type {
-        margin-top: 22px;
     }
 
     @include media.tablet {
