@@ -1,8 +1,9 @@
 //! One-time authentication code utilities.
 //!
-//! This module supports short numeric code flows (for example email confirmation
-//! and password reset) by generating six-digit codes, hashing codes for storage,
-//! and verifying user input against stored hashes.
+//! This module supports short numeric code flows (for example email confirmation,
+//! password reset, and authenticated email-change verification) by generating
+//! six-digit codes, hashing codes for storage, and verifying user input against
+//! stored hashes.
 
 use rand::Rng;
 use sha2::{Digest, Sha256};

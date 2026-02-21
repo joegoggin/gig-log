@@ -1,4 +1,5 @@
-//! Authentication code model for email confirmation and password reset flows.
+//! Authentication code model for email confirmation, password reset, and
+//! authenticated email-change verification flows.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,8 @@ pub enum AuthCodeType {
     EmailChange,
 }
 
-/// A time-limited authentication code used for email and password security flows.
+/// A time-limited authentication code used for email ownership and password
+/// security flows.
 ///
 /// Codes are hashed before storage and can only be used once. They expire after
 /// a configured time period.
