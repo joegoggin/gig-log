@@ -81,7 +81,9 @@ const createPresetSelection = (
 
 const isPresetPalette = (palette: string): palette is ColorPalette => {
     return (
-        palette === "default" || palette === "sunset" || palette === "forest"
+        palette === "catppuccin" ||
+        palette === "tokyo-night" ||
+        palette === "everforest"
     );
 };
 

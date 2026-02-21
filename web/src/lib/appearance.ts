@@ -2,7 +2,11 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export type ResolvedTheme = "light" | "dark";
 
-export const COLOR_PALETTES = ["default", "sunset", "forest"] as const;
+export const COLOR_PALETTES = [
+    "catppuccin",
+    "tokyo-night",
+    "everforest",
+] as const;
 
 export type ColorPalette = (typeof COLOR_PALETTES)[number];
 
@@ -65,7 +69,13 @@ export const SYSTEM_COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)";
 
 export const DEFAULT_APPEARANCE_PREFERENCES: AppearancePreferences = {
     mode: "system",
-    palette: "default",
+    palette: "tokyo-night",
+};
+
+const LEGACY_COLOR_PALETTE_MAP: Record<string, ColorPalette> = {
+    default: "tokyo-night",
+    sunset: "catppuccin",
+    forest: "everforest",
 };
 
 const PALETTE_TOKEN_VARIABLE_NAMES: Record<keyof PaletteRgbTokens, string> = {
@@ -188,12 +198,18 @@ const parseStoredPreferences = (
         return DEFAULT_APPEARANCE_PREFERENCES;
     }
 
+    const storedPalette =
+        typeof storedValue.palette === "string" ? storedValue.palette : null;
+    const normalizedPalette = storedPalette
+        ? (LEGACY_COLOR_PALETTE_MAP[storedPalette] ?? storedPalette)
+        : null;
+
     return {
         mode: isThemeMode(storedValue.mode)
             ? storedValue.mode
             : DEFAULT_APPEARANCE_PREFERENCES.mode,
-        palette: isColorPalette(storedValue.palette)
-            ? storedValue.palette
+        palette: isColorPalette(normalizedPalette)
+            ? normalizedPalette
             : DEFAULT_APPEARANCE_PREFERENCES.palette,
     };
 };

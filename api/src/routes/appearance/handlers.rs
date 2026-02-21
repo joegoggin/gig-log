@@ -25,7 +25,7 @@ use super::payloads::{
     SetActivePaletteResponse, UpdateCustomPaletteRequest, UpdateCustomPaletteResponse,
 };
 
-const PRESET_PALETTES: [&str; 3] = ["default", "sunset", "forest"];
+const PRESET_PALETTES: [&str; 3] = ["catppuccin", "tokyo-night", "everforest"];
 
 /// Loads appearance settings for the authenticated user.
 ///
@@ -338,7 +338,8 @@ pub async fn set_active_palette(
 
             if !is_preset_palette(&preset_palette) {
                 return Err(ApiError::ValidationError(
-                    "Preset palette must be one of: default, sunset, forest".to_string(),
+                    "Preset palette must be one of: catppuccin, tokyo-night, everforest"
+                        .to_string(),
                 ));
             }
 
@@ -445,7 +446,7 @@ fn resolve_active_palette(
 
     ActivePaletteSelectionResponse {
         palette_type: "preset".to_string(),
-        preset_palette: Some("default".to_string()),
+        preset_palette: Some("tokyo-night".to_string()),
         custom_palette_id: None,
     }
 }
@@ -712,7 +713,7 @@ mod tests {
             .insert_header(("Cookie", format!("access_token={access_token}")))
             .set_json(json!({
                 "palette_type": "preset",
-                "preset_palette": "default",
+                "preset_palette": "tokyo-night",
                 "custom_palette_id": Uuid::new_v4()
             }))
             .to_request();
@@ -745,7 +746,7 @@ mod tests {
             .insert_header(("Cookie", format!("access_token={access_token}")))
             .set_json(json!({
                 "palette_type": "custom",
-                "preset_palette": "default",
+                "preset_palette": "tokyo-night",
                 "custom_palette_id": Uuid::new_v4()
             }))
             .to_request();

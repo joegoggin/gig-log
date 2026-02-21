@@ -4,6 +4,7 @@
  * Covered scenarios:
  * - Default appearance preferences are used when storage is empty or invalid.
  * - Saved theme mode and palette preferences persist and restore correctly.
+ * - Legacy preset palette names migrate to the new preset identifiers.
  * - App initialization applies the restored preference to `data-theme`/`data-palette`.
  * - Custom palette seed colors generate deterministic token shades and apply/clear CSS vars.
  *
@@ -89,7 +90,7 @@ describe("appearance helpers", () => {
     it("falls back to default appearance when stored mode is invalid", () => {
         storage.setItem(
             APPEARANCE_STORAGE_KEY,
-            JSON.stringify({ mode: "invalid-mode", palette: "default" }),
+            JSON.stringify({ mode: "invalid-mode", palette: "tokyo-night" }),
         );
 
         expect(loadAppearancePreferences(storage)).toEqual(
@@ -112,7 +113,7 @@ describe("appearance helpers", () => {
     it("restores persisted appearance preference", () => {
         const savedPreferences = {
             mode: "dark",
-            palette: "sunset",
+            palette: "catppuccin",
         } as const;
 
         persistAppearancePreferences(savedPreferences, storage);
@@ -120,12 +121,24 @@ describe("appearance helpers", () => {
         expect(loadAppearancePreferences(storage)).toEqual(savedPreferences);
     });
 
+    it("maps legacy preset palettes to new preset identifiers", () => {
+        storage.setItem(
+            APPEARANCE_STORAGE_KEY,
+            JSON.stringify({ mode: "dark", palette: "sunset" }),
+        );
+
+        expect(loadAppearancePreferences(storage)).toEqual({
+            mode: "dark",
+            palette: "catppuccin",
+        });
+    });
+
     it("applies persisted mode to data-theme on initialize", () => {
         const mediaQueryMock = mockMatchMedia(false);
 
         try {
             persistAppearancePreferences(
-                { mode: "dark", palette: "forest" },
+                { mode: "dark", palette: "everforest" },
                 storage,
             );
 
@@ -135,7 +148,7 @@ describe("appearance helpers", () => {
                 "dark",
             );
             expect(document.documentElement.getAttribute("data-palette")).toBe(
-                "forest",
+                "everforest",
             );
         } finally {
             mediaQueryMock.restore();
@@ -147,7 +160,7 @@ describe("appearance helpers", () => {
 
         try {
             persistAppearancePreferences(
-                { mode: "system", palette: "default" },
+                { mode: "system", palette: "tokyo-night" },
                 storage,
             );
 
