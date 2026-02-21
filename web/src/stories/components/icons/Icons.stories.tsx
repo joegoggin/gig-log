@@ -5,8 +5,8 @@
  * - Renders all icons in gallery and standalone stories.
  * - Verifies GigLog logo mark colors respond to theme changes.
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import AddIcon from "@/components/icons/AddIcon";
 import BackIcon from "@/components/icons/BackIcon";
 import CheckIcon from "@/components/icons/CheckIcon";
@@ -208,10 +208,9 @@ export const GigLogLogoThemeResponsive: StoryObj<typeof GigLogLogoIcon> = {
         } finally {
             if (initialTheme === "light" || initialTheme === "dark") {
                 rootElement.setAttribute("data-theme", initialTheme);
-                return;
+            } else {
+                rootElement.removeAttribute("data-theme");
             }
-
-            rootElement.removeAttribute("data-theme");
         }
     },
 };

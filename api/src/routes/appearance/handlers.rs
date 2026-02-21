@@ -470,12 +470,15 @@ fn map_custom_palette(palette: UserColorPalette) -> ApiResult<CustomPaletteRespo
 }
 
 fn map_create_palette_error(error: sqlx::Error) -> ApiError {
-    if let sqlx::Error::Database(database_error) = &error {
-        if database_error.constraint() == Some("idx_user_color_palettes_user_lower_name") {
+    match &error {
+        sqlx::Error::Database(database_error)
+            if database_error.constraint() == Some("idx_user_color_palettes_user_lower_name") =>
+        {
             return ApiError::ValidationError(
                 "You already have a custom palette with this name.".to_string(),
             );
         }
+        _ => {}
     }
 
     ApiError::from(error)
