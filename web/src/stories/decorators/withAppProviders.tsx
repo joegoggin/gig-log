@@ -6,6 +6,7 @@
  * - Injects auth context overrides from `parameters.storyTest.auth`.
  * - Captures notification calls via `parameters.storyTest.spies.addNotification`.
  * - Applies deterministic appearance defaults (theme + palette).
+ * - Allows opting into persisted appearance API behavior per story.
  * - Keeps real notification rendering so stories can assert visible messages.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -47,7 +48,9 @@ const getDefaultStoryThemeMode = (): AppearancePreferences["mode"] => {
     return "dark";
 };
 
-const createBaseAuthValue = (): NonNullable<ContextType<typeof AuthContext>> => ({
+const createBaseAuthValue = (): NonNullable<
+    ContextType<typeof AuthContext>
+> => ({
     user: null,
     isLoggedIn: false,
     isLoading: false,
@@ -81,9 +84,9 @@ function StoryProviders({ children, config }: StoryProvidersProps) {
                 },
             }),
     );
-    const [notifications, setNotifications] = useState<Array<NotificationWithId>>(
-        [],
-    );
+    const [notifications, setNotifications] = useState<
+        Array<NotificationWithId>
+    >([]);
     const notificationIdRef = useRef(0);
     const authOverrides = config?.auth;
     const authValue = useMemo(() => {
@@ -101,6 +104,7 @@ function StoryProviders({ children, config }: StoryProvidersProps) {
         () => createAppearancePreferences(config),
         [config],
     );
+    const appearancePersist = config?.appearance?.persist ?? false;
 
     const addNotification = useCallback(
         (notification: Omit<NotificationProps, "onClose">) => {
@@ -120,18 +124,22 @@ function StoryProviders({ children, config }: StoryProvidersProps) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <AppearanceProvider
-                initialPreferences={appearancePreferences}
-                persist={false}
-            >
-                <AuthContext.Provider value={authValue}>
+            <AuthContext.Provider value={authValue}>
+                <AppearanceProvider
+                    initialPreferences={appearancePreferences}
+                    persist={appearancePersist}
+                >
                     <NotificationContext.Provider
-                        value={{ notifications, addNotification, removeNotification }}
+                        value={{
+                            notifications,
+                            addNotification,
+                            removeNotification,
+                        }}
                     >
                         <WorkSessionProvider>{children}</WorkSessionProvider>
                     </NotificationContext.Provider>
-                </AuthContext.Provider>
-            </AppearanceProvider>
+                </AppearanceProvider>
+            </AuthContext.Provider>
         </QueryClientProvider>
     );
 }

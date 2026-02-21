@@ -11,7 +11,8 @@ export const settingsSections: Array<SettingsSection> = [
     {
         href: "/settings",
         label: "Overview",
-        description: "Start here to choose the settings area you want to manage.",
+        description:
+            "Start here to choose the settings area you want to manage.",
     },
     {
         href: "/settings/password",
@@ -26,6 +27,6 @@ export const settingsSections: Array<SettingsSection> = [
     {
         href: "/settings/appearance",
         label: "Appearance",
-        description: "Adjust theme mode and color palette preferences.",
+        description: "Adjust theme mode, presets, and custom color palettes.",
     },
 ];

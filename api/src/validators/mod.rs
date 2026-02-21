@@ -6,11 +6,13 @@
 //!
 //! # Modules
 //!
+//! - [`color_hex`] - 6-digit hex color validation for custom palette seeds
 //! - [`company_tax_rate`] - Company tax-withholding cross-field validation
 //! - [`job_payment_type`] - Job payment-type cross-field validation
 //! - [`password_match`] - Password confirmation validation for sign-up and password-update flows
 //! - [`payment_consistency`] - Payment payout/date/status cross-field validation
 
+pub mod color_hex;
 pub mod company_tax_rate;
 pub mod job_payment_type;
 pub mod password_match;

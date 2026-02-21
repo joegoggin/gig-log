@@ -4,6 +4,8 @@
  * Covered scenarios:
  * - Theme mode controls switch appearance and update `data-theme`.
  * - Palette controls restore persisted state and update `data-palette`.
+ * - Custom palette creation adds a selectable palette and activates it.
+ * - Custom palette creation requires a non-empty palette name.
  * - Contrast checks verify readable text/surface pairs across palette and theme combinations.
  *
  * These tests prevent regressions in persisted appearance preferences.
@@ -42,9 +44,7 @@ const getRelativeLuminance = (color: string): number => {
     });
 
     return (
-        normalized[0] * 0.2126 +
-        normalized[1] * 0.7152 +
-        normalized[2] * 0.0722
+        normalized[0] * 0.2126 + normalized[1] * 0.7152 + normalized[2] * 0.0722
     );
 };
 
@@ -61,7 +61,9 @@ const clickOptionLabel = async (radioInput: HTMLElement) => {
     const label = radioInput.closest("label");
 
     if (!label) {
-        throw new Error("Expected radio input to be wrapped by a label element.");
+        throw new Error(
+            "Expected radio input to be wrapped by a label element.",
+        );
     }
 
     await userEvent.click(label);
@@ -144,7 +146,9 @@ export const RestoresPalettePreferenceOnLoad: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
-        const forestPaletteRadio = canvas.getByRole("radio", { name: /^Forest / });
+        const forestPaletteRadio = canvas.getByRole("radio", {
+            name: /^Forest /,
+        });
         const eyebrow = canvas.getByText("Account and appearance");
 
         await expect(rootElement.getAttribute("data-palette")).toBe("forest");
@@ -176,9 +180,15 @@ export const SwitchesPaletteAndUpdatesDataPalette: Story = {
         const canvas = within(canvasElement);
         const rootElement = canvasElement.ownerDocument.documentElement;
         const eyebrow = canvas.getByText("Account and appearance");
-        const defaultPaletteRadio = canvas.getByRole("radio", { name: /^Default / });
-        const sunsetPaletteRadio = canvas.getByRole("radio", { name: /^Sunset / });
-        const forestPaletteRadio = canvas.getByRole("radio", { name: /^Forest / });
+        const defaultPaletteRadio = canvas.getByRole("radio", {
+            name: /^Default /,
+        });
+        const sunsetPaletteRadio = canvas.getByRole("radio", {
+            name: /^Sunset /,
+        });
+        const forestPaletteRadio = canvas.getByRole("radio", {
+            name: /^Forest /,
+        });
 
         await expect(rootElement.getAttribute("data-palette")).toBe("default");
         await expect(defaultPaletteRadio).toBeChecked();
@@ -256,7 +266,9 @@ export const MaintainsReadableContrastAcrossPalettesAndThemes: Story = {
             await clickOptionLabel(themeRadio);
 
             await waitFor(() => {
-                expect(rootElement.getAttribute("data-theme")).toBe(themeSelection.value);
+                expect(rootElement.getAttribute("data-theme")).toBe(
+                    themeSelection.value,
+                );
             });
 
             for (const paletteSelection of paletteSelections) {
@@ -273,7 +285,8 @@ export const MaintainsReadableContrastAcrossPalettesAndThemes: Story = {
 
                 const pageContrast = getContrastRatio(
                     getComputedStyle(heading).color,
-                    getComputedStyle(canvasElement.ownerDocument.body).backgroundColor,
+                    getComputedStyle(canvasElement.ownerDocument.body)
+                        .backgroundColor,
                 );
                 const optionContrast = getContrastRatio(
                     getComputedStyle(themeOptionLabel).color,
@@ -284,5 +297,41 @@ export const MaintainsReadableContrastAcrossPalettesAndThemes: Story = {
                 await expect(optionContrast).toBeGreaterThanOrEqual(4.5);
             }
         }
+    },
+};
+
+export const CreatesCustomPaletteAndActivatesIt: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const rootElement = canvasElement.ownerDocument.documentElement;
+        const paletteNameInput = canvas.getByPlaceholderText("Ocean Mist");
+
+        await userEvent.type(paletteNameInput, "Ocean Mist");
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        );
+
+        const oceanMistRadio = await canvas.findByRole("radio", {
+            name: /Ocean Mist/i,
+        });
+
+        await waitFor(() => {
+            expect(rootElement.getAttribute("data-palette")).toBe("custom");
+        });
+        await expect(oceanMistRadio).toBeChecked();
+    },
+};
+
+export const RequiresPaletteNameBeforeCreatingCustomPalette: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(
+            canvas.getByRole("button", { name: "Create Custom Palette" }),
+        );
+
+        await expect(
+            canvas.getByText("Palette name is required"),
+        ).toBeVisible();
     },
 };

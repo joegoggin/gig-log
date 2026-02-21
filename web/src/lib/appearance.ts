@@ -11,6 +11,40 @@ export type AppearancePreferences = {
     palette: ColorPalette;
 };
 
+export type PaletteSeedHexColors = {
+    green_seed_hex: string;
+    red_seed_hex: string;
+    yellow_seed_hex: string;
+    blue_seed_hex: string;
+    magenta_seed_hex: string;
+    cyan_seed_hex: string;
+};
+
+export type PaletteRgbTokens = {
+    black: string;
+    white: string;
+    green_100: string;
+    green_80: string;
+    green_60: string;
+    red_100: string;
+    red_80: string;
+    red_60: string;
+    yellow_100: string;
+    yellow_80: string;
+    yellow_60: string;
+    blue_100: string;
+    blue_80: string;
+    blue_60: string;
+    magenta_100: string;
+    magenta_80: string;
+    magenta_60: string;
+    cyan_100: string;
+    cyan_80: string;
+    cyan_60: string;
+};
+
+export type PaletteAttribute = ColorPalette | "custom";
+
 export type AppearanceStorage = Pick<Storage, "getItem" | "setItem">;
 
 export const APPEARANCE_STORAGE_KEY = "giglog.appearance";
@@ -20,6 +54,32 @@ export const SYSTEM_COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)";
 export const DEFAULT_APPEARANCE_PREFERENCES: AppearancePreferences = {
     mode: "system",
     palette: "default",
+};
+
+const DEFAULT_BLACK_RGB = "26, 27, 38";
+const DEFAULT_WHITE_RGB = "169, 177, 214";
+
+const PALETTE_TOKEN_VARIABLE_NAMES: Record<keyof PaletteRgbTokens, string> = {
+    black: "--color-black-rgb",
+    white: "--color-white-rgb",
+    green_100: "--color-green-100-rgb",
+    green_80: "--color-green-80-rgb",
+    green_60: "--color-green-60-rgb",
+    red_100: "--color-red-100-rgb",
+    red_80: "--color-red-80-rgb",
+    red_60: "--color-red-60-rgb",
+    yellow_100: "--color-yellow-100-rgb",
+    yellow_80: "--color-yellow-80-rgb",
+    yellow_60: "--color-yellow-60-rgb",
+    blue_100: "--color-blue-100-rgb",
+    blue_80: "--color-blue-80-rgb",
+    blue_60: "--color-blue-60-rgb",
+    magenta_100: "--color-magenta-100-rgb",
+    magenta_80: "--color-magenta-80-rgb",
+    magenta_60: "--color-magenta-60-rgb",
+    cyan_100: "--color-cyan-100-rgb",
+    cyan_80: "--color-cyan-80-rgb",
+    cyan_60: "--color-cyan-60-rgb",
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -35,6 +95,53 @@ const isColorPalette = (value: unknown): value is ColorPalette => {
         typeof value === "string" &&
         COLOR_PALETTES.includes(value as ColorPalette)
     );
+};
+
+const isValidHexColor = (value: string): boolean => {
+    return /^#[\da-fA-F]{6}$/.test(value.trim());
+};
+
+const parseHexChannel = (value: string): number => {
+    const channel = Number.parseInt(value, 16);
+
+    if (Number.isNaN(channel)) {
+        throw new Error("Invalid hex color channel");
+    }
+
+    return channel;
+};
+
+const parseHexToRgbChannels = (hex: string): [number, number, number] => {
+    const normalized = hex.trim();
+
+    if (!isValidHexColor(normalized)) {
+        throw new Error("Color must use 6-digit hex format.");
+    }
+
+    return [
+        parseHexChannel(normalized.slice(1, 3)),
+        parseHexChannel(normalized.slice(3, 5)),
+        parseHexChannel(normalized.slice(5, 7)),
+    ];
+};
+
+const lightenChannel = (channel: number, mixWithWhite: number): number => {
+    const mixed = channel + (255 - channel) * mixWithWhite;
+    return Math.round(Math.max(0, Math.min(255, mixed)));
+};
+
+const toRgbTriplet = (channels: [number, number, number]): string => {
+    return `${channels[0]}, ${channels[1]}, ${channels[2]}`;
+};
+
+const shadeHexColor = (hex: string, mixWithWhite: number): string => {
+    const [red, green, blue] = parseHexToRgbChannels(hex);
+
+    return toRgbTriplet([
+        lightenChannel(red, mixWithWhite),
+        lightenChannel(green, mixWithWhite),
+        lightenChannel(blue, mixWithWhite),
+    ]);
 };
 
 const getDefaultStorage = (): AppearanceStorage | null => {
@@ -57,7 +164,9 @@ const getDocumentElement = (): HTMLElement | null => {
     return document.documentElement;
 };
 
-const parseStoredPreferences = (storedValue: unknown): AppearancePreferences => {
+const parseStoredPreferences = (
+    storedValue: unknown,
+): AppearancePreferences => {
     if (!isRecord(storedValue)) {
         return DEFAULT_APPEARANCE_PREFERENCES;
     }
@@ -73,11 +182,16 @@ const parseStoredPreferences = (storedValue: unknown): AppearancePreferences => 
 };
 
 export function getSystemTheme(): ResolvedTheme {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+        typeof window === "undefined" ||
+        typeof window.matchMedia !== "function"
+    ) {
         return "light";
     }
 
-    return window.matchMedia(SYSTEM_COLOR_SCHEME_QUERY).matches ? "dark" : "light";
+    return window.matchMedia(SYSTEM_COLOR_SCHEME_QUERY).matches
+        ? "dark"
+        : "light";
 }
 
 export function resolveThemeMode(
@@ -140,7 +254,7 @@ export function applyTheme(
 }
 
 export function applyPalette(
-    palette: ColorPalette,
+    palette: PaletteAttribute,
     target: HTMLElement | null = getDocumentElement(),
 ): void {
     if (!target) {
@@ -148,6 +262,63 @@ export function applyPalette(
     }
 
     target.setAttribute("data-palette", palette);
+}
+
+export function generatePaletteTokensFromSeeds(
+    seedColors: PaletteSeedHexColors,
+): PaletteRgbTokens {
+    return {
+        black: DEFAULT_BLACK_RGB,
+        white: DEFAULT_WHITE_RGB,
+        green_100: shadeHexColor(seedColors.green_seed_hex, 0),
+        green_80: shadeHexColor(seedColors.green_seed_hex, 0.2),
+        green_60: shadeHexColor(seedColors.green_seed_hex, 0.4),
+        red_100: shadeHexColor(seedColors.red_seed_hex, 0),
+        red_80: shadeHexColor(seedColors.red_seed_hex, 0.2),
+        red_60: shadeHexColor(seedColors.red_seed_hex, 0.4),
+        yellow_100: shadeHexColor(seedColors.yellow_seed_hex, 0),
+        yellow_80: shadeHexColor(seedColors.yellow_seed_hex, 0.2),
+        yellow_60: shadeHexColor(seedColors.yellow_seed_hex, 0.4),
+        blue_100: shadeHexColor(seedColors.blue_seed_hex, 0),
+        blue_80: shadeHexColor(seedColors.blue_seed_hex, 0.2),
+        blue_60: shadeHexColor(seedColors.blue_seed_hex, 0.4),
+        magenta_100: shadeHexColor(seedColors.magenta_seed_hex, 0),
+        magenta_80: shadeHexColor(seedColors.magenta_seed_hex, 0.2),
+        magenta_60: shadeHexColor(seedColors.magenta_seed_hex, 0.4),
+        cyan_100: shadeHexColor(seedColors.cyan_seed_hex, 0),
+        cyan_80: shadeHexColor(seedColors.cyan_seed_hex, 0.2),
+        cyan_60: shadeHexColor(seedColors.cyan_seed_hex, 0.4),
+    };
+}
+
+export function applyCustomPaletteTokens(
+    tokens: PaletteRgbTokens,
+    target: HTMLElement | null = getDocumentElement(),
+): void {
+    if (!target) {
+        return;
+    }
+
+    for (const token of Object.keys(PALETTE_TOKEN_VARIABLE_NAMES) as Array<
+        keyof PaletteRgbTokens
+    >) {
+        target.style.setProperty(
+            PALETTE_TOKEN_VARIABLE_NAMES[token],
+            tokens[token],
+        );
+    }
+}
+
+export function clearCustomPaletteTokens(
+    target: HTMLElement | null = getDocumentElement(),
+): void {
+    if (!target) {
+        return;
+    }
+
+    for (const variableName of Object.values(PALETTE_TOKEN_VARIABLE_NAMES)) {
+        target.style.removeProperty(variableName);
+    }
 }
 
 export function applyAppearancePreferences(
@@ -176,7 +347,10 @@ export function initializeAppearance(
 export function subscribeToSystemTheme(
     onThemeChange: (theme: ResolvedTheme) => void,
 ): () => void {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+        typeof window === "undefined" ||
+        typeof window.matchMedia !== "function"
+    ) {
         return () => {};
     }
 

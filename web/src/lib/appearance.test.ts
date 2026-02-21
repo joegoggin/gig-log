@@ -5,6 +5,7 @@
  * - Default appearance preferences are used when storage is empty or invalid.
  * - Saved theme mode and palette preferences persist and restore correctly.
  * - App initialization applies the restored preference to `data-theme`/`data-palette`.
+ * - Custom palette seed colors generate deterministic token shades and apply/clear CSS vars.
  *
  * These tests prevent regressions where a saved theme mode is ignored after
  * reload or malformed storage data breaks appearance initialization.
@@ -14,6 +15,9 @@ import type { AppearanceStorage } from "@/lib/appearance";
 import {
     APPEARANCE_STORAGE_KEY,
     DEFAULT_APPEARANCE_PREFERENCES,
+    applyCustomPaletteTokens,
+    clearCustomPaletteTokens,
+    generatePaletteTokensFromSeeds,
     initializeAppearance,
     loadAppearancePreferences,
     persistAppearancePreferences,
@@ -127,8 +131,12 @@ describe("appearance helpers", () => {
 
             initializeAppearance(storage);
 
-            expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-            expect(document.documentElement.getAttribute("data-palette")).toBe("forest");
+            expect(document.documentElement.getAttribute("data-theme")).toBe(
+                "dark",
+            );
+            expect(document.documentElement.getAttribute("data-palette")).toBe(
+                "forest",
+            );
         } finally {
             mediaQueryMock.restore();
         }
@@ -144,13 +152,61 @@ describe("appearance helpers", () => {
             );
 
             initializeAppearance(storage);
-            expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+            expect(document.documentElement.getAttribute("data-theme")).toBe(
+                "dark",
+            );
 
             mediaQueryMock.setMatches(false);
             initializeAppearance(storage);
-            expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+            expect(document.documentElement.getAttribute("data-theme")).toBe(
+                "light",
+            );
         } finally {
             mediaQueryMock.restore();
         }
+    });
+
+    it("generates deterministic accent shades from seed colors", () => {
+        const tokens = generatePaletteTokensFromSeeds({
+            green_seed_hex: "#336699",
+            red_seed_hex: "#e65100",
+            yellow_seed_hex: "#f9a825",
+            blue_seed_hex: "#1e88e5",
+            magenta_seed_hex: "#8e24aa",
+            cyan_seed_hex: "#00838f",
+        });
+
+        expect(tokens.green_100).toBe("51, 102, 153");
+        expect(tokens.green_80).toBe("92, 133, 173");
+        expect(tokens.green_60).toBe("133, 163, 194");
+        expect(tokens.black).toBe("26, 27, 38");
+        expect(tokens.white).toBe("169, 177, 214");
+    });
+
+    it("applies and clears custom palette css variables", () => {
+        const tokens = generatePaletteTokensFromSeeds({
+            green_seed_hex: "#66bb6a",
+            red_seed_hex: "#e27d7c",
+            yellow_seed_hex: "#d0a761",
+            blue_seed_hex: "#5c93cd",
+            magenta_seed_hex: "#a082ce",
+            cyan_seed_hex: "#59b7aa",
+        });
+
+        applyCustomPaletteTokens(tokens, document.documentElement);
+
+        expect(
+            document.documentElement.style.getPropertyValue(
+                "--color-blue-100-rgb",
+            ),
+        ).toBe(tokens.blue_100);
+
+        clearCustomPaletteTokens(document.documentElement);
+
+        expect(
+            document.documentElement.style.getPropertyValue(
+                "--color-blue-100-rgb",
+            ),
+        ).toBe("");
     });
 });
