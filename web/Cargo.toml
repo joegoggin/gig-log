@@ -1,0 +1,8 @@
+[package]
+name = "gig-log-frontend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gig-log-common = { path = "../common" }
+leptos = { version = "0.8.16", features = ["csr"] }

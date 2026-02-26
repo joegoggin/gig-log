@@ -1,0 +1,469 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+:root {
+  --color-black-rgb: 31, 35, 53;
+  --color-white-rgb: 192, 202, 245;
+  --color-background-rgb: 192, 202, 245;
+  --color-text-rgb: 31, 35, 53;
+  --color-primary-100-rgb: 122, 162, 247;
+  --color-primary-80-rgb: 149, 181, 249;
+  --color-primary-60-rgb: 175, 199, 250;
+  --color-secondary-100-rgb: 187, 154, 247;
+  --color-secondary-80-rgb: 201, 174, 249;
+  --color-secondary-60-rgb: 214, 194, 250;
+  --color-green-100-rgb: 158, 206, 106;
+  --color-green-80-rgb: 177, 216, 136;
+  --color-green-60-rgb: 197, 226, 166;
+  --color-red-100-rgb: 247, 118, 142;
+  --color-red-80-rgb: 249, 145, 165;
+  --color-red-60-rgb: 250, 173, 187;
+  --color-yellow-100-rgb: 224, 175, 104;
+  --color-yellow-80-rgb: 230, 191, 134;
+  --color-yellow-60-rgb: 236, 207, 164;
+  --color-blue-100-rgb: 122, 162, 247;
+  --color-blue-80-rgb: 149, 181, 249;
+  --color-blue-60-rgb: 175, 199, 250;
+  --color-magenta-100-rgb: 187, 154, 247;
+  --color-magenta-80-rgb: 201, 174, 249;
+  --color-magenta-60-rgb: 214, 194, 250;
+  --color-cyan-100-rgb: 125, 207, 255;
+  --color-cyan-80-rgb: 151, 217, 255;
+  --color-cyan-60-rgb: 177, 226, 255;
+}
+
+[data-palette=catppuccin] {
+  --color-black-rgb: 30, 30, 46;
+  --color-white-rgb: 205, 214, 244;
+  --color-background-rgb: 205, 214, 244;
+  --color-text-rgb: 30, 30, 46;
+  --color-primary-100-rgb: 137, 180, 250;
+  --color-primary-80-rgb: 161, 195, 251;
+  --color-primary-60-rgb: 184, 210, 252;
+  --color-secondary-100-rgb: 203, 166, 247;
+  --color-secondary-80-rgb: 213, 184, 249;
+  --color-secondary-60-rgb: 224, 202, 250;
+  --color-green-100-rgb: 166, 227, 161;
+  --color-green-80-rgb: 184, 233, 180;
+  --color-green-60-rgb: 202, 238, 199;
+  --color-red-100-rgb: 243, 139, 168;
+  --color-red-80-rgb: 245, 162, 185;
+  --color-red-60-rgb: 248, 185, 203;
+  --color-yellow-100-rgb: 249, 226, 175;
+  --color-yellow-80-rgb: 250, 232, 191;
+  --color-yellow-60-rgb: 251, 238, 207;
+  --color-blue-100-rgb: 137, 180, 250;
+  --color-blue-80-rgb: 161, 195, 251;
+  --color-blue-60-rgb: 184, 210, 252;
+  --color-magenta-100-rgb: 245, 194, 231;
+  --color-magenta-80-rgb: 247, 206, 236;
+  --color-magenta-60-rgb: 249, 218, 241;
+  --color-cyan-100-rgb: 148, 226, 213;
+  --color-cyan-80-rgb: 169, 232, 221;
+  --color-cyan-60-rgb: 191, 238, 230;
+}
+
+[data-palette=tokyo-night] {
+  --color-black-rgb: 31, 35, 53;
+  --color-white-rgb: 192, 202, 245;
+  --color-background-rgb: 192, 202, 245;
+  --color-text-rgb: 31, 35, 53;
+  --color-primary-100-rgb: 122, 162, 247;
+  --color-primary-80-rgb: 149, 181, 249;
+  --color-primary-60-rgb: 175, 199, 250;
+  --color-secondary-100-rgb: 187, 154, 247;
+  --color-secondary-80-rgb: 201, 174, 249;
+  --color-secondary-60-rgb: 214, 194, 250;
+  --color-green-100-rgb: 158, 206, 106;
+  --color-green-80-rgb: 177, 216, 136;
+  --color-green-60-rgb: 197, 226, 166;
+  --color-red-100-rgb: 247, 118, 142;
+  --color-red-80-rgb: 249, 145, 165;
+  --color-red-60-rgb: 250, 173, 187;
+  --color-yellow-100-rgb: 224, 175, 104;
+  --color-yellow-80-rgb: 230, 191, 134;
+  --color-yellow-60-rgb: 236, 207, 164;
+  --color-blue-100-rgb: 122, 162, 247;
+  --color-blue-80-rgb: 149, 181, 249;
+  --color-blue-60-rgb: 175, 199, 250;
+  --color-magenta-100-rgb: 187, 154, 247;
+  --color-magenta-80-rgb: 201, 174, 249;
+  --color-magenta-60-rgb: 214, 194, 250;
+  --color-cyan-100-rgb: 125, 207, 255;
+  --color-cyan-80-rgb: 151, 217, 255;
+  --color-cyan-60-rgb: 177, 226, 255;
+}
+
+[data-palette=everforest] {
+  --color-black-rgb: 45, 53, 59;
+  --color-white-rgb: 211, 198, 170;
+  --color-background-rgb: 211, 198, 170;
+  --color-text-rgb: 45, 53, 59;
+  --color-primary-100-rgb: 167, 192, 128;
+  --color-primary-80-rgb: 185, 205, 153;
+  --color-primary-60-rgb: 202, 217, 179;
+  --color-secondary-100-rgb: 127, 187, 179;
+  --color-secondary-80-rgb: 153, 201, 194;
+  --color-secondary-60-rgb: 178, 214, 209;
+  --color-green-100-rgb: 167, 192, 128;
+  --color-green-80-rgb: 185, 205, 153;
+  --color-green-60-rgb: 202, 217, 179;
+  --color-red-100-rgb: 230, 126, 128;
+  --color-red-80-rgb: 235, 152, 153;
+  --color-red-60-rgb: 240, 178, 179;
+  --color-yellow-100-rgb: 219, 188, 127;
+  --color-yellow-80-rgb: 226, 201, 153;
+  --color-yellow-60-rgb: 233, 215, 178;
+  --color-blue-100-rgb: 127, 187, 179;
+  --color-blue-80-rgb: 153, 201, 194;
+  --color-blue-60-rgb: 178, 214, 209;
+  --color-magenta-100-rgb: 214, 153, 182;
+  --color-magenta-80-rgb: 222, 173, 197;
+  --color-magenta-60-rgb: 230, 194, 211;
+  --color-cyan-100-rgb: 131, 192, 146;
+  --color-cyan-80-rgb: 156, 205, 168;
+  --color-cyan-60-rgb: 181, 217, 190;
+}
+
+[data-theme=light] {
+  --bg-rgb: var(--color-background-rgb);
+  --text-rgb: var(--color-text-rgb);
+  --bg-color: rgb(var(--bg-rgb));
+  --text-color: rgb(var(--text-rgb));
+  --auth-surface-rgb: var(--bg-rgb);
+  --auth-border-rgb: var(--text-rgb);
+  --auth-muted-rgb: var(--text-rgb);
+  --auth-overlay-rgb: var(--text-rgb);
+  --auth-primary-rgb: var(--color-primary-100-rgb);
+  --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+  --auth-secondary-rgb: var(--color-secondary-100-rgb);
+  --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+  --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+  --logo-mark-blue-rgb: var(--color-blue-100-rgb);
+  --logo-mark-cyan-rgb: var(--color-cyan-100-rgb);
+  --logo-mark-yellow-rgb: var(--color-yellow-100-rgb);
+  --logo-mark-magenta-rgb: var(--color-magenta-100-rgb);
+  --logo-mark-green-rgb: var(--color-green-100-rgb);
+  --logo-mark-blue-highlight-rgb: var(--color-blue-80-rgb);
+  --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+  --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
+  background: var(--bg-color);
+}
+
+[data-theme=dark] {
+  --bg-rgb: var(--color-text-rgb);
+  --text-rgb: var(--color-background-rgb);
+  --bg-color: rgb(var(--bg-rgb));
+  --text-color: rgb(var(--text-rgb));
+  --auth-surface-rgb: var(--bg-rgb);
+  --auth-border-rgb: var(--text-rgb);
+  --auth-muted-rgb: var(--text-rgb);
+  --auth-overlay-rgb: var(--text-rgb);
+  --auth-primary-rgb: var(--color-primary-100-rgb);
+  --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+  --auth-secondary-rgb: var(--color-secondary-100-rgb);
+  --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+  --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+  --logo-mark-blue-rgb: var(--color-blue-80-rgb);
+  --logo-mark-cyan-rgb: var(--color-cyan-80-rgb);
+  --logo-mark-yellow-rgb: var(--color-yellow-80-rgb);
+  --logo-mark-magenta-rgb: var(--color-magenta-80-rgb);
+  --logo-mark-green-rgb: var(--color-green-80-rgb);
+  --logo-mark-blue-highlight-rgb: var(--color-blue-60-rgb);
+  --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+  --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
+  background: var(--bg-color);
+}
+
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg-color);
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+#root,
+#__next {
+  isolation: isolate;
+}
+
+h1 {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Rubik;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  h1 {
+    font-size: 40px;
+  }
+}
+
+h2 {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Rubik;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 125%;
+  letter-spacing: -0.72px;
+}
+@media (max-width: 1025px) {
+  h2 {
+    font-size: 30px;
+  }
+}
+
+h3 {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Rubik;
+  font-size: 28px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  h3 {
+    font-size: 24px;
+  }
+}
+
+h4 {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Rubik;
+  font-size: 22px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  h4 {
+    font-size: 18px;
+  }
+}
+
+h5 {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Rubik;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  h5 {
+    font-size: 16px;
+  }
+}
+
+p {
+  color: var(--text-color);
+  font-feature-settings: "liga" off;
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  p {
+    font-size: 14px;
+  }
+}
+
+.l1-r {
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l1-r {
+    font-size: 14px;
+  }
+}
+
+.l1-b {
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l1-b {
+    font-size: 14px;
+  }
+}
+
+.l2-r {
+  font-family: Roboto;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l2-r {
+    font-size: 13px;
+  }
+}
+
+.l2-b {
+  font-family: Roboto;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l2-b {
+    font-size: 13px;
+  }
+}
+
+.l3-r {
+  font-family: Roboto;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l3-r {
+    font-size: 12px;
+  }
+}
+
+.l3-b {
+  font-family: Roboto;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 125%;
+}
+@media (max-width: 1025px) {
+  .l3-b {
+    font-size: 12px;
+  }
+}
+
+.p1-r {
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p1-r {
+    font-size: 14px;
+  }
+}
+
+.p1-b {
+  font-family: Roboto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p1-b {
+    font-size: 14px;
+  }
+}
+
+.p2-r {
+  font-family: Roboto;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p2-r {
+    font-size: 13px;
+  }
+}
+
+.p2-b {
+  font-family: Roboto;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p2-b {
+    font-size: 13px;
+  }
+}
+
+.p3-r {
+  font-family: Roboto;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p3-r {
+    font-size: 12px;
+  }
+}
+
+.p3-b {
+  font-family: Roboto;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 150%;
+}
+@media (max-width: 1025px) {
+  .p3-b {
+    font-size: 12px;
+  }
+}
+
+/*# sourceMappingURL=data:application/json;charset=utf-8,%7B%22version%22:3,%22sourceRoot%22:%22%22,%22sources%22:%5B%22../../styles/core/_base.scss%22,%22../../styles/variables/_colors.scss%22,%22../../styles/mixins/_media.scss%22,%22../../styles/core/_labels.scss%22,%22../../styles/core/_paragraphs.scss%22%5D,%22names%22:%5B%5D,%22mappings%22:%22AAGA;AAAA;AAAA;EAGI;;;AAGJ;EACI;;;ACqIA;EA/BA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AASI;EApCJ;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AASI;EApCJ;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AASI;EApCJ;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AD5HJ;EACI;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AAGJ;EACI;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;;AAGJ;EACI;EACA;EACA;;;AAGJ;AAAA;AAAA;AAAA;AAAA;EAKI;EACA;;;AAGJ;AAAA;AAAA;AAAA;EAII;;;AAGJ;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;EAOI;;;AAGJ;AAAA;EAEI;;;AAGJ;EACI;EACA;EACA;EACA;EACA;EACA;EACA;;AEpGA;EF6FJ;IAUQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;EACA;EACA;EACA;;AEnHA;EF2GJ;IAWQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;EACA;EACA;;AEjIA;EF0HJ;IAUQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;EACA;EACA;;AE/IA;EFwIJ;IAUQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;EACA;EACA;;AE7JA;EFsJJ;IAUQ;;;;AAKR;EACI;EACA;EACA;EACA;EACA;EACA;EACA;;AE5KA;EFqKJ;IAUQ;;;;AGtLR;EACI;EACA;EACA;EACA;EACA;;ADEA;ECPJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;ADVA;ECKJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;ADtBA;ECiBJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;ADlCA;EC6BJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AD9CA;ECyCJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AD1DA;ECqDJ;IAQQ;;;;ACnER;EACI;EACA;EACA;EACA;EACA;;AFCA;EENJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AFXA;EEMJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AFvBA;EEkBJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AFnCA;EE8BJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AF/CA;EE0CJ;IAQQ;;;;AAIR;EACI;EACA;EACA;EACA;EACA;;AF3DA;EEsDJ;IAQQ%22,%22file%22:%22main.css%22%7D */

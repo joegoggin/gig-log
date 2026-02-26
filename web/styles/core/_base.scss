@@ -1,0 +1,187 @@
+@use "../variables/colors" as colors;
+@use "../mixins/media" as media;
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+* {
+    margin: 0;
+}
+
+@include colors.register-color-palettes;
+
+[data-theme="light"] {
+    --bg-rgb: var(--color-background-rgb);
+    --text-rgb: var(--color-text-rgb);
+    --bg-color: rgb(var(--bg-rgb));
+    --text-color: rgb(var(--text-rgb));
+    --auth-surface-rgb: var(--bg-rgb);
+    --auth-border-rgb: var(--text-rgb);
+    --auth-muted-rgb: var(--text-rgb);
+    --auth-overlay-rgb: var(--text-rgb);
+    --auth-primary-rgb: var(--color-primary-100-rgb);
+    --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+    --auth-secondary-rgb: var(--color-secondary-100-rgb);
+    --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+    --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+    --logo-mark-blue-rgb: var(--color-blue-100-rgb);
+    --logo-mark-cyan-rgb: var(--color-cyan-100-rgb);
+    --logo-mark-yellow-rgb: var(--color-yellow-100-rgb);
+    --logo-mark-magenta-rgb: var(--color-magenta-100-rgb);
+    --logo-mark-green-rgb: var(--color-green-100-rgb);
+    --logo-mark-blue-highlight-rgb: var(--color-blue-80-rgb);
+    --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+    --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
+    background: var(--bg-color);
+}
+
+[data-theme="dark"] {
+    --bg-rgb: var(--color-text-rgb);
+    --text-rgb: var(--color-background-rgb);
+    --bg-color: rgb(var(--bg-rgb));
+    --text-color: rgb(var(--text-rgb));
+    --auth-surface-rgb: var(--bg-rgb);
+    --auth-border-rgb: var(--text-rgb);
+    --auth-muted-rgb: var(--text-rgb);
+    --auth-overlay-rgb: var(--text-rgb);
+    --auth-primary-rgb: var(--color-primary-100-rgb);
+    --auth-primary-hover-rgb: var(--color-primary-80-rgb);
+    --auth-secondary-rgb: var(--color-secondary-100-rgb);
+    --auth-secondary-hover-rgb: var(--color-secondary-80-rgb);
+    --auth-focus-ring-rgb: var(--color-secondary-100-rgb);
+    --logo-mark-blue-rgb: var(--color-blue-80-rgb);
+    --logo-mark-cyan-rgb: var(--color-cyan-80-rgb);
+    --logo-mark-yellow-rgb: var(--color-yellow-80-rgb);
+    --logo-mark-magenta-rgb: var(--color-magenta-80-rgb);
+    --logo-mark-green-rgb: var(--color-green-80-rgb);
+    --logo-mark-blue-highlight-rgb: var(--color-blue-60-rgb);
+    --logo-mark-green-highlight-rgb: var(--color-green-60-rgb);
+    --logo-mark-yellow-highlight-rgb: var(--color-yellow-60-rgb);
+    background: var(--bg-color);
+}
+
+body {
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bg-color);
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+    font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    overflow-wrap: break-word;
+}
+
+#root,
+#__next {
+    isolation: isolate;
+}
+
+h1 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 48px;
+    font-style: normal;
+    font-weight: 900;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 40px;
+    }
+}
+
+h2 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 36px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 125%;
+    letter-spacing: -0.72px;
+
+    @include media.tablet {
+        font-size: 30px;
+    }
+}
+
+h3 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 28px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 24px;
+    }
+}
+
+h4 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 22px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 18px;
+    }
+}
+
+h5 {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Rubik;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 125%;
+
+    @include media.tablet {
+        font-size: 16px;
+    }
+}
+
+// Note that these defaults are the same as p1-r with addition of a color
+p {
+    color: var(--text-color);
+    font-feature-settings: "liga" off;
+    font-family: Roboto;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+
+    @include media.tablet {
+        font-size: 14px;
+    }
+}

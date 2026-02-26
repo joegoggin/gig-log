@@ -1,0 +1,31 @@
+@use "../variables/breakpoints" as breakpoints;
+
+@mixin phone {
+    @media (max-width: breakpoints.$tablet-sm) {
+        @content;
+    }
+}
+
+@mixin tablet {
+    @media (max-width: breakpoints.$tablet-lg) {
+        @content;
+    }
+}
+
+@mixin range($min, $max) {
+    @media (min-width: $min) and (max-width: $max) {
+        @content;
+    }
+}
+
+@mixin greaterThan($min) {
+    @media (min-width: $min) {
+        @content;
+    }
+}
+
+@mixin lessThan($max) {
+    @media (max-width: $max) {
+        @content;
+    }
+}
