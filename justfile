@@ -42,22 +42,9 @@ web-build:
     cd web && trunk build --release
 
 # Serve workspace docs on :7007 with watch
-docs: _require-cargo-watch _require-miniserve
-    #!/usr/bin/env bash
-    # Kill any leftover doc server on port 7007
-    lsof -ti :7007 | xargs -r kill 2>/dev/null || true
-    mkdir -p target/doc
-    cargo doc --workspace --document-private-items --color always || true
-    bash scripts/generate-doc-index.sh
-    miniserve --index index.html -p 7007 target/doc &
-    SERVER_PID=$!
-    trap "kill $SERVER_PID 2>/dev/null" EXIT
-    echo "Docs available at http://localhost:7007"
-    cargo watch -s 'cargo doc --workspace --document-private-items --color always && bash scripts/generate-doc-index.sh'
+docs:
+    cargo run -p gig-log-dev-tools -- docs
 
-# Start all services
+# Start all services in TUI mode
 dev: db-up
-    (script -qfec "just api" /dev/null 2>&1 | sed 's/^/\x1b[34m[API]\x1b[0m  | /') & \
-    (script -qfec "just web" /dev/null 2>&1 | sed 's/^/\x1b[32m[WEB]\x1b[0m  | /') & \
-    (script -qfec "just docs" /dev/null 2>&1 | sed 's/^/\x1b[33m[DOCS]\x1b[0m | /') & \
-    wait 
+    cargo run -p gig-log-dev-tools -- dev
