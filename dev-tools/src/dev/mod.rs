@@ -31,12 +31,12 @@ pub async fn run(service_names: Option<Vec<String>>) -> Result<()> {
 
     check_requirements(&services)?;
 
-    // For the docs service, we need miniserve and the initial doc build
+    let (tui_tx, tui_rx) = mpsc::channel::<TuiEvent>(512);
+
+    // For the docs service, we need miniserve running
     if services.contains(&Service::Docs) {
         start_docs_prerequisites().await?;
     }
-
-    let (tui_tx, tui_rx) = mpsc::channel::<TuiEvent>(512);
 
     // Spawn all service processes
     let mut processes = Vec::new();
@@ -82,30 +82,8 @@ async fn start_docs_prerequisites() -> Result<()> {
         .status()
         .await;
 
-    // Ensure target/doc exists
+    // Ensure target/doc exists so miniserve can start serving immediately
     tokio::fs::create_dir_all("target/doc").await?;
-
-    // Initial cargo doc build
-    let _ = Command::new("cargo")
-        .args([
-            "doc",
-            "--workspace",
-            "--document-private-items",
-            "--color",
-            "always",
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await;
-
-    // Generate doc index
-    let _ = Command::new("bash")
-        .args(["scripts/generate-doc-index.sh"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await;
 
     // Start miniserve in background (kill_on_drop handles cleanup)
     let _miniserve = Command::new("miniserve")

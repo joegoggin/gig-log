@@ -47,4 +47,5 @@ docs:
 
 # Start all services in TUI mode
 dev: db-up
+    cargo build -p gig-log-dev-tools
     cargo run -p gig-log-dev-tools -- dev
