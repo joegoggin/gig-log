@@ -21,6 +21,7 @@ pub async fn run() -> Result<()> {
         .args([
             "doc",
             "--workspace",
+            "--no-deps",
             "--document-private-items",
             "--color",
             "always",
@@ -60,7 +61,7 @@ pub async fn run() -> Result<()> {
         .args([
             "watch",
             "-s",
-            "cargo doc --workspace --document-private-items --color always && bash scripts/generate-doc-index.sh",
+            "cargo doc --workspace --no-deps --document-private-items --color always && bash scripts/generate-doc-index.sh",
         ])
         .kill_on_drop(true)
         .spawn()

@@ -106,7 +106,7 @@ fn service_command(service: Service) -> (&'static str, Vec<&'static str>, Option
             vec![
                 "watch",
                 "-s",
-                "cargo doc --workspace --document-private-items --color always && bash scripts/generate-doc-index.sh",
+                "cargo doc --workspace --no-deps --document-private-items --color always && bash scripts/generate-doc-index.sh",
             ],
             None,
         ),
