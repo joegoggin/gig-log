@@ -1,16 +1,11 @@
-use actix_web::{App, HttpResponse, HttpServer, Responder, get};
+use axum::{Router, routing::get};
+use tokio::net::TcpListener;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
+#[tokio::main]
+async fn main() {
+    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+    let listener = TcpListener::bind("0.0.0.0:8000").await.unwrap();
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
     println!("Server running on port 8000");
-
-    HttpServer::new(|| App::new().service(hello))
-        .bind(("127.0.0.1", 8000))?
-        .run()
-        .await
+    axum::serve(listener, app).await.unwrap();
 }
