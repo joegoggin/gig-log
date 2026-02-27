@@ -46,81 +46,36 @@ async fn run_event_loop(
     event_rx: &mut mpsc::Receiver<TuiEvent>,
 ) -> Result<()> {
     loop {
-        // Draw
+        while let Ok(event) = event_rx.try_recv() {
+            apply_tui_event(log_store, state, event);
+        }
+
+        // Draw and capture frame size
         let entries = log_store.filtered(state.filter);
+        let mut metrics = ui::ViewMetrics::default();
         terminal.draw(|frame| {
-            ui::render(frame, &entries, state);
+            metrics = ui::render(frame, &entries, state);
         })?;
 
-        // Handle events with a short poll to keep UI responsive
-        tokio::select! {
-            // Check for crossterm input events
-            _ = tokio::task::yield_now() => {
-                while event::poll(Duration::from_millis(16))? {
-                    if let Event::Key(key) = event::read()? {
-                        match (key.code, key.modifiers) {
-                            (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                                return Ok(());
-                            }
-                            (KeyCode::Char('c'), _) => {
-                                log_store.clear();
-                                state.scroll_offset = 0;
-                                state.follow = true;
-                            }
-                            (KeyCode::Char('1'), _) => {
-                                state.filter = Some(Service::Api);
-                                state.scroll_offset = 0;
-                                state.follow = true;
-                            }
-                            (KeyCode::Char('2'), _) => {
-                                state.filter = Some(Service::Web);
-                                state.scroll_offset = 0;
-                                state.follow = true;
-                            }
-                            (KeyCode::Char('3'), _) => {
-                                state.filter = Some(Service::Docs);
-                                state.scroll_offset = 0;
-                                state.follow = true;
-                            }
-                            (KeyCode::Char('a'), _) => {
-                                state.filter = None;
-                                state.scroll_offset = 0;
-                                state.follow = true;
-                            }
-                            (KeyCode::Char('j') | KeyCode::Down, _) => {
-                                state.follow = false;
-                                state.scroll_offset = state.scroll_offset.saturating_add(1);
-                            }
-                            (KeyCode::Char('k') | KeyCode::Up, _) => {
-                                state.follow = false;
-                                state.scroll_offset = state.scroll_offset.saturating_sub(1);
-                            }
-                            (KeyCode::Char('G'), _) => {
-                                state.follow = true;
-                            }
-                            _ => {}
-                        }
-                    }
+        let max_offset = metrics.max_offset;
+        let page_jump = (metrics.viewport_height / 2).max(1);
+
+        while event::poll(Duration::from_millis(0))? {
+            if let Event::Key(key) = event::read()? {
+                if handle_key_event(log_store, state, key.code, key.modifiers, max_offset, page_jump)
+                {
+                    return Ok(());
                 }
             }
-            // Check for log events from child processes
+        }
+
+        tokio::select! {
             event = event_rx.recv() => {
                 match event {
-                    Some(TuiEvent::Log(entry)) => {
-                        log_store.push(entry);
-                    }
-                    Some(TuiEvent::ServiceStarted(service)) => {
-                        match service {
-                            Service::Api => state.services_running[0] = true,
-                            Service::Web => state.services_running[1] = true,
-                            Service::Docs => state.services_running[2] = true,
-                        }
-                    }
-                    Some(TuiEvent::ServiceExited(service)) => {
-                        match service {
-                            Service::Api => state.services_running[0] = false,
-                            Service::Web => state.services_running[1] = false,
-                            Service::Docs => state.services_running[2] = false,
+                    Some(event) => {
+                        apply_tui_event(log_store, state, event);
+                        while let Ok(next_event) = event_rx.try_recv() {
+                            apply_tui_event(log_store, state, next_event);
                         }
                     }
                     None => {
@@ -129,6 +84,120 @@ async fn run_event_loop(
                     }
                 }
             }
+            _ = tokio::time::sleep(Duration::from_millis(16)) => {}
         }
+    }
+}
+
+fn handle_key_event(
+    log_store: &mut LogStore,
+    state: &mut AppState,
+    key_code: KeyCode,
+    modifiers: KeyModifiers,
+    max_offset: usize,
+    page_jump: usize,
+) -> bool {
+    if state.pending_g {
+        state.pending_g = false;
+        if key_code == KeyCode::Char('g') {
+            state.follow = false;
+            state.scroll_offset = 0;
+            return false;
+        }
+    }
+
+    match (key_code, modifiers) {
+        (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+            true
+        }
+        (KeyCode::Char('c'), _) => {
+            log_store.clear();
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('1'), _) => {
+            state.filter = Some(Service::Api);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('2'), _) => {
+            state.filter = Some(Service::Web);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('3'), _) => {
+            state.filter = Some(Service::Docs);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('a'), _) => {
+            state.filter = None;
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('j') | KeyCode::Down, _) => {
+            if state.follow {
+                state.scroll_offset = max_offset;
+            }
+            state.follow = false;
+            state.scroll_offset = state.scroll_offset.saturating_add(1).min(max_offset);
+            false
+        }
+        (KeyCode::Char('k') | KeyCode::Up, _) => {
+            if state.follow {
+                state.scroll_offset = max_offset;
+            }
+            state.follow = false;
+            state.scroll_offset = state.scroll_offset.saturating_sub(1);
+            false
+        }
+        (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+            if state.follow {
+                state.scroll_offset = max_offset;
+            }
+            state.follow = false;
+            state.scroll_offset = state.scroll_offset.saturating_add(page_jump).min(max_offset);
+            false
+        }
+        (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
+            if state.follow {
+                state.scroll_offset = max_offset;
+            }
+            state.follow = false;
+            state.scroll_offset = state.scroll_offset.saturating_sub(page_jump);
+            false
+        }
+        (KeyCode::Char('g'), _) => {
+            state.pending_g = true;
+            false
+        }
+        (KeyCode::Char('G'), _) => {
+            state.follow = true;
+            false
+        }
+        _ => false,
+    }
+}
+
+fn apply_tui_event(log_store: &mut LogStore, state: &mut AppState, event: TuiEvent) {
+    match event {
+        TuiEvent::Log(entry) => {
+            log_store.push(entry);
+        }
+        TuiEvent::ServiceStarted(service) => match service {
+            Service::Api => state.services_running[0] = true,
+            Service::Web => state.services_running[1] = true,
+            Service::Docs => state.services_running[2] = true,
+        },
+        TuiEvent::ServiceExited(service) => match service {
+            Service::Api => state.services_running[0] = false,
+            Service::Web => state.services_running[1] = false,
+            Service::Docs => state.services_running[2] = false,
+        },
     }
 }

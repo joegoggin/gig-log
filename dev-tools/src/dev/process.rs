@@ -26,6 +26,9 @@ impl ServiceProcess {
             command.current_dir(dir);
         }
 
+        command.env("CARGO_TERM_COLOR", "always");
+        command.env("CLICOLOR_FORCE", "1");
+
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
         command.kill_on_drop(true);
