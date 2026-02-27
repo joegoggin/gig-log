@@ -64,3 +64,54 @@ When working with git you should follow these conventions:
 - If asked to push to `main` prompt me about creating a branch
 - NEVER create a new branch without my permission
 
+## Code Review Process
+
+When asked to perform a code review, follow this interactive process:
+
+### What to Check
+
+- **Spelling mistakes** - Check for typos in code, comments, and strings
+- **Documentation compliance** - Ensure all files follow the documentation formats defined in this file (JSDoc comments, Storybook stories, MDX files for routes, etc.)
+- **Web testing convention compliance** - Verify new/updated web component and page tests follow the `Web Testing Conventions` section (behavior-focused story tests, component variant/state coverage, route-wrapper coverage where needed, and targeted unit tests for internal side effects)
+- **API testing convention compliance** - Verify new/updated API changes follow the `API Testing Conventions` section (unit + handler-level + integration flow coverage, with failure/security assertions and mocked external services)
+- **Code quality issues** - Bugs, logic errors, and other problems
+
+### Process
+
+1. **Step through issues one at a time** - Do not provide all feedback in a single response
+2. **For each issue found:**
+   - Provide a clear description of the issue
+   - Show a diff of the proposed fix
+     - display this the same way you display changes to the code being made
+   - Ask the user whether to accept or reject the change
+3. **Wait for user confirmation** before moving to the next issue
+4. **After the user responds:**
+   - If accepted: Apply the change and move to the next issue
+   - If rejected: Skip the change and move to the next issue
+5. **Continue until all issues have been addressed**
+6. **After all issues are resolved:** Ask the user if they want to:
+   - Commit the changes
+   - Push to the remote branch
+   - Create a PR with a summary of all the changes made during the review
+     - The summary and title should reflect all the changes made on the current branch
+     - If a PR for this branch already exists, update the summary to reflect
+       any new changes that might be missing
+
+### Example Format
+
+For each issue, present it like this:
+
+```
+**Issue 1: [Brief title]**
+
+[Description of the issue and why it should be changed]
+
+**Proposed fix:**
+
+\`\`\`diff
+- old code
++ new code
+\`\`\`
+
+Do you want to accept this change?
+```
