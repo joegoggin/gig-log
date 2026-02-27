@@ -34,9 +34,12 @@ pub async fn run(service_names: Option<Vec<String>>) -> Result<()> {
     let (tui_tx, tui_rx) = mpsc::channel::<TuiEvent>(512);
 
     // For the docs service, we need miniserve running
-    if services.contains(&Service::Docs) {
-        start_docs_prerequisites().await?;
-    }
+    // Hold the child handle so kill_on_drop doesn't kill it immediately
+    let _miniserve = if services.contains(&Service::Docs) {
+        Some(start_docs_prerequisites().await?)
+    } else {
+        None
+    };
 
     // Spawn all service processes
     let mut processes = Vec::new();
@@ -72,7 +75,7 @@ pub async fn run(service_names: Option<Vec<String>>) -> Result<()> {
     result
 }
 
-async fn start_docs_prerequisites() -> Result<()> {
+async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
     use std::process::Stdio;
     use tokio::process::Command;
 
@@ -86,12 +89,12 @@ async fn start_docs_prerequisites() -> Result<()> {
     tokio::fs::create_dir_all("target/doc").await?;
 
     // Start miniserve in background (kill_on_drop handles cleanup)
-    let _miniserve = Command::new("miniserve")
+    let child = Command::new("miniserve")
         .args(["--index", "index.html", "-p", "7007", "target/doc"])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .kill_on_drop(true)
-        .spawn();
+        .spawn()?;
 
-    Ok(())
+    Ok(child)
 }

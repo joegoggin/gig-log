@@ -167,6 +167,18 @@ pub fn check_requirements(services: &[Service]) -> Result<()> {
                         "cargo-watch is not installed. Install it with: cargo install cargo-watch"
                     );
                 }
+                if std::process::Command::new("which")
+                    .arg("miniserve")
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .map(|s| !s.success())
+                    .unwrap_or(true)
+                {
+                    anyhow::bail!(
+                        "miniserve is not installed. Install it with: cargo install miniserve"
+                    );
+                }
             }
         }
     }
