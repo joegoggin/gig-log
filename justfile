@@ -49,3 +49,7 @@ docs:
 dev: db-up
     cargo build -p gig-log-dev-tools
     cargo run -p gig-log-dev-tools -- dev
+
+# Bootstrap local development environment
+setup:
+    cargo run -p gig-log-dev-tools -- setup

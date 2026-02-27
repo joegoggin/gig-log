@@ -19,4 +19,25 @@ pub enum Command {
     Docs,
     /// Generate workspace documentation index.html
     DocsIndex,
+    /// Initialize local development environment
+    Setup {
+        /// Do not prompt for input; fail if required values are missing
+        #[arg(long)]
+        non_interactive: bool,
+        /// Skip starting database containers
+        #[arg(long)]
+        skip_db: bool,
+        /// Skip running SQLx migrations
+        #[arg(long)]
+        skip_migrate: bool,
+        /// Skip building workspace crates
+        #[arg(long)]
+        skip_build: bool,
+        /// Print actions without executing commands
+        #[arg(long)]
+        dry_run: bool,
+        /// Build in release mode
+        #[arg(long)]
+        release: bool,
+    },
 }
