@@ -111,7 +111,7 @@ fn handle_key_event(
             true
         }
         (KeyCode::Char('c'), _) => {
-            log_store.clear();
+            log_store.clear_filtered(state.filter);
             state.scroll_offset = 0;
             state.follow = true;
             false
