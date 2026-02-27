@@ -13,6 +13,7 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Dev { services } => dev::run(services).await?,
         Command::Docs => docs::run().await?,
+        Command::DocsIndex => docs::generate_index()?,
     }
 
     Ok(())

@@ -3,6 +3,8 @@ use std::process::Stdio;
 use anyhow::{Context, Result};
 use tokio::process::Command;
 
+mod doc_index;
+
 pub async fn run() -> Result<()> {
     check_requirements().await?;
 
@@ -35,15 +37,7 @@ pub async fn run() -> Result<()> {
     }
 
     // Generate doc index
-    let status = Command::new("bash")
-        .args(["scripts/generate-doc-index.sh"])
-        .status()
-        .await
-        .context("Failed to run generate-doc-index.sh")?;
-
-    if !status.success() {
-        anyhow::bail!("generate-doc-index.sh failed");
-    }
+    doc_index::generate()?;
 
     // Start miniserve in background
     let mut miniserve = Command::new("miniserve")
@@ -61,7 +55,7 @@ pub async fn run() -> Result<()> {
         .args([
             "watch",
             "-s",
-            "cargo doc --workspace --no-deps --document-private-items --color always && bash scripts/generate-doc-index.sh",
+            "cargo doc --workspace --no-deps --document-private-items --color always && cargo run -p gig-log-dev-tools -- docs-index",
         ])
         .kill_on_drop(true)
         .spawn()
@@ -84,6 +78,10 @@ pub async fn run() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn generate_index() -> Result<()> {
+    doc_index::generate()
 }
 
 async fn check_requirements() -> Result<()> {

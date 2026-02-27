@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "gig-log-dev", about = "Development tools for gig-log")]
+#[command(name = "gig-log-dev-tools", about = "Development tools for gig-log")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -17,4 +17,6 @@ pub enum Command {
     },
     /// Build and serve workspace documentation
     Docs,
+    /// Generate workspace documentation index.html
+    DocsIndex,
 }
