@@ -21,7 +21,9 @@ pub async fn run(service_names: Option<Vec<String>>) -> Result<()> {
                     "api" => services.push(Service::Api),
                     "web" => services.push(Service::Web),
                     "docs" => services.push(Service::Docs),
-                    other => anyhow::bail!("Unknown service: {other}. Valid services: api, web, docs"),
+                    other => {
+                        anyhow::bail!("Unknown service: {other}. Valid services: api, web, docs")
+                    }
                 }
             }
             services

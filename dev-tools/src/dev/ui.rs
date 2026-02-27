@@ -1,11 +1,9 @@
 use ansi_to_tui::IntoText as _;
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{
-    Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
-};
-use ratatui::Frame;
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use super::log_store::{LogEntry, Service};
 
@@ -123,12 +121,26 @@ fn render_logs(
 
     let block = Block::default().borders(Borders::TOP | Borders::BOTTOM);
     let inner = block.inner(area);
-    let viewport_height = inner.height as usize;
-    let content_width = inner.width.saturating_sub(1).max(1);
+    frame.render_widget(block, area);
 
-    let wrapped_paragraph = Paragraph::new(visible)
-        .block(block)
-        .wrap(Wrap { trim: false });
+    let log_width = inner.width.saturating_sub(1).max(1);
+    let log_area = Rect {
+        x: inner.x,
+        y: inner.y,
+        width: log_width,
+        height: inner.height,
+    };
+    let scrollbar_area = Rect {
+        x: inner.x.saturating_add(log_width),
+        y: inner.y,
+        width: inner.width.saturating_sub(log_width),
+        height: inner.height,
+    };
+
+    let viewport_height = log_area.height as usize;
+    let content_width = log_area.width.max(1);
+
+    let wrapped_paragraph = Paragraph::new(visible).wrap(Wrap { trim: false });
 
     let total = wrapped_paragraph.line_count(content_width);
     let max_offset = total.saturating_sub(viewport_height);
@@ -140,15 +152,29 @@ fn render_logs(
     };
 
     let paragraph = wrapped_paragraph.scroll((offset.min(u16::MAX as usize) as u16, 0));
-    frame.render_widget(paragraph, area);
+    frame.render_widget(paragraph, log_area);
 
-    let mut scrollbar_state = ScrollbarState::new(total)
-        .viewport_content_length(viewport_height)
-        .position(offset);
-    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-        .track_style(Style::default().fg(Color::DarkGray))
-        .thumb_style(Style::default().fg(Color::Gray));
-    frame.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
+    if scrollbar_area.width > 0 && viewport_height > 0 {
+        let thumb_row = if max_offset == 0 {
+            0
+        } else {
+            offset.saturating_mul(viewport_height.saturating_sub(1)) / max_offset
+        };
+        let bar_width = scrollbar_area.width as usize;
+        let scrollbar_lines: Vec<Line> = (0..viewport_height)
+            .map(|row| {
+                let (symbol, style) = if row == thumb_row {
+                    ("", Style::default().fg(Color::DarkGray))
+                } else if row < thumb_row {
+                    ("", Style::default().fg(Color::DarkGray))
+                } else {
+                    ("", Style::default().fg(Color::DarkGray))
+                };
+                Line::from(Span::styled(symbol.repeat(bar_width), style))
+            })
+            .collect();
+        frame.render_widget(Paragraph::new(scrollbar_lines), scrollbar_area);
+    }
 
     ViewMetrics {
         viewport_height,
