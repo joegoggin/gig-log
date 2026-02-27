@@ -74,7 +74,7 @@ async fn check_prerequisites(options: &SetupOptions) -> Result<()> {
         ensure_command_exists(tool, options).await?;
     }
 
-    if !options.skip_migrate {
+    if !options.skip_migrate && Path::new("migrations").exists() {
         ensure_command_exists("sqlx", options).await?;
     }
 
@@ -150,9 +150,8 @@ fn create_env_files(options: &SetupOptions, summary: &mut SetupSummary) -> Resul
             }
             fs::write(&target, rendered)
                 .with_context(|| format!("Failed to write env file {}", target.display()))?;
+            summary.env_created.push(target);
         }
-
-        summary.env_created.push(target);
     }
 
     Ok(())
@@ -235,7 +234,7 @@ fn render_env_template(
         rendered.push('\n');
     }
 
-    if rendered.contains("your_") || rendered.contains("example.com") {
+    if contains_placeholder_values(&rendered) {
         summary.env_warnings.push(format!(
             "Template {} still includes placeholder-like values; review created file.",
             template_path.display()
@@ -251,6 +250,10 @@ fn resolve_sensitive_value(
     template_path: &Path,
     options: &SetupOptions,
 ) -> Result<String> {
+    if options.dry_run {
+        return Ok(format_env_value(suggested));
+    }
+
     if options.non_interactive {
         if key == "JWT_SECRET" {
             return Ok(generate_jwt_secret());
@@ -303,6 +306,25 @@ fn normalize_value(value: &str) -> String {
         out = out[1..out.len() - 1].to_string();
     }
     out
+}
+
+fn contains_placeholder_values(text: &str) -> bool {
+    text.lines().any(|line| {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            return false;
+        }
+
+        let Some((_, value)) = trimmed.split_once('=') else {
+            return false;
+        };
+
+        let value = normalize_value(value.trim()).to_ascii_lowercase();
+        value.contains("your_")
+            || value.contains("example.com")
+            || value.contains("yourdomain")
+            || value.contains("re_your")
+    })
 }
 
 fn is_secret_key(key: &str) -> bool {
