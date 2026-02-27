@@ -29,10 +29,10 @@ api-build:
     cargo build --release -p gig-log-api
 
 api-add *args:
-	cd api && cargo add {{args}}
+    cd api && cargo add {{args}}
 
 api-remove *args:
-	cd api && cargo remove {{args}}
+    cd api && cargo remove {{args}}
 
 # Web
 web:
@@ -42,14 +42,14 @@ web-build:
     cd web && trunk build --release
 
 web-add *args:
-	cd web && cargo add {{args}}
+    cd web && cargo add {{args}}
 
-api-remove *arg:
-	cd web && cd remove {{args}}
+web-remove *args:
+    cd web && cargo remove {{args}}
 
 # Development
 dev-tools *args:
-	cargo run -p gig-log-dev-tools -- {{args}}
+    cargo run -p gig-log-dev-tools -- {{args}}
 
 docs:
     cargo run -p gig-log-dev-tools -- docs
