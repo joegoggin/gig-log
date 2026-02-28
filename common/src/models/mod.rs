@@ -1,3 +1,4 @@
+pub mod appearance;
 pub mod company;
 pub mod job;
 pub mod payment;
