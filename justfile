@@ -62,6 +62,16 @@ web-add *args:
 web-remove *args:
     cd web && cargo remove {{args}}
 
+# Common
+common-build:
+	cargo build -p gig-log-common
+
+common-release:
+	cargo build --release -p gig-log-common
+
+common-add *args:
+	cd common && cargo add {{args}}
+
 # Development
 dev-tools *args:
     cargo run -p gig-log-dev-tools -- {{args}}
