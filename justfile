@@ -18,8 +18,17 @@ db-up:
 db-down:
     docker compose down
 
-db-migrate: _require-sqlx-cli
-    sqlx migrate run
+db-add *args: _require-sqlx-cli
+    cd api && sqlx migrate add -r {{args}}
+
+db-migrate:
+	cd api && sqlx migrate run 
+
+db-revert:
+	cd api && sqlx migrate revert
+
+db-info:
+	cd api && sqlx migrate info
 
 # API
 api: _require-cargo-watch
