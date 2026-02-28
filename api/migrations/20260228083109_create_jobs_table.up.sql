@@ -11,7 +11,15 @@ CREATE TABLE jobs (
     payout_amount DECIMAL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_hourly CHECK (payment_type != 'hourly' OR hourly_rate IS NOT NULL),
-    CONSTRAINT chk_payouts CHECK (payment_type != 'payouts' OR (number_of_payouts IS NOT NULL AND payout_amount IS NOT NULL))
+    CONSTRAINT chk_payment_fields_consistent CHECK (
+        (payment_type = 'hourly'
+         AND hourly_rate IS NOT NULL
+         AND number_of_payouts IS NULL
+         AND payout_amount IS NULL)
+        OR
+        (payment_type = 'payouts'
+         AND hourly_rate IS NULL
+         AND number_of_payouts IS NOT NULL
+         AND payout_amount IS NOT NULL)
+    )
 );
-

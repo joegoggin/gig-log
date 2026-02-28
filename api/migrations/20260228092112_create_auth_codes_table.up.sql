@@ -8,6 +8,10 @@ CREATE TABLE auth_codes (
     new_email VARCHAR,
     expires_at TIMESTAMPTZ NOT NULL,
     used BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_new_email_for_email_change CHECK (
+        (code_type = 'email_change' AND new_email IS NOT NULL)
+        OR
+        (code_type != 'email_change' AND new_email IS NULL)
+    )
 );
-

@@ -11,6 +11,7 @@ CREATE TABLE work_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_running_no_end_time CHECK (is_running != true OR end_time IS NULL),
-    CONSTRAINT chk_paused_must_be_running CHECK (paused_at IS NULL OR is_running = true)
+    CONSTRAINT chk_paused_must_be_running CHECK (paused_at IS NULL OR is_running = true),
+    CONSTRAINT chk_stopped_requires_end_time CHECK (is_running = true OR end_time IS NOT NULL),
+    CONSTRAINT chk_end_after_start CHECK (end_time IS NULL OR end_time >= start_time)
 );
-

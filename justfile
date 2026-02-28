@@ -21,13 +21,13 @@ db-down:
 db-add *args: _require-sqlx-cli
     cd api && sqlx migrate add -r {{args}}
 
-db-migrate:
+db-migrate: _require-sqlx-cli
 	cd api && sqlx migrate run 
 
-db-revert:
+db-revert: _require-sqlx-cli
 	cd api && sqlx migrate revert
 
-db-info:
+db-info: _require-sqlx-cli
 	cd api && sqlx migrate info
 
 # API

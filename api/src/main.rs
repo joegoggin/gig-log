@@ -14,10 +14,12 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
-    sqlx::migrate!()
-        .run(&pool)
-        .await
-        .expect("Failed to run migrations");
+    if auto_apply_migrations_enabled() {
+        sqlx::migrate!()
+            .run(&pool)
+            .await
+            .expect("Failed to run migrations");
+    }
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
@@ -27,4 +29,11 @@ async fn main() {
 
     println!("Server running on port 8000");
     axum::serve(listener, app).await.unwrap();
+}
+
+fn auto_apply_migrations_enabled() -> bool {
+    std::env::var("AUTO_APPLY_MIGRATIONS_ENABLED")
+        .ok()
+        .and_then(|value| value.parse::<bool>().ok())
+        .unwrap_or(true)
 }

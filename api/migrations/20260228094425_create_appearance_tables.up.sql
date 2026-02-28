@@ -14,7 +14,8 @@ CREATE TABLE user_color_palettes (
     generated_tokens JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(user_id, name)
+    UNIQUE(user_id, name),
+    UNIQUE(id, user_id)
 );
 
 CREATE TABLE user_appearance_preferences (
@@ -22,7 +23,19 @@ CREATE TABLE user_appearance_preferences (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
     active_palette_type palette_type NOT NULL,
     active_preset_palette preset_palette,
-    active_custom_palette_id UUID REFERENCES user_color_palettes(id),
+    active_custom_palette_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_active_custom_palette_owner
+        FOREIGN KEY (active_custom_palette_id, user_id)
+        REFERENCES user_color_palettes(id, user_id),
+    CONSTRAINT chk_active_palette_selection CHECK (
+        (active_palette_type = 'preset'
+         AND active_preset_palette IS NOT NULL
+         AND active_custom_palette_id IS NULL)
+        OR
+        (active_palette_type = 'custom'
+         AND active_preset_palette IS NULL
+         AND active_custom_palette_id IS NOT NULL)
+    )
 );
