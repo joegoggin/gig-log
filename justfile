@@ -1,55 +1,77 @@
-# Check that cargo-watch is installed
+# Installation Checks
 [private]
 _require-cargo-watch:
     @command -v cargo-watch > /dev/null 2>&1 || { echo "cargo-watch is not installed. Install it with: cargo install cargo-watch"; exit 1; }
 
-# Check that sqlx-cli is installed
 [private]
 _require-sqlx-cli:
     @command -v sqlx > /dev/null 2>&1 || { echo "sqlx-cli is not installed. Install it with: cargo install sqlx-cli"; exit 1; }
 
-# Check that miniserve is installed
 [private]
 _require-miniserve:
     @command -v miniserve > /dev/null 2>&1 || { echo "miniserve is not installed. Install it with: cargo install miniserve"; exit 1; }
 
-# Start PostgreSQL via Docker Compose
+# Database
 db-up:
     docker compose up -d
 
-# Stop PostgreSQL
 db-down:
     docker compose down
 
-# Run SQLx migrations
-db-migrate: _require-sqlx-cli
-    sqlx migrate run
+db-add *args: _require-sqlx-cli
+    cd api && sqlx migrate add -r {{args}}
 
-# Start API with auto-reload
+db-migrate: _require-sqlx-cli
+	cd api && sqlx migrate run 
+
+db-revert: _require-sqlx-cli
+	cd api && sqlx migrate revert
+
+db-info: _require-sqlx-cli
+	cd api && sqlx migrate info
+
+# API
 api: _require-cargo-watch
     cargo watch -x 'run -p gig-log-api'
 
-# Start frontend with trunk serve
+api-build:
+    cargo build -p gig-log-api
+
+api-release:
+	cargo build --release -p gig-log-api
+
+api-add *args:
+    cd api && cargo add {{args}}
+
+api-remove *args:
+    cd api && cargo remove {{args}}
+
+# Web
 web:
     cd web && trunk serve
 
-# Build API release
-api-build:
-    cargo build --release -p gig-log-api
-
-# Build web release
 web-build:
-    cd web && trunk build --release
+    cd web && trunk build 
 
-# Serve workspace docs on :7007 with watch
+web-release:
+	cd web && trunk build --release
+
+web-add *args:
+    cd web && cargo add {{args}}
+
+web-remove *args:
+    cd web && cargo remove {{args}}
+
+# Development
+dev-tools *args:
+    cargo run -p gig-log-dev-tools -- {{args}}
+
 docs:
     cargo run -p gig-log-dev-tools -- docs
 
-# Start all services in TUI mode
 dev: db-up
     cargo build -p gig-log-dev-tools
     cargo run -p gig-log-dev-tools -- dev
 
-# Bootstrap local development environment
-setup:
-    cargo run -p gig-log-dev-tools -- setup
+setup *args:
+    cargo run -p gig-log-dev-tools -- setup {{args}}
