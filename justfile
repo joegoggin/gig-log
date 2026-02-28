@@ -35,7 +35,10 @@ api: _require-cargo-watch
     cargo watch -x 'run -p gig-log-api'
 
 api-build:
-    cargo build --release -p gig-log-api
+    cargo build -p gig-log-api
+
+api-release:
+	cargo build --release -p gig-log-api
 
 api-add *args:
     cd api && cargo add {{args}}
@@ -48,7 +51,10 @@ web:
     cd web && trunk serve
 
 web-build:
-    cd web && trunk build --release
+    cd web && trunk build 
+
+web-release:
+	cd web && trunk build --release
 
 web-add *args:
     cd web && cargo add {{args}}
