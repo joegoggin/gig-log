@@ -52,11 +52,7 @@ impl From<sqlx::Error> for ApiErrorResposne {
             sqlx::Error::RowNotFound => {
                 ApiErrorResposne::NotFound("Resource not found".to_string())
             }
-            _ => {
-                println!("{:#?}", err);
-
-                ApiErrorResposne::InternalServerError("Something went wrong".to_string())
-            }
+            error => ApiErrorResposne::InternalServerError(error.to_string()),
         }
     }
 }
