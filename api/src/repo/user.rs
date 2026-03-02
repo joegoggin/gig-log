@@ -15,7 +15,7 @@ impl UserRepo {
         email: &str,
         password_hash: &str,
     ) -> ApiResult<User> {
-        sqlx::query_as!(
+        let user = sqlx::query_as!(
             User,
             r#"
         INSERT INTO users (first_name, last_name, email, hashed_password)
@@ -28,12 +28,13 @@ impl UserRepo {
             password_hash,
         )
         .fetch_one(pool)
-        .await
-        .map_err(|error| error.into())
+        .await?;
+
+        Ok(user)
     }
 
     pub async fn find_user_by_email(pool: &Pool<Postgres>, email: &str) -> ApiResult<User> {
-        sqlx::query_as!(
+        let user = sqlx::query_as!(
             User,
             r#"
         SELECT id, first_name, last_name, email, email_confirmed, created_at, updated_at
@@ -43,12 +44,13 @@ impl UserRepo {
             email,
         )
         .fetch_one(pool)
-        .await
-        .map_err(|error| error.into())
+        .await?;
+
+        Ok(user)
     }
 
     pub async fn find_user_by_id(pool: &Pool<Postgres>, id: Uuid) -> ApiResult<User> {
-        sqlx::query_as!(
+        let user = sqlx::query_as!(
             User,
             r#"
         SELECT id, first_name, last_name, email, email_confirmed, created_at, updated_at
@@ -58,12 +60,13 @@ impl UserRepo {
             id,
         )
         .fetch_one(pool)
-        .await
-        .map_err(|error| error.into())
+        .await?;
+
+        Ok(user)
     }
 
     pub async fn get_password_hash(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<String> {
-        sqlx::query_scalar!(
+        let hashed_password = sqlx::query_scalar!(
             r#"
         SELECT hashed_password
         FROM users
@@ -72,8 +75,9 @@ impl UserRepo {
             user_id,
         )
         .fetch_one(pool)
-        .await
-        .map_err(|error| error.into())
+        .await?;
+
+        Ok(hashed_password)
     }
 
     pub async fn update_password(
