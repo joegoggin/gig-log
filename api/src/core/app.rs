@@ -3,6 +3,7 @@ use tokio::net::TcpListener;
 
 use crate::{
     core::config::Config,
+    email::client::EmailClient,
     routes::app::{AppRouter, AppState},
 };
 
@@ -19,11 +20,17 @@ impl App {
             .connect(&config.database_url)
             .await?;
 
+        let email_client = EmailClient::new(&config);
+
         if config.auto_apply_migrations {
             sqlx::migrate!().run(&db_pool).await?
         }
 
-        let state = AppState { config, db_pool };
+        let state = AppState {
+            config,
+            db_pool,
+            email_client,
+        };
         let app = AppRouter::new(state);
 
         let listener = TcpListener::bind("0.0.0.0:8000").await?;

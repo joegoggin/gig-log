@@ -7,6 +7,13 @@ pub struct AuthSender {
 }
 
 impl AuthSender {
+    pub fn new(client: EmailClient, to: impl Into<String>, code: impl Into<String>) -> Self {
+        Self {
+            client,
+            to: to.into(),
+            code: code.into(),
+        }
+    }
     pub async fn send_email_verification(&self) -> ApiResult<()> {
         self.client
             .send_email(
