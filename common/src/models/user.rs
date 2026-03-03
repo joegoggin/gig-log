@@ -56,3 +56,8 @@ pub struct SetPasswordRequest {
 pub struct VerifyForgotPasswordRequest {
     pub code: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ConfirmEmailRequest {
+    pub code: String,
+}

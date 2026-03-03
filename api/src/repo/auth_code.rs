@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::core::error::ApiResult;
 
 #[derive(Debug, Clone, sqlx::Type)]
-#[sqlx(type_name = "auth_code_type", rename_all = "snake_case")]
+#[sqlx(type_name = "code_type", rename_all = "snake_case")]
 pub enum AuthCodeType {
     EmailVerification,
     PasswordReset,
