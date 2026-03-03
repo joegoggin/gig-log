@@ -1,8 +1,8 @@
 use axum::{
+    Json,
     extract::rejection::JsonRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use gig_log_common::models::error::{ApiError, ValidationError};
 
@@ -14,6 +14,7 @@ pub enum ApiErrorResponse {
     BadRequest(String),
     Validation(Vec<ValidationError>),
     InternalServerError(String),
+    Unauthorized(String),
 }
 
 impl IntoResponse for ApiErrorResponse {
@@ -35,6 +36,7 @@ impl IntoResponse for ApiErrorResponse {
                     None,
                 )
             }
+            ApiErrorResponse::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg, None),
         };
 
         let body = ApiError {
