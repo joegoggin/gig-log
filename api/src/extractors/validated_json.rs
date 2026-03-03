@@ -2,6 +2,7 @@ use axum::{
     extract::rejection::JsonRejection,
     extract::{FromRequest, Json, Request},
 };
+use gig_log_common::models::error::ValidationError;
 use validator::Validate;
 
 use crate::core::error::ApiErrorResponse;
@@ -26,11 +27,47 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state)
             .await
-            .map_err(ApiErrorResponse::from)?;
+            .map_err(|err| match err {
+                JsonRejection::JsonDataError(error) => {
+                    let message = error.body_text();
+
+                    map_missing_field_error(&message)
+                        .unwrap_or_else(|| ApiErrorResponse::BadRequest(message))
+                }
+                error => ApiErrorResponse::from(error),
+            })?;
 
         value.validate().map_err(ApiErrorResponse::from)?;
 
         Ok(Self(value))
+    }
+}
+
+fn map_missing_field_error(message: &str) -> Option<ApiErrorResponse> {
+    let field = extract_missing_field_name(message)?;
+
+    Some(ApiErrorResponse::Validation(vec![ValidationError {
+        field: Some(field.to_string()),
+        message: format!("{} is required", format_field_name(field)),
+    }]))
+}
+
+fn extract_missing_field_name(message: &str) -> Option<&str> {
+    let prefix = "missing field `";
+    let start = message.find(prefix)? + prefix.len();
+    let remainder = &message[start..];
+    let end = remainder.find('`')?;
+
+    Some(&remainder[..end])
+}
+
+fn format_field_name(field: &str) -> String {
+    let normalized = field.replace('_', " ");
+    let mut chars = normalized.chars();
+
+    match chars.next() {
+        Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+        None => normalized,
     }
 }
 
@@ -51,7 +88,6 @@ mod tests {
 
     #[derive(Debug, Deserialize, Validate)]
     struct TestPayload {
-        #[serde(default)]
         #[validate(length(min = 1, message = "Name is required"))]
         name: String,
     }

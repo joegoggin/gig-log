@@ -20,28 +20,23 @@ pub struct User {
     validate(schema(function = "validate_signup_passwords_match"))
 )]
 pub struct SignUpRequest {
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(
         feature = "validation",
         validate(length(min = 1, message = "First name is required"))
     )]
     pub first_name: String,
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(
         feature = "validation",
         validate(length(min = 1, message = "Last name is required"))
     )]
     pub last_name: String,
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(feature = "validation", validate(email(message = "Email is invalid")))]
     pub email: String,
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(
         feature = "validation",
         validate(length(min = 8, message = "Password must have at least 8 characters"))
     )]
     pub password: String,
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(
         feature = "validation",
         validate(length(min = 1, message = "Confirm password is required"))
@@ -98,7 +93,6 @@ pub struct VerifyForgotPasswordRequest {
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct ConfirmEmailRequest {
-    #[cfg_attr(feature = "validation", serde(default))]
     #[cfg_attr(
         feature = "validation",
         validate(length(min = 1, message = "Auth code is required"))
@@ -147,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn sign_up_request_missing_first_name_deserializes_and_fails_validation() {
+    fn sign_up_request_missing_first_name_fails_deserialization() {
         let raw = json!({
             "last_name": "Goggin",
             "email": "joe@example.com",
@@ -155,25 +149,17 @@ mod tests {
             "confirm_password": "Password1234$"
         });
 
-        let req: SignUpRequest =
-            serde_json::from_value(raw).expect("request should deserialize with defaults");
+        let err = serde_json::from_value::<SignUpRequest>(raw)
+            .expect_err("request should fail deserialization without first_name");
 
-        let errors = req
-            .validate()
-            .expect_err("validation should fail for missing first name");
-
-        assert!(errors.errors().contains_key("first_name"));
+        assert!(err.to_string().contains("missing field `first_name`"));
     }
 
     #[test]
-    fn confirm_email_request_missing_code_deserializes_and_fails_validation() {
-        let req: ConfirmEmailRequest =
-            serde_json::from_value(json!({})).expect("request should deserialize with defaults");
+    fn confirm_email_request_missing_code_fails_deserialization() {
+        let err = serde_json::from_value::<ConfirmEmailRequest>(json!({}))
+            .expect_err("request should fail deserialization without code");
 
-        let errors = req
-            .validate()
-            .expect_err("validation should fail for missing code");
-
-        assert!(errors.errors().contains_key("code"));
+        assert!(err.to_string().contains("missing field `code`"));
     }
 }
