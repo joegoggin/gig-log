@@ -16,5 +16,10 @@ impl AuthRouter {
             .route("/log-out", post(AuthController::log_out))
             .route("/refresh", post(AuthController::refresh))
             .route("/me", get(AuthController::me))
+            .route("/forgot-password", post(AuthController::forgot_password))
+            .route(
+                "/verify-forgot-password",
+                post(AuthController::verify_forgot_password),
+            )
     }
 }

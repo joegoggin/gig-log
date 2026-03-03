@@ -2,7 +2,10 @@ use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
 use gig_log_common::models::generic::MessageResponse;
-use gig_log_common::models::user::{ConfirmEmailRequest, LogInRequest, SignUpRequest, User};
+use gig_log_common::models::user::{
+    ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest, SignUpRequest, User,
+    VerifyForgotPasswordRequest,
+};
 use sha2::{Digest, Sha256};
 
 use crate::auth::AuthUser;
@@ -228,6 +231,69 @@ impl AuthController {
         let user = UserRepo::find_user_by_id(&state.db_pool, auth.user_id).await?;
 
         Ok(Json(user))
+    }
+
+    pub async fn forgot_password(
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<ForgotPasswordRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        match UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
+            Ok(user) => {
+                let reset_code = code::generate();
+                let expires_at = Utc::now() + Duration::minutes(15);
+
+                AuthCodeRepo::insert_code(
+                    &state.db_pool,
+                    user.id,
+                    &reset_code,
+                    AuthCodeType::PasswordReset,
+                    expires_at,
+                    None,
+                )
+                .await?;
+
+                let sender = AuthSender::new(
+                    state.email_client.clone(),
+                    user.email.clone(),
+                    reset_code.clone(),
+                );
+
+                let result = sender.send_reset_password().await;
+
+                if let Err(_) = result {
+                    return Err(ApiErrorResponse::InternalServerError(
+                        "Failed to send email".to_string(),
+                    ));
+                };
+            }
+            Err(_) => {
+                return Err(ApiErrorResponse::NotFound(format!(
+                    "Account with email of {} not found",
+                    &body.email
+                )));
+            }
+        }
+
+        let response = MessageResponse {
+            message: format!("Reset code send to {}", &body.email),
+        };
+
+        Ok(Json(response))
+    }
+
+    pub async fn verify_forgot_password(
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<VerifyForgotPasswordRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordReset)
+            .await
+            .map_err(|_| {
+                ApiErrorResponse::BadRequest("Invalid or expired reset code".to_string())
+            })?;
+
+        Ok(Json(MessageResponse {
+            message: "Reset code is valid.".to_string(),
+        }))
     }
 
     fn sha256_hash(input: &str) -> String {

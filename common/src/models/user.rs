@@ -80,7 +80,9 @@ pub struct RequestEmailChangeRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct ForgotPasswordRequest {
+    #[cfg_attr(feature = "validation", validate(email(message = "Email is invalid")))]
     pub email: String,
 }
 
@@ -92,11 +94,16 @@ pub struct SetPasswordRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct VerifyForgotPasswordRequest {
+    #[cfg_attr(
+        feature = "validation",
+        validate(length(min = 1, message = "Code is required"))
+    )]
     pub code: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct ConfirmEmailRequest {
     #[cfg_attr(
