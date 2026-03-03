@@ -9,5 +9,6 @@ impl AuthRouter {
         Router::new()
             .route("/sign-up", post(AuthController::sign_up))
             .route("/confirm-email", post(AuthController::confirm_email))
+            .route("/log-in", post(AuthController::log_in))
     }
 }

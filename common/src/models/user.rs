@@ -56,8 +56,14 @@ fn validate_signup_passwords_match(req: &SignUpRequest) -> Result<(), validator:
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct LogInRequest {
+    #[cfg_attr(feature = "validation", validate(email(message = "Email is invalid")))]
     pub email: String,
+    #[cfg_attr(
+        feature = "validation",
+        validate(length(min = 1, message = "Password is required"))
+    )]
     pub password: String,
 }
 

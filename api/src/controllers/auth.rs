@@ -1,12 +1,17 @@
 use axum::{Json, extract::State};
+use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
 use gig_log_common::models::generic::MessageResponse;
-use gig_log_common::models::user::{ConfirmEmailRequest, SignUpRequest};
+use gig_log_common::models::user::{ConfirmEmailRequest, LogInRequest, SignUpRequest, User};
+use sha2::{Digest, Sha256};
 
+use crate::auth::cookies::CookiesUtil;
+use crate::auth::jwt::JwtUtil;
 use crate::auth::{code, password::PasswordUtil};
 use crate::core::error::{ApiErrorResponse, ApiResult};
 use crate::email::senders::auth::AuthSender;
 use crate::extractors::ValidatedJson;
+use crate::repo::refresh_token::RefreshTokenRepo;
 use crate::repo::{
     auth_code::{AuthCodeRepo, AuthCodeType},
     user::UserRepo,
@@ -86,5 +91,52 @@ impl AuthController {
         };
 
         Ok(Json::from(response))
+    }
+
+    pub async fn log_in(
+        state: State<AppState>,
+        jar: CookieJar,
+        ValidatedJson(body): ValidatedJson<LogInRequest>,
+    ) -> ApiResult<(CookieJar, Json<User>)> {
+        let user = UserRepo::find_user_by_email(&state.db_pool, &body.email)
+            .await
+            .map_err(|_| ApiErrorResponse::BadRequest("Invalid credentials".to_string()))?;
+
+        if !user.email_confirmed {
+            return Err(ApiErrorResponse::BadRequest(
+                "Please confirm your email before logging in".to_string(),
+            ));
+        }
+
+        let password_hash = UserRepo::get_password_hash(&state.db_pool, user.id).await?;
+        if !PasswordUtil::verify_password(&body.password, &password_hash)? {
+            return Err(ApiErrorResponse::BadRequest(
+                "Invalid credentials".to_string(),
+            ));
+        }
+
+        let access_token = JwtUtil::generate_access_token(user.id, &state.config)?;
+        let refresh_token = JwtUtil::generate_refresh_token(user.id, &state.config)?;
+
+        let token_hash = Self::sha256_hash(&refresh_token);
+        RefreshTokenRepo::insert_token(&state.db_pool, user.id, &token_hash).await?;
+
+        let jar = jar
+            .add(CookiesUtil::build_access_cookie(
+                &access_token,
+                &state.config,
+            ))
+            .add(CookiesUtil::build_refresh_cookie(
+                &refresh_token,
+                &state.config,
+            ));
+
+        Ok((jar, Json(user)))
+    }
+
+    fn sha256_hash(input: &str) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(input.as_bytes());
+        format!("{:x}", hasher.finalize())
     }
 }
