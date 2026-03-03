@@ -6,6 +6,7 @@ use gig_log_common::models::user::{ConfirmEmailRequest, SignUpRequest};
 use crate::auth::{code, password::PasswordUtil};
 use crate::core::error::{ApiErrorResponse, ApiResult};
 use crate::email::senders::auth::AuthSender;
+use crate::extractors::ValidatedJson;
 use crate::repo::{
     auth_code::{AuthCodeRepo, AuthCodeType},
     user::UserRepo,
@@ -17,14 +18,8 @@ pub struct AuthController;
 impl AuthController {
     pub async fn sign_up(
         State(state): State<AppState>,
-        Json(body): Json<SignUpRequest>,
+        ValidatedJson(body): ValidatedJson<SignUpRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
-        if body.password != body.confirm_password {
-            return Err(ApiErrorResponse::BadRequest(
-                "Passwords do not match".to_string(),
-            ));
-        }
-
         let existing = UserRepo::find_user_by_email(&state.db_pool, &body.email).await;
         if existing.is_ok() {
             return Err(ApiErrorResponse::BadRequest(
@@ -73,7 +68,7 @@ impl AuthController {
 
     pub async fn confirm_email(
         State(state): State<AppState>,
-        Json(body): Json<ConfirmEmailRequest>,
+        ValidatedJson(body): ValidatedJson<ConfirmEmailRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
         let auth_code = AuthCodeRepo::find_valid_code(
             &state.db_pool,

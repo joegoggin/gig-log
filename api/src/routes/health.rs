@@ -1,4 +1,4 @@
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 
 use crate::controllers::health::HeathController;
 use crate::routes::app::AppState;

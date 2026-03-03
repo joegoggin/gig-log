@@ -1,7 +1,8 @@
 use axum::{
-    Json,
+    extract::rejection::JsonRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use gig_log_common::models::error::{ApiError, ValidationError};
 
@@ -22,7 +23,7 @@ impl IntoResponse for ApiErrorResponse {
             ApiErrorResponse::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg, None),
             ApiErrorResponse::Validation(errs) => (
                 StatusCode::BAD_REQUEST,
-                "Validation failed".to_string(),
+                "Validation Error".to_string(),
                 Some(errs),
             ),
             ApiErrorResponse::InternalServerError(msg) => {
@@ -71,5 +72,11 @@ impl From<validator::ValidationErrors> for ApiErrorResponse {
             .collect();
 
         ApiErrorResponse::Validation(validation_errors)
+    }
+}
+
+impl From<JsonRejection> for ApiErrorResponse {
+    fn from(err: JsonRejection) -> Self {
+        ApiErrorResponse::BadRequest(err.body_text())
     }
 }
