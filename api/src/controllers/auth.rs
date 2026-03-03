@@ -183,6 +183,46 @@ impl AuthController {
         Ok(jar)
     }
 
+    pub async fn refresh(
+        State(state): State<AppState>,
+        jar: CookieJar,
+    ) -> ApiResult<(CookieJar, Json<User>)> {
+        let refresh_cookie = jar
+            .get("refresh_token")
+            .ok_or_else(|| ApiErrorResponse::BadRequest("Missing refresh token".to_string()))?;
+
+        let old_token = refresh_cookie.value();
+        let old_hash = Self::sha256_hash(old_token);
+
+        let token_record = RefreshTokenRepo::find_by_hash(&state.db_pool, &old_hash)
+            .await
+            .map_err(|_| ApiErrorResponse::BadRequest("Invalid refresh token".to_string()))?;
+
+        RefreshTokenRepo::revoke_token(&state.db_pool, &old_hash).await?;
+
+        let new_access_token = JwtUtil::generate_access_token(token_record.user_id, &state.config)?;
+        let new_refresh_token =
+            JwtUtil::generate_refresh_token(token_record.user_id, &state.config)?;
+        let new_refresh_hash = Self::sha256_hash(&new_refresh_token);
+
+        RefreshTokenRepo::insert_token(&state.db_pool, token_record.user_id, &new_refresh_hash)
+            .await?;
+
+        let user = UserRepo::find_user_by_id(&state.db_pool, token_record.user_id).await?;
+
+        let jar = jar
+            .add(CookiesUtil::build_access_cookie(
+                &new_access_token,
+                &state.config,
+            ))
+            .add(CookiesUtil::build_refresh_cookie(
+                &new_refresh_token,
+                &state.config,
+            ));
+
+        Ok((jar, Json(user)))
+    }
+
     fn sha256_hash(input: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());
