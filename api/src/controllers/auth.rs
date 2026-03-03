@@ -5,6 +5,7 @@ use gig_log_common::models::generic::MessageResponse;
 use gig_log_common::models::user::{ConfirmEmailRequest, LogInRequest, SignUpRequest, User};
 use sha2::{Digest, Sha256};
 
+use crate::auth::AuthUser;
 use crate::auth::cookies::CookiesUtil;
 use crate::auth::jwt::JwtUtil;
 use crate::auth::{code, password::PasswordUtil};
@@ -221,6 +222,12 @@ impl AuthController {
             ));
 
         Ok((jar, Json(user)))
+    }
+
+    pub async fn me(auth: AuthUser, State(state): State<AppState>) -> ApiResult<Json<User>> {
+        let user = UserRepo::find_user_by_id(&state.db_pool, auth.user_id).await?;
+
+        Ok(Json(user))
     }
 
     fn sha256_hash(input: &str) -> String {

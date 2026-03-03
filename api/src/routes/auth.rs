@@ -1,4 +1,7 @@
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 use crate::{controllers::auth::AuthController, routes::app::AppState};
 
@@ -12,5 +15,6 @@ impl AuthRouter {
             .route("/log-in", post(AuthController::log_in))
             .route("/log-out", post(AuthController::log_out))
             .route("/refresh", post(AuthController::refresh))
+            .route("/me", get(AuthController::me))
     }
 }
