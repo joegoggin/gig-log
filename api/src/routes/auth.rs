@@ -21,5 +21,6 @@ impl AuthRouter {
                 "/verify-forgot-password",
                 post(AuthController::verify_forgot_password),
             )
+            .route("/set-password", post(AuthController::set_password))
     }
 }

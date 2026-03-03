@@ -2,6 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[cfg(feature = "validation")]
+use crate::validators::user::{validate_set_password_match, validate_signup_passwords_match};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
@@ -44,17 +47,6 @@ pub struct SignUpRequest {
     pub confirm_password: String,
 }
 
-#[cfg(feature = "validation")]
-fn validate_signup_passwords_match(req: &SignUpRequest) -> Result<(), validator::ValidationError> {
-    if req.password != req.confirm_password {
-        let mut error = validator::ValidationError::new("password_mismatch");
-        error.message = Some("Passwords do not match".into());
-        return Err(error);
-    }
-
-    Ok(())
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct LogInRequest {
@@ -87,9 +79,26 @@ pub struct ForgotPasswordRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "validation", derive(validator::Validate))]
+#[cfg_attr(
+    feature = "validation",
+    validate(schema(function = "validate_set_password_match"))
+)]
 pub struct SetPasswordRequest {
+    #[cfg_attr(
+        feature = "validation",
+        validate(length(min = 1, message = "Code is required"))
+    )]
     pub code: String,
+    #[cfg_attr(
+        feature = "validation",
+        validate(length(min = 1, message = "New password is required"))
+    )]
     pub new_password: String,
+    #[cfg_attr(
+        feature = "validation",
+        validate(length(min = 1, message = "Confirm new password is required"))
+    )]
     pub confirm_new_password: String,
 }
 

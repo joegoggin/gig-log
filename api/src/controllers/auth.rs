@@ -3,8 +3,8 @@ use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
 use gig_log_common::models::generic::MessageResponse;
 use gig_log_common::models::user::{
-    ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest, SignUpRequest, User,
-    VerifyForgotPasswordRequest,
+    ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest, SetPasswordRequest, SignUpRequest,
+    User, VerifyForgotPasswordRequest,
 };
 use sha2::{Digest, Sha256};
 
@@ -293,6 +293,29 @@ impl AuthController {
 
         Ok(Json(MessageResponse {
             message: "Reset code is valid.".to_string(),
+        }))
+    }
+
+    pub async fn set_password(
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<SetPasswordRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        let auth_code =
+            AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordReset)
+                .await
+                .map_err(|_| {
+                    ApiErrorResponse::BadRequest("Invalid or expired reset code".to_string())
+                })?;
+
+        let password_hash = PasswordUtil::hash_password(&body.new_password).map_err(|_| {
+            ApiErrorResponse::InternalServerError("Failed to hash password".to_string())
+        })?;
+
+        UserRepo::update_password(&state.db_pool, auth_code.user_id, &password_hash).await?;
+        AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
+
+        Ok(Json(MessageResponse {
+            message: "Password has been reset successfully.".to_string(),
         }))
     }
 
