@@ -134,6 +134,55 @@ impl AuthController {
         Ok((jar, Json(user)))
     }
 
+    pub async fn log_out(State(state): State<AppState>, jar: CookieJar) -> ApiResult<CookieJar> {
+        let mut revoked_by_refresh_cookie = false;
+
+        if let Some(refresh_cookie) = jar.get("refresh_token") {
+            let token_hash = Self::sha256_hash(refresh_cookie.value());
+            revoked_by_refresh_cookie =
+                RefreshTokenRepo::revoke_token(&state.db_pool, &token_hash).await?;
+
+            if !revoked_by_refresh_cookie {
+                println!(
+                    "Warning: refresh token cookie was present but no active row was revoked; falling back to user-wide revocation"
+                );
+            }
+        } else {
+            println!(
+                "Warning: logout request did not include a refresh_token cookie; falling back to user-wide revocation"
+            );
+        }
+
+        if !revoked_by_refresh_cookie {
+            if let Some(access_cookie) = jar.get("access_token") {
+                match JwtUtil::validate_token(access_cookie.value(), &state.config) {
+                    Ok(token_data) => {
+                        RefreshTokenRepo::revoke_all_for_user(
+                            &state.db_pool,
+                            token_data.claims.sub,
+                        )
+                        .await?;
+                    }
+                    Err(_) => {
+                        println!(
+                            "Warning: could not validate access token for fallback logout revocation"
+                        );
+                    }
+                }
+            } else {
+                println!(
+                    "Warning: logout request did not include an access_token cookie for fallback revocation"
+                );
+            }
+        }
+
+        let jar = jar
+            .add(CookiesUtil::clear_access_cookie())
+            .add(CookiesUtil::clear_refresh_cookie());
+
+        Ok(jar)
+    }
+
     fn sha256_hash(input: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());

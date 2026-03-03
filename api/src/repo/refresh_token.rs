@@ -56,19 +56,28 @@ impl RefreshTokenRepo {
         Ok(refresh_token)
     }
 
-    pub async fn revoke_token(pool: &Pool<Postgres>, token_hash: &str) -> ApiResult<()> {
-        sqlx::query!(
+    pub async fn revoke_token(pool: &Pool<Postgres>, token_hash: &str) -> ApiResult<bool> {
+        let result = sqlx::query!(
             r#"
         UPDATE refresh_tokens
         SET revoked = TRUE
         WHERE token_hash = $1
+          AND revoked = FALSE
         "#,
             token_hash,
         )
         .execute(pool)
         .await?;
 
-        Ok(())
+        if result.rows_affected() == 0 {
+            println!(
+                "Warning: no active refresh token record matched the provided hash during logout"
+            );
+
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 
     pub async fn revoke_all_for_user(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<()> {

@@ -25,7 +25,7 @@ impl CookiesUtil {
 
     pub fn build_refresh_cookie(token: &str, config: &Config) -> Cookie<'static> {
         let mut cookie = Cookie::build((REFRESH_TOKEN_COOKIE, token.to_string()))
-            .path("/api/auth/refresh")
+            .path("/")
             .http_only(true)
             .same_site(SameSite::Lax)
             .max_age(Duration::seconds(
@@ -46,7 +46,7 @@ impl CookiesUtil {
 
     pub fn clear_refresh_cookie() -> Cookie<'static> {
         Cookie::build((REFRESH_TOKEN_COOKIE, ""))
-            .path("/api/auth/refresh")
+            .path("/")
             .max_age(Duration::ZERO)
             .build()
     }

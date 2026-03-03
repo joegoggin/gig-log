@@ -85,7 +85,3 @@ dev: db-up
 
 setup *args:
     cargo run -p gig-log-dev-tools -- setup {{args}}
-
-# Posting 
-posting *args:
-	posting --collection ./api/.posting
