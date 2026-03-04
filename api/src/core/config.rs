@@ -8,6 +8,7 @@ use crate::core::app::AppResult;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub app_env: String,
+    pub web_origin: String,
     pub database_url: String,
     pub auto_apply_migrations: bool,
     pub jwt_secret: String,
@@ -26,6 +27,7 @@ impl Config {
         dotenv().ok();
 
         let app_env = Self::get_var_from_env("APP_ENV")?;
+        let web_origin = Self::get_var_from_env("WEB_ORIGIN")?;
         let database_url = Self::get_var_from_env("DATABASE_URL")?;
         let auto_apply_migrations = Self::get_optional_bool("AUTO_APPLY_MIGRATIONS_ENABLED", true);
         let jwt_secret = Self::get_var_from_env("JWT_SECRET")?;
@@ -42,6 +44,7 @@ impl Config {
 
         Ok(Self {
             app_env,
+            web_origin,
             database_url,
             auto_apply_migrations,
             jwt_secret,
