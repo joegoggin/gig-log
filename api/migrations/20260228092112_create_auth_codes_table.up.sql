@@ -1,4 +1,4 @@
-CREATE TYPE code_type AS ENUM ('email_verification', 'password_reset', 'email_change');
+CREATE TYPE code_type AS ENUM ('email_verification', 'password_reset', 'email_change', 'password_change');
 
 CREATE TABLE auth_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

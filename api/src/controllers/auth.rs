@@ -3,8 +3,8 @@ use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
 use gig_log_common::models::generic::MessageResponse;
 use gig_log_common::models::user::{
-    ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest, SetPasswordRequest, SignUpRequest,
-    User, VerifyForgotPasswordRequest,
+    ChangePasswordRequest, ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest,
+    SetPasswordRequest, SignUpRequest, User, VerifyForgotPasswordRequest,
 };
 use sha2::{Digest, Sha256};
 
@@ -316,6 +316,75 @@ impl AuthController {
 
         Ok(Json(MessageResponse {
             message: "Password has been reset successfully.".to_string(),
+        }))
+    }
+
+    pub async fn request_change_password_code(
+        auth: AuthUser,
+        State(state): State<AppState>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        let user = UserRepo::find_user_by_id(&state.db_pool, auth.user_id).await?;
+
+        let verification_code = code::generate();
+        let expires_at = Utc::now() + Duration::minutes(10);
+
+        AuthCodeRepo::insert_code(
+            &state.db_pool,
+            user.id,
+            &verification_code,
+            AuthCodeType::PasswordChange,
+            expires_at,
+            None,
+        )
+        .await?;
+
+        let sender = AuthSender::new(
+            state.email_client.clone(),
+            user.email.clone(),
+            verification_code,
+        );
+        sender.send_password_change().await?;
+
+        Ok(Json(MessageResponse {
+            message: "A verification code was sent to your email".to_string(),
+        }))
+    }
+
+    pub async fn change_password(
+        auth: AuthUser,
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<ChangePasswordRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        let current_hash = UserRepo::get_password_hash(&state.db_pool, auth.user_id).await?;
+
+        if !PasswordUtil::verify_password(&body.current_password, &current_hash)? {
+            return Err(ApiErrorResponse::BadRequest(
+                "Current password is incorrect".to_string(),
+            ));
+        }
+
+        let auth_code =
+            AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordChange)
+                .await
+                .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired code".to_string()))?;
+
+        if auth_code.user_id != auth.user_id {
+            return Err(ApiErrorResponse::BadRequest(
+                "Invalid or expired code".to_string(),
+            ));
+        }
+
+        AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
+
+        let new_hash = PasswordUtil::hash_password(&body.new_password).map_err(|_| {
+            ApiErrorResponse::InternalServerError("Failed to hash password".to_string())
+        })?;
+
+        UserRepo::update_password(&state.db_pool, auth.user_id, &new_hash).await?;
+        RefreshTokenRepo::revoke_all_for_user(&state.db_pool, auth.user_id).await?;
+
+        Ok(Json(MessageResponse {
+            message: "Password changed successfully.".to_string(),
         }))
     }
 

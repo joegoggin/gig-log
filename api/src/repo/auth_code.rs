@@ -10,6 +10,7 @@ pub enum AuthCodeType {
     EmailVerification,
     PasswordReset,
     EmailChange,
+    PasswordChange,
 }
 
 #[derive(Debug, FromRow)]

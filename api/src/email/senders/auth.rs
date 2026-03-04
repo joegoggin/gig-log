@@ -43,4 +43,14 @@ impl AuthSender {
             )
             .await
     }
+
+    pub async fn send_password_change(&self) -> ApiResult<()> {
+        self.client
+            .send_email(
+                &self.to,
+                "Confirm your password change",
+                &format!("Your password change code is: {}", self.code),
+            )
+            .await
+    }
 }
