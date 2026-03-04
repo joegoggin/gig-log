@@ -41,9 +41,9 @@ impl ServiceProcess {
             });
         }
 
-        let mut child = command.spawn().with_context(|| {
-            format!("Failed to spawn {} service", service.label())
-        })?;
+        let mut child = command
+            .spawn()
+            .with_context(|| format!("Failed to spawn {} service", service.label()))?;
 
         let pid = child.id().unwrap_or(0);
 
@@ -95,11 +95,7 @@ impl ServiceProcess {
 
 fn service_command(service: Service) -> (&'static str, Vec<&'static str>, Option<&'static str>) {
     match service {
-        Service::Api => (
-            "cargo",
-            vec!["watch", "-x", "run -p gig-log-api"],
-            None,
-        ),
+        Service::Api => ("cargo", vec!["watch", "-x", "run -p gig-log-api"], None),
         Service::Web => ("trunk", vec!["serve"], Some("web/")),
         Service::Docs => (
             "cargo",
@@ -152,9 +148,7 @@ pub fn check_requirements(services: &[Service]) -> Result<()> {
                     .map(|s| !s.success())
                     .unwrap_or(true)
                 {
-                    anyhow::bail!(
-                        "trunk is not installed. Install it with: cargo install trunk"
-                    );
+                    anyhow::bail!("trunk is not installed. Install it with: cargo install trunk");
                 }
             }
             Service::Docs => {

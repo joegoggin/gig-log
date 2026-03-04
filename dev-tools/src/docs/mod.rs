@@ -92,9 +92,7 @@ async fn check_requirements() -> Result<()> {
         .await;
 
     if cargo_watch.is_err() || !cargo_watch.unwrap().success() {
-        anyhow::bail!(
-            "cargo-watch is not installed. Install it with: cargo install cargo-watch"
-        );
+        anyhow::bail!("cargo-watch is not installed. Install it with: cargo install cargo-watch");
     }
 
     let miniserve = Command::new("which")

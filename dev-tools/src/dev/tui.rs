@@ -62,8 +62,14 @@ async fn run_event_loop(
 
         while event::poll(Duration::from_millis(0))? {
             if let Event::Key(key) = event::read()? {
-                if handle_key_event(log_store, state, key.code, key.modifiers, max_offset, page_jump)
-                {
+                if handle_key_event(
+                    log_store,
+                    state,
+                    key.code,
+                    key.modifiers,
+                    max_offset,
+                    page_jump,
+                ) {
                     return Ok(());
                 }
             }
@@ -107,9 +113,7 @@ fn handle_key_event(
     }
 
     match (key_code, modifiers) {
-        (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-            true
-        }
+        (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => true,
         (KeyCode::Char('c'), _) => {
             log_store.clear_filtered(state.filter);
             state.scroll_offset = 0;
@@ -161,7 +165,10 @@ fn handle_key_event(
                 state.scroll_offset = max_offset;
             }
             state.follow = false;
-            state.scroll_offset = state.scroll_offset.saturating_add(page_jump).min(max_offset);
+            state.scroll_offset = state
+                .scroll_offset
+                .saturating_add(page_jump)
+                .min(max_offset);
             false
         }
         (KeyCode::Char('u'), KeyModifiers::CONTROL) => {

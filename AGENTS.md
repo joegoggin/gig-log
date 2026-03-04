@@ -73,6 +73,20 @@ following:
       plan for that issue
 - DO NOT implement the plan
 
+#### Updating Issues
+
+When asked to reevaluate the plan or update issues you should do the following:
+
+- Review recent changes for context
+- Compare them to existing `issue-*.md` files and address any inconsistencies
+  cause by the changes if needed
+    - What to look for:
+        - Project structure changes
+        - Code style/convention changes
+        - Variable name changes
+- Compare the updated `issue-*.md` to the existing GitHub issue to ensure they still
+  match each other
+
 
 ## Git
 
@@ -89,10 +103,12 @@ When asked to perform a code review, follow this interactive process:
 ### What to Check
 
 - **Spelling mistakes** - Check for typos in code, comments, and strings
-- **Documentation compliance** - Ensure all files follow the documentation formats defined in this file (JSDoc comments, Storybook stories, MDX files for routes, etc.)
-- **Web testing convention compliance** - Verify new/updated web component and page tests follow the `Web Testing Conventions` section (behavior-focused story tests, component variant/state coverage, route-wrapper coverage where needed, and targeted unit tests for internal side effects)
-- **API testing convention compliance** - Verify new/updated API changes follow the `API Testing Conventions` section (unit + handler-level + integration flow coverage, with failure/security assertions and mocked external services)
 - **Code quality issues** - Bugs, logic errors, and other problems
+- **Security issues** - Ensure the app is secure. Security is a top priority.
+- **Issue consistency** - The instructions provided in the `issue-*.md` for a
+  given issue might not always be completely follow this is more of a guideline
+  for completing the task. If the implementation differs from the original 
+  instructions ensure that all other `issue-*.md` file reflect this change.
 
 ### Process
 

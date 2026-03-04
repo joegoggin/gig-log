@@ -165,12 +165,17 @@ fn discover_env_templates() -> Result<Vec<PathBuf>> {
 }
 
 fn collect_env_examples(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("Failed to read directory {}", dir.display()))? {
+    for entry in
+        fs::read_dir(dir).with_context(|| format!("Failed to read directory {}", dir.display()))?
+    {
         let entry = entry?;
         let path = entry.path();
 
         if path.is_dir() {
-            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
+            let name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
             if matches!(name, ".git" | "target" | "node_modules") {
                 continue;
             }
@@ -417,9 +422,17 @@ async fn run_build(options: &SetupOptions) -> Result<()> {
     }
 }
 
-async fn run_command(options: &SetupOptions, cmd: &str, args: &[&str], description: &str) -> Result<()> {
+async fn run_command(
+    options: &SetupOptions,
+    cmd: &str,
+    args: &[&str],
+    description: &str,
+) -> Result<()> {
     if options.dry_run {
-        println!("[dry-run] Would run ({description}): {cmd} {}", args.join(" "));
+        println!(
+            "[dry-run] Would run ({description}): {cmd} {}",
+            args.join(" ")
+        );
         return Ok(());
     }
 
@@ -429,7 +442,10 @@ async fn run_command(options: &SetupOptions, cmd: &str, args: &[&str], descripti
         .await
         .with_context(|| format!("Failed {description}"))?;
     if !status.success() {
-        anyhow::bail!("Command failed while {description}: {cmd} {}", args.join(" "));
+        anyhow::bail!(
+            "Command failed while {description}: {cmd} {}",
+            args.join(" ")
+        );
     }
     Ok(())
 }
@@ -442,7 +458,10 @@ fn print_summary(summary: &SetupSummary, options: &SetupOptions) {
         println!("  - {}", path.display());
     }
 
-    println!("- Env files skipped (already exist): {}", summary.env_skipped.len());
+    println!(
+        "- Env files skipped (already exist): {}",
+        summary.env_skipped.len()
+    );
     for path in &summary.env_skipped {
         println!("  - {}", path.display());
     }
@@ -454,19 +473,36 @@ fn print_summary(summary: &SetupSummary, options: &SetupOptions) {
     if options.skip_db {
         println!("- Database startup: skipped");
     } else {
-        println!("- Database startup: {}", if summary.db_started { "done" } else { "not run" });
+        println!(
+            "- Database startup: {}",
+            if summary.db_started {
+                "done"
+            } else {
+                "not run"
+            }
+        );
     }
 
     if options.skip_migrate {
         println!("- Migrations: skipped");
     } else {
-        println!("- Migrations: {}", if summary.migrations_ran { "done" } else { "not run" });
+        println!(
+            "- Migrations: {}",
+            if summary.migrations_ran {
+                "done"
+            } else {
+                "not run"
+            }
+        );
     }
 
     if options.skip_build {
         println!("- Build: skipped");
     } else {
-        println!("- Build: {}", if summary.build_ran { "done" } else { "not run" });
+        println!(
+            "- Build: {}",
+            if summary.build_ran { "done" } else { "not run" }
+        );
     }
 
     println!("- Existing env files were left untouched (non-destructive mode).");
