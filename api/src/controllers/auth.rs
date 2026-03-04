@@ -197,11 +197,19 @@ impl AuthController {
             .ok_or_else(|| ApiErrorResponse::BadRequest("Missing refresh token".to_string()))?;
 
         let old_token = refresh_cookie.value();
+        let token_data = JwtUtil::validate_token(old_token, &state.config)
+            .map_err(|_| ApiErrorResponse::BadRequest("Invalid refresh token".to_string()))?;
         let old_hash = Self::sha256_hash(old_token);
 
         let token_record = RefreshTokenRepo::find_by_hash(&state.db_pool, &old_hash)
             .await
             .map_err(|_| ApiErrorResponse::BadRequest("Invalid refresh token".to_string()))?;
+
+        if token_data.claims.sub != token_record.user_id {
+            return Err(ApiErrorResponse::BadRequest(
+                "Invalid refresh token".to_string(),
+            ));
+        }
 
         RefreshTokenRepo::revoke_token(&state.db_pool, &old_hash).await?;
 
@@ -238,45 +246,38 @@ impl AuthController {
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<ForgotPasswordRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
-        match UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
-            Ok(user) => {
-                let reset_code = code::generate();
-                let expires_at = Utc::now() + Duration::minutes(15);
+        if let Ok(user) = UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
+            let reset_code = code::generate();
+            let expires_at = Utc::now() + Duration::minutes(15);
 
-                AuthCodeRepo::insert_code(
-                    &state.db_pool,
-                    user.id,
-                    &reset_code,
-                    AuthCodeType::PasswordReset,
-                    expires_at,
-                    None,
-                )
-                .await?;
+            AuthCodeRepo::insert_code(
+                &state.db_pool,
+                user.id,
+                &reset_code,
+                AuthCodeType::PasswordReset,
+                expires_at,
+                None,
+            )
+            .await?;
 
-                let sender = AuthSender::new(
-                    state.email_client.clone(),
-                    user.email.clone(),
-                    reset_code.clone(),
-                );
+            let sender = AuthSender::new(
+                state.email_client.clone(),
+                user.email.clone(),
+                reset_code.clone(),
+            );
 
-                let result = sender.send_reset_password().await;
+            let result = sender.send_reset_password().await;
 
-                if let Err(_) = result {
-                    return Err(ApiErrorResponse::InternalServerError(
-                        "Failed to send email".to_string(),
-                    ));
-                };
-            }
-            Err(_) => {
-                return Err(ApiErrorResponse::NotFound(format!(
-                    "Account with email of {} not found",
-                    &body.email
-                )));
-            }
+            if let Err(_) = result {
+                return Err(ApiErrorResponse::InternalServerError(
+                    "Failed to send email".to_string(),
+                ));
+            };
         }
 
         let response = MessageResponse {
-            message: format!("Reset code send to {}", &body.email),
+            message: "If an account exists for this email, a reset code has been sent."
+                .to_string(),
         };
 
         Ok(Json(response))
@@ -314,6 +315,7 @@ impl AuthController {
 
         UserRepo::update_password(&state.db_pool, auth_code.user_id, &password_hash).await?;
         AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
+        RefreshTokenRepo::revoke_all_for_user(&state.db_pool, auth_code.user_id).await?;
 
         Ok(Json(MessageResponse {
             message: "Password has been reset successfully.".to_string(),
@@ -422,7 +424,6 @@ impl AuthController {
         );
 
         sender.send_email_change().await?;
-        UserRepo::set_email_unconfirmed(&state.db_pool, auth.user_id).await?;
 
         Ok(Json(MessageResponse {
             message: "Verification code sent to new email.".to_string(),

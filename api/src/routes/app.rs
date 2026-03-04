@@ -1,6 +1,6 @@
 use axum::{
-    Router,
     http::{HeaderName, Method},
+    Router,
 };
 use sqlx::{Pool, Postgres};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -22,8 +22,14 @@ pub struct AppRouter;
 
 impl AppRouter {
     pub fn new(state: AppState) -> Router {
+        let web_origin = state.config.web_origin.parse().unwrap_or_else(|_| {
+            "http://localhost:3000"
+                .parse()
+                .expect("default localhost origin should always be valid")
+        });
+
         let cors = CorsLayer::new()
-            .allow_origin(AllowOrigin::exact(state.config.web_origin.parse().unwrap()))
+            .allow_origin(AllowOrigin::exact(web_origin))
             .allow_methods([
                 Method::GET,
                 Method::POST,
