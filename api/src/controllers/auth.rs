@@ -4,7 +4,8 @@ use chrono::{Duration, Utc};
 use gig_log_common::models::generic::MessageResponse;
 use gig_log_common::models::user::{
     ChangePasswordRequest, ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest,
-    SetPasswordRequest, SignUpRequest, User, VerifyForgotPasswordRequest,
+    RequestEmailChangeRequest, SetPasswordRequest, SignUpRequest, User,
+    VerifyForgotPasswordRequest,
 };
 use sha2::{Digest, Sha256};
 
@@ -346,7 +347,7 @@ impl AuthController {
         sender.send_password_change().await?;
 
         Ok(Json(MessageResponse {
-            message: "A verification code was sent to your email".to_string(),
+            message: "Verification sent to your email".to_string(),
         }))
     }
 
@@ -385,6 +386,67 @@ impl AuthController {
 
         Ok(Json(MessageResponse {
             message: "Password changed successfully.".to_string(),
+        }))
+    }
+
+    pub async fn request_email_change(
+        auth: AuthUser,
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<RequestEmailChangeRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        let existing = UserRepo::find_user_by_email(&state.db_pool, &body.new_email).await;
+
+        if existing.is_ok() {
+            return Err(ApiErrorResponse::BadRequest(
+                "Email already in use".to_string(),
+            ));
+        }
+
+        let change_code = code::generate();
+        let expires_at = Utc::now() + Duration::minutes(15);
+
+        AuthCodeRepo::insert_code(
+            &state.db_pool,
+            auth.user_id,
+            &change_code,
+            AuthCodeType::EmailChange,
+            expires_at,
+            Some(&body.new_email),
+        )
+        .await?;
+
+        let sender = AuthSender::new(
+            state.email_client.clone(),
+            body.new_email.clone(),
+            change_code.clone(),
+        );
+
+        sender.send_email_change().await?;
+        UserRepo::set_email_unconfirmed(&state.db_pool, auth.user_id).await?;
+
+        Ok(Json(MessageResponse {
+            message: "Verification code sent to new email.".to_string(),
+        }))
+    }
+
+    pub async fn confirm_email_change(
+        State(state): State<AppState>,
+        ValidatedJson(body): ValidatedJson<ConfirmEmailRequest>,
+    ) -> ApiResult<Json<MessageResponse>> {
+        let auth_code =
+            AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::EmailChange)
+                .await
+                .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired code".to_string()))?;
+
+        let new_email = auth_code.new_email.as_ref().ok_or_else(|| {
+            ApiErrorResponse::InternalServerError("Email change code missing new email".to_string())
+        })?;
+
+        UserRepo::update_email_and_confirm(&state.db_pool, auth_code.user_id, new_email).await?;
+        AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
+
+        Ok(Json(MessageResponse {
+            message: "Email changed successfully.".to_string(),
         }))
     }
 

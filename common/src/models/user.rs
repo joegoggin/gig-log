@@ -91,7 +91,9 @@ pub struct ChangePasswordRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "validation", derive(validator::Validate))]
 pub struct RequestEmailChangeRequest {
+    #[cfg_attr(feature = "validation", validate(email(message = "Email is invalid")))]
     pub new_email: String,
 }
 

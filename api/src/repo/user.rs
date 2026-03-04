@@ -115,7 +115,7 @@ impl UserRepo {
         Ok(())
     }
 
-    pub async fn update_email(
+    pub async fn update_email_and_confirm(
         pool: &Pool<Postgres>,
         user_id: Uuid,
         new_email: &str,
@@ -123,10 +123,25 @@ impl UserRepo {
         sqlx::query!(
             r#"
         UPDATE users
-        SET email = $1, email_confirmed = FALSE, updated_at = NOW()
+        SET email = $1, email_confirmed = TRUE, updated_at = NOW()
         WHERE id = $2
         "#,
             new_email,
+            user_id,
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn set_email_unconfirmed(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<()> {
+        sqlx::query!(
+            r#"
+        UPDATE users
+        SET email_confirmed = FALSE, updated_at = NOW()
+        WHERE id = $1
+        "#,
             user_id,
         )
         .execute(pool)

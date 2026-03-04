@@ -22,10 +22,18 @@ impl AuthRouter {
                 post(AuthController::verify_forgot_password),
             )
             .route("/set-password", post(AuthController::set_password))
+            .route(
+                "/request-change-password",
+                post(AuthController::request_change_password_code),
+            )
             .route("/change-password", post(AuthController::change_password))
             .route(
-                "/change-password/request-code",
-                post(AuthController::request_change_password_code),
+                "/request-email-change",
+                post(AuthController::request_email_change),
+            )
+            .route(
+                "/confirm-email-change",
+                post(AuthController::confirm_email_change),
             )
     }
 }
