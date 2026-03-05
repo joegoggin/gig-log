@@ -76,6 +76,9 @@ common-add *args:
 dev-tools *args:
     cargo run -p gig-log-dev-tools -- {{args}}
 
+dev-tools-build:
+	cargo build -p gig-log-dev-tools
+
 docs:
     cargo run -p gig-log-dev-tools -- docs
 
