@@ -86,6 +86,7 @@ When asked to reevaluate the plan or update issues you should do the following:
         - Variable name changes
 - Compare the updated `issue-*.md` to the existing GitHub issue to ensure they still
   match each other
+- DO NOT implement the plan
 
 
 ## Git
