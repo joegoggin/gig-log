@@ -40,4 +40,7 @@ pub enum Command {
         #[arg(long)]
         release: bool,
     },
+    // Add to the Command enum in dev-tools/src/cli.rs
+    /// Launch the API tester TUI
+    ApiTester,
 }

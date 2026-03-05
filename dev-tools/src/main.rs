@@ -1,3 +1,4 @@
+mod api_tester;
 mod cli;
 mod dev;
 mod docs;
@@ -33,6 +34,7 @@ async fn main() -> anyhow::Result<()> {
             })
             .await?
         }
+        Command::ApiTester => api_tester::run().await?,
     }
 
     Ok(())
