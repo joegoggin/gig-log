@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+const DATA_DIR: &str = ".api-tester";
 const COLLECTION_FILE: &str = "collections.toml";
-const DATA_DIR: &str = "dev-tools/api-tester";
 const VARIABLES_FILE: &str = "variables.toml";
 const COOKIE_JAR_FILE: &str = "cookies.txt";
 const ROUTE_LIST_STATE_FILE: &str = "route-list-state.toml";
@@ -17,11 +17,11 @@ fn data_dir() -> PathBuf {
 }
 
 pub fn collection_path() -> PathBuf {
-    workspace_root().join(COLLECTION_FILE)
+    data_dir().join(COLLECTION_FILE)
 }
 
 pub fn variables_path() -> PathBuf {
-    workspace_root().join(VARIABLES_FILE)
+    data_dir().join(VARIABLES_FILE)
 }
 
 pub fn cookie_jar_path() -> PathBuf {

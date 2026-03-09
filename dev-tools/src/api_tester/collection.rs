@@ -138,6 +138,16 @@ impl Collection {
 
     pub fn save(&self) -> anyhow::Result<()> {
         let path = paths::collection_path();
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create collection directory: {}",
+                    parent.display()
+                )
+            })?;
+        }
+
         let mut groups: Vec<RouteGroupFile> = vec![];
 
         for route in &self.routes {

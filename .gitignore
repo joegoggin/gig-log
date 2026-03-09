@@ -2,7 +2,7 @@ target
 dist
 .env
 *.env
-variables.toml
 issues
-cookies.txt
-dev-tools/api-tester/route-list-state.toml
+.api-tester/variables.toml
+.api-tester/cookies.txt
+.api-tester/route-list-state.toml
