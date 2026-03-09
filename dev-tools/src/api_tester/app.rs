@@ -1,3 +1,9 @@
+use ratatui::{
+    layout::{Constraint, Layout, Margin, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
+};
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::{Application, AttrValue, Attribute, NoUserEvent, State, StateValue};
 
@@ -107,6 +113,8 @@ pub struct AppModel {
 }
 
 impl AppModel {
+    const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
+
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
             app,
@@ -211,6 +219,10 @@ impl AppModel {
             Msg::RouteListStateChanged(state) => {
                 self.route_list_state = state;
                 self.persist_route_list_state();
+            }
+            Msg::TerminalResize(width, _height) => {
+                self.terminal_width = width;
+                self.layout_mode = Self::layout_mode_for_width(width);
             }
             Msg::RefreshList | Msg::None => {}
             Msg::EnterInsertMode => {
@@ -412,16 +424,14 @@ impl AppModel {
 
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
         let content_area = Self::content_area(frame.area());
+        self.terminal_width = content_area.width;
+        self.layout_mode = Self::layout_mode_for_width(self.terminal_width);
 
         match self.active_view {
             ActiveView::RouteList => {
-                self.app.view(&Id::RouteList, frame, content_area);
+                self.render_route_list(frame, content_area);
             }
             ActiveView::RouteEditor => {
-                use ratatui::layout::{Constraint, Layout, Margin, Rect};
-                use ratatui::style::{Color, Style};
-                use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Wrap};
-
                 // Check if "New Group..." is selected to show the new group input
                 let show_new_group = if let Ok(State::One(StateValue::Usize(idx))) =
                     self.app.state(&Id::EditorGroup)
@@ -551,6 +561,424 @@ impl AppModel {
         }
     }
 
+    fn render_route_list(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        if self.layout_mode != LayoutMode::Wide {
+            self.app.view(&Id::RouteList, frame, area);
+            return;
+        }
+
+        let chunks = Layout::horizontal([Constraint::Percentage(45), Constraint::Percentage(55)])
+            .split(area);
+
+        let route_list_area = chunks[0].inner(Margin {
+            vertical: 1,
+            horizontal: 1,
+        });
+
+        self.app.view(&Id::RouteList, frame, route_list_area);
+        self.render_route_preview(frame, chunks[1]);
+    }
+
+    fn render_route_preview(&self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        if let Some(SelectedItem::Route(selection)) = self.route_list_state.selected.as_ref()
+            && let Some(route) = self.selected_route(selection)
+        {
+            self.render_selected_route_preview(frame, area, route);
+            return;
+        }
+
+        let max_lines = area.height.saturating_sub(2) as usize;
+        let (title, lines) = self.route_preview_content(max_lines);
+
+        let preview = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(Color::Cyan))
+                    .padding(Padding::new(1, 1, 1, 1))
+                    .title(title),
+            )
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(preview, area);
+    }
+
+    fn render_selected_route_preview(
+        &self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+        route: &Route,
+    ) {
+        let preview_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Cyan))
+            .padding(Padding::new(1, 1, 1, 1))
+            .title("Route Preview");
+        let inner = preview_block.inner(area);
+        frame.render_widget(preview_block, area);
+
+        if inner.width == 0 || inner.height == 0 {
+            return;
+        }
+
+        let summary_lines =
+            Self::interleave_with_blank_lines(Self::route_summary_lines(route), usize::MAX);
+        let summary_height = summary_lines.len() as u16;
+        let body_preview = route
+            .body
+            .as_deref()
+            .map(body_preview::build)
+            .filter(|preview| !preview.lines.is_empty());
+
+        if let Some(preview) = body_preview
+            && inner.height >= summary_height.saturating_add(6)
+        {
+            let chunks = Layout::vertical([
+                Constraint::Length(summary_height),
+                Constraint::Length(3),
+                Constraint::Min(3),
+            ])
+            .split(inner);
+
+            frame.render_widget(
+                Paragraph::new(summary_lines.clone()).wrap(Wrap { trim: false }),
+                chunks[0],
+            );
+
+            let body_status_area = chunks[1].inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            });
+            frame.render_widget(
+                Paragraph::new(vec![Self::route_body_status_line(route)]),
+                body_status_area,
+            );
+
+            let body_preview_title = match preview.format {
+                body_preview::BodyPreviewFormat::Json => "Body Preview (JSON)",
+                body_preview::BodyPreviewFormat::Text => "Body Preview",
+            };
+            let body_preview_lines = Self::truncate_preview_lines(
+                preview.lines,
+                chunks[2].height.saturating_sub(2) as usize,
+            );
+
+            let body_widget = Paragraph::new(body_preview_lines)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(Color::Cyan))
+                        .title(body_preview_title),
+                )
+                .wrap(Wrap { trim: false });
+            frame.render_widget(body_widget, chunks[2]);
+            return;
+        }
+
+        let mut lines = summary_lines;
+        lines.push(Self::route_body_status_line(route));
+        let lines = Self::interleave_with_blank_lines(lines, inner.height as usize);
+        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
+    }
+
+    fn route_preview_content(&self, max_lines: usize) -> (String, Vec<Line<'static>>) {
+        match self.route_list_state.selected.as_ref() {
+            Some(SelectedItem::Route(selection)) => {
+                let group_name = Self::normalized_group_name(&selection.group);
+                let routes = self.group_routes(&group_name);
+
+                if routes.is_empty() {
+                    (
+                        "Route Preview".to_string(),
+                        Self::placeholder_preview_lines(
+                            "Selected route is no longer available.",
+                            max_lines,
+                        ),
+                    )
+                } else {
+                    (
+                        "Group Preview".to_string(),
+                        self.route_preview_for_group(&group_name, &routes, max_lines),
+                    )
+                }
+            }
+            Some(SelectedItem::Group { name }) => {
+                let group_name = Self::normalized_group_name(name);
+                let routes = self.group_routes(&group_name);
+
+                (
+                    "Group Preview".to_string(),
+                    self.route_preview_for_group(&group_name, &routes, max_lines),
+                )
+            }
+            None => {
+                if let Some(first_route) = self.collection.routes.first() {
+                    let group_name = Self::normalized_group_name(&first_route.group);
+                    let routes = self.group_routes(&group_name);
+
+                    (
+                        "Group Preview".to_string(),
+                        self.route_preview_for_group(&group_name, &routes, max_lines),
+                    )
+                } else {
+                    (
+                        "Preview".to_string(),
+                        Self::placeholder_preview_lines(
+                            "No routes. Press 'n' to create one.",
+                            max_lines,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fn route_summary_lines(route: &Route) -> Vec<Line<'static>> {
+        let method = route.method.to_string();
+        let group_name = Self::normalized_group_name(&route.group);
+        let headers_label = if route.headers.is_empty() {
+            "Headers: none".to_string()
+        } else {
+            format!("Headers: {}", route.headers.len())
+        };
+
+        vec![
+            Line::from(vec![
+                Span::styled(
+                    format!("{method:<6}"),
+                    Style::default()
+                        .fg(Self::method_color(&route.method))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::raw(route.name.clone()),
+            ]),
+            Line::from(format!("Group: {group_name}")),
+            Line::from(format!("URL: {}", route.url)),
+            Line::from(headers_label),
+        ]
+    }
+
+    fn route_body_status_line(route: &Route) -> Line<'static> {
+        let body_status = route
+            .body
+            .as_ref()
+            .filter(|body| !body.trim().is_empty())
+            .map(|body| format!("Body: Set ({} chars)", body.chars().count()))
+            .unwrap_or_else(|| "Body: Empty".to_string());
+
+        Line::from(Span::styled(
+            body_status,
+            Style::default().fg(Color::DarkGray),
+        ))
+    }
+
+    fn route_preview_for_group(
+        &self,
+        group_name: &str,
+        routes: &[&Route],
+        max_lines: usize,
+    ) -> Vec<Line<'static>> {
+        if max_lines == 0 {
+            return vec![];
+        }
+
+        let mut entries = vec![Line::from(vec![
+            Span::styled(
+                "Group: ",
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                group_name.to_string(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ])];
+
+        entries.push(Line::from(format!("Routes: {}", routes.len())));
+
+        if routes.is_empty() {
+            entries.push(Line::from(Span::styled(
+                "No routes in this group.",
+                Style::default().fg(Color::DarkGray),
+            )));
+            return Self::interleave_with_blank_lines(entries, max_lines);
+        }
+
+        let total_routes = routes.len();
+        let mut visible_route_count = 0;
+
+        for candidate in (0..=total_routes).rev() {
+            let hidden = total_routes.saturating_sub(candidate);
+            let entry_count = 2 + candidate + usize::from(hidden > 0);
+            let required_lines = entry_count.saturating_mul(2).saturating_sub(1);
+
+            if required_lines <= max_lines {
+                visible_route_count = candidate;
+                break;
+            }
+        }
+
+        entries.extend(
+            routes
+                .iter()
+                .copied()
+                .take(visible_route_count)
+                .map(Self::group_route_line),
+        );
+
+        let hidden_routes = total_routes.saturating_sub(visible_route_count);
+        if hidden_routes > 0 {
+            entries.push(Line::from(Span::styled(
+                format!("... +{hidden_routes} more"),
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+
+        Self::interleave_with_blank_lines(entries, max_lines)
+    }
+
+    fn group_route_line(route: &Route) -> Line<'static> {
+        let method = route.method.to_string();
+
+        Line::from(vec![
+            Span::styled(
+                format!("{method:<6}"),
+                Style::default()
+                    .fg(Self::method_color(&route.method))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" "),
+            Span::raw(route.name.clone()),
+        ])
+    }
+
+    fn selected_route<'a>(&'a self, selection: &RouteSelection) -> Option<&'a Route> {
+        self.collection
+            .routes
+            .iter()
+            .find(|route| Self::route_matches_selection(route, selection))
+    }
+
+    fn group_routes<'a>(&'a self, group_name: &str) -> Vec<&'a Route> {
+        let normalized_group_name = Self::normalized_group_name(group_name);
+
+        self.collection
+            .routes
+            .iter()
+            .filter(|route| Self::normalized_group_name(&route.group) == normalized_group_name)
+            .collect()
+    }
+
+    fn route_matches_selection(route: &Route, selection: &RouteSelection) -> bool {
+        Self::normalized_group_name(&route.group) == Self::normalized_group_name(&selection.group)
+            && route.name == selection.name
+            && route
+                .method
+                .to_string()
+                .eq_ignore_ascii_case(&selection.method)
+            && route.url == selection.url
+    }
+
+    fn normalized_group_name(group_name: &str) -> String {
+        let trimmed = group_name.trim();
+
+        if trimmed.is_empty() {
+            DEFAULT_ROUTE_GROUP.to_string()
+        } else {
+            trimmed.to_string()
+        }
+    }
+
+    fn method_color(method: &HttpMethod) -> Color {
+        match method {
+            HttpMethod::Get => Color::Green,
+            HttpMethod::Post => Color::Blue,
+            HttpMethod::Put => Color::Yellow,
+            HttpMethod::Patch => Color::Magenta,
+            HttpMethod::Delete => Color::Red,
+        }
+    }
+
+    fn truncate_preview_lines(
+        mut lines: Vec<Line<'static>>,
+        max_lines: usize,
+    ) -> Vec<Line<'static>> {
+        if max_lines == 0 {
+            return vec![];
+        }
+
+        if lines.len() <= max_lines {
+            return lines;
+        }
+
+        if max_lines == 1 {
+            lines.truncate(1);
+            return lines;
+        }
+
+        let hidden_lines = lines.len() - max_lines + 1;
+        lines.truncate(max_lines - 1);
+        lines.push(Line::from(Span::styled(
+            format!("... +{hidden_lines} more"),
+            Style::default().fg(Color::DarkGray),
+        )));
+        lines
+    }
+
+    fn placeholder_preview_lines(message: &str, max_lines: usize) -> Vec<Line<'static>> {
+        if max_lines == 0 {
+            return vec![];
+        }
+
+        vec![Line::from(Span::styled(
+            message.to_string(),
+            Style::default().fg(Color::DarkGray),
+        ))]
+    }
+
+    fn interleave_with_blank_lines(
+        lines: Vec<Line<'static>>,
+        max_lines: usize,
+    ) -> Vec<Line<'static>> {
+        if max_lines == 0 {
+            return vec![];
+        }
+
+        let mut spaced = Vec::with_capacity(lines.len().saturating_mul(2));
+        let mut iter = lines.into_iter().peekable();
+
+        while let Some(line) = iter.next() {
+            if spaced.len() >= max_lines {
+                break;
+            }
+
+            spaced.push(line);
+
+            if iter.peek().is_some() && spaced.len() < max_lines {
+                spaced.push(Line::from(""));
+            }
+        }
+
+        spaced
+    }
+
+    fn layout_mode_for_width(width: u16) -> LayoutMode {
+        if width >= Self::ROUTE_PREVIEW_MIN_WIDTH {
+            LayoutMode::Wide
+        } else if width >= 80 {
+            LayoutMode::Medium
+        } else {
+            LayoutMode::Narrow
+        }
+    }
+
     pub fn mount_editor(&mut self, route: &Route) -> anyhow::Result<()> {
         let group_names = self.collection.group_names();
 
@@ -618,8 +1046,8 @@ impl AppModel {
         }
     }
 
-    fn content_area(area: ratatui::layout::Rect) -> ratatui::layout::Rect {
-        area.inner(ratatui::layout::Margin {
+    fn content_area(area: Rect) -> Rect {
+        area.inner(Margin {
             vertical: 1,
             horizontal: 2,
         })
