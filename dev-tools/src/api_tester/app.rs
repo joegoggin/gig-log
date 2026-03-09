@@ -2,7 +2,10 @@ use ratatui::{
     layout::{Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
+    widgets::{
+        Block, BorderType, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, Wrap,
+    },
 };
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::props::{
@@ -74,6 +77,7 @@ pub enum Msg {
     EditorScrollDown,
     EditorPageUp,
     EditorPageDown,
+    EditorScrollBy(isize),
     MethodChanged(usize),
     BodyEditorResult(Option<String>),
     ResponseTabChanged(usize),
@@ -144,7 +148,9 @@ impl AppModel {
     const BODY_STATUS_HEIGHT: u16 = 3;
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
     const EDITOR_FOOTER_MAX_HEIGHT: u16 = 2;
-    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll";
+    const EDITOR_SCROLLBAR_MIN_CONTENT_WIDTH: u16 = 30;
+    const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
+    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | Swipe/Mouse Wheel: Scroll";
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -286,6 +292,7 @@ impl AppModel {
             Msg::EditorScrollDown => self.scroll_editor_by(1),
             Msg::EditorPageUp => self.scroll_editor_page(-1),
             Msg::EditorPageDown => self.scroll_editor_page(1),
+            Msg::EditorScrollBy(delta) => self.scroll_editor_by(delta),
             Msg::GroupSelected(_index) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
@@ -522,18 +529,45 @@ impl AppModel {
             (area, None)
         };
 
+        let total_content_height = Self::editor_total_height(&sections);
+        let can_render_scrollbar = total_content_height > editor_area.height as usize
+            && editor_area.width
+                > Self::EDITOR_SCROLLBAR_MIN_CONTENT_WIDTH + Self::EDITOR_SCROLLBAR_WIDTH;
+        let (editor_content_area, scrollbar_area) = if can_render_scrollbar {
+            let chunks = Layout::horizontal([
+                Constraint::Min(0),
+                Constraint::Length(Self::EDITOR_SCROLLBAR_WIDTH),
+            ])
+            .split(editor_area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (editor_area, None)
+        };
+
         let start = self
             .editor_scroll_offset
             .min(sections.len().saturating_sub(1));
-        let (start, end) = Self::editor_visible_range(&sections, start, editor_area.height);
+        let start = Self::editor_aligned_start(&sections, start, editor_content_area.height);
+        let (start, end) = Self::editor_visible_range(&sections, start, editor_content_area.height);
         let can_scroll_up = start > 0;
         let can_scroll_down = end < sections.len();
 
         if start == end {
-            if editor_area.height > 0 {
+            if editor_content_area.height > 0 {
                 let warning = Paragraph::new("Increase terminal height to edit this route.")
                     .style(Style::default().fg(Color::DarkGray));
-                frame.render_widget(warning, editor_area);
+                frame.render_widget(warning, editor_content_area);
+            }
+
+            if let Some(scrollbar_area) = scrollbar_area {
+                self.render_editor_scrollbar(
+                    frame,
+                    scrollbar_area,
+                    &sections,
+                    start,
+                    editor_content_area.height,
+                    !can_scroll_down,
+                );
             }
 
             if let Some(footer_area) = footer_area {
@@ -549,7 +583,7 @@ impl AppModel {
             .iter()
             .map(|section| Constraint::Length(section.height))
             .collect();
-        let chunks = Layout::vertical(constraints).split(editor_area);
+        let chunks = Layout::vertical(constraints).split(editor_content_area);
 
         for (section, chunk) in sections[start..end].iter().zip(chunks.iter()) {
             match section.kind {
@@ -600,9 +634,62 @@ impl AppModel {
             }
         }
 
+        if let Some(scrollbar_area) = scrollbar_area {
+            self.render_editor_scrollbar(
+                frame,
+                scrollbar_area,
+                &sections,
+                start,
+                editor_content_area.height,
+                !can_scroll_down,
+            );
+        }
+
         if let Some(footer_area) = footer_area {
             self.render_editor_footer(frame, footer_area, can_scroll_up, can_scroll_down);
         }
+    }
+
+    fn render_editor_scrollbar(
+        &self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+        sections: &[EditorSection],
+        start_index: usize,
+        viewport_height: u16,
+        at_bottom: bool,
+    ) {
+        if area.width == 0 || area.height == 0 || viewport_height == 0 {
+            return;
+        }
+
+        let content_length = Self::editor_total_height(sections);
+        if content_length <= viewport_height as usize {
+            return;
+        }
+
+        let start_position = sections
+            .iter()
+            .take(start_index)
+            .map(|section| section.height as usize)
+            .sum::<usize>()
+            .min(content_length.saturating_sub(1));
+        let position = if at_bottom {
+            content_length.saturating_sub(1)
+        } else {
+            start_position
+        };
+
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_style(Style::default().fg(Color::DarkGray))
+            .thumb_style(Style::default().fg(Color::Cyan));
+        let mut state = ScrollbarState::new(content_length)
+            .position(position)
+            .viewport_content_length(viewport_height as usize);
+
+        frame.render_stateful_widget(scrollbar, area, &mut state);
     }
 
     fn render_editor_footer(
@@ -900,6 +987,45 @@ impl AppModel {
         }
 
         (start, end)
+    }
+
+    fn editor_aligned_start(
+        sections: &[EditorSection],
+        start: usize,
+        available_height: u16,
+    ) -> usize {
+        if sections.is_empty() || available_height == 0 {
+            return 0;
+        }
+
+        let start = start.min(sections.len().saturating_sub(1));
+        let (mut aligned_start, end) =
+            Self::editor_visible_range(sections, start, available_height);
+
+        if end < sections.len() {
+            return aligned_start;
+        }
+
+        let mut used_height: u16 = sections[aligned_start..end]
+            .iter()
+            .map(|section| section.height)
+            .sum();
+
+        while aligned_start > 0 {
+            let previous_height = sections[aligned_start - 1].height;
+            if used_height.saturating_add(previous_height) > available_height {
+                break;
+            }
+
+            used_height = used_height.saturating_add(previous_height);
+            aligned_start -= 1;
+        }
+
+        aligned_start
+    }
+
+    fn editor_total_height(sections: &[EditorSection]) -> usize {
+        sections.iter().map(|section| section.height as usize).sum()
     }
 
     fn render_route_list(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {

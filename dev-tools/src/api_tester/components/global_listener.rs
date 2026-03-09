@@ -2,19 +2,23 @@ use ratatui::{Frame, layout::Rect};
 use tuirealm::{
     AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
     command::{Cmd, CmdResult},
-    event::{Key, KeyEvent, KeyModifiers},
+    event::{Key, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
 };
 
 use crate::api_tester::app::{ActiveView, InputMode, Msg};
 
 pub struct GlobalListener {
     input_mode: InputMode,
+    touch_drag_row: Option<u16>,
 }
 
 impl GlobalListener {
+    const MAX_DRAG_STEP: isize = 3;
+
     pub fn new() -> Self {
         Self {
             input_mode: InputMode::Normal,
+            touch_drag_row: None,
         }
     }
 
@@ -38,6 +42,49 @@ impl GlobalListener {
         match key.code {
             Key::Esc => Some(Msg::EnterNormalMode),
             _ => None, // All other keys pass through to focused component
+        }
+    }
+
+    fn map_mouse(&mut self, mouse: MouseEvent) -> Option<Msg> {
+        match mouse.kind {
+            MouseEventKind::ScrollUp => {
+                self.touch_drag_row = None;
+                Some(Msg::EditorScrollBy(-1))
+            }
+            MouseEventKind::ScrollDown => {
+                self.touch_drag_row = None;
+                Some(Msg::EditorScrollBy(1))
+            }
+            MouseEventKind::Down(MouseButton::Left) => {
+                self.touch_drag_row = Some(mouse.row);
+                None
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                let Some(last_row) = self.touch_drag_row else {
+                    self.touch_drag_row = Some(mouse.row);
+                    return None;
+                };
+
+                self.touch_drag_row = Some(mouse.row);
+                let delta = last_row as isize - mouse.row as isize;
+                if delta == 0 {
+                    return None;
+                }
+
+                Some(Msg::EditorScrollBy(
+                    delta.clamp(-Self::MAX_DRAG_STEP, Self::MAX_DRAG_STEP),
+                ))
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                self.touch_drag_row = None;
+                None
+            }
+            MouseEventKind::Down(_) | MouseEventKind::Up(_) => {
+                self.touch_drag_row = None;
+                None
+            }
+            MouseEventKind::Drag(_) | MouseEventKind::Moved => None,
+            MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight => None,
         }
     }
 }
@@ -77,8 +124,72 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
                 InputMode::Normal => Self::map_normal_key(key),
                 InputMode::Insert => Self::map_insert_key(key),
             },
+            Event::Mouse(mouse) => self.map_mouse(mouse),
             Event::WindowResize(width, height) => Some(Msg::TerminalResize(width, height)),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mouse_event(kind: MouseEventKind, row: u16) -> Event<NoUserEvent> {
+        Event::Mouse(MouseEvent {
+            kind,
+            modifiers: KeyModifiers::NONE,
+            column: 0,
+            row,
+        })
+    }
+
+    #[test]
+    fn wheel_events_map_to_scroll_messages() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::ScrollUp, 0)),
+            Some(Msg::EditorScrollBy(-1))
+        );
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::ScrollDown, 0)),
+            Some(Msg::EditorScrollBy(1))
+        );
+    }
+
+    #[test]
+    fn drag_events_map_to_phone_style_scroll_direction() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::Down(MouseButton::Left), 10)),
+            None
+        );
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 8)),
+            Some(Msg::EditorScrollBy(2))
+        );
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 12)),
+            Some(Msg::EditorScrollBy(-3))
+        );
+    }
+
+    #[test]
+    fn drag_state_resets_on_left_button_release() {
+        let mut listener = GlobalListener::new();
+
+        listener.on(mouse_event(MouseEventKind::Down(MouseButton::Left), 10));
+        listener.on(mouse_event(MouseEventKind::Up(MouseButton::Left), 10));
+
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 7)),
+            None
+        );
+        assert_eq!(
+            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 5)),
+            Some(Msg::EditorScrollBy(2))
+        );
     }
 }
