@@ -77,6 +77,10 @@ impl Component<Msg, NoUserEvent> for EditorGroupSelector {
                 code: Key::BackTab, ..
             }) => Some(Msg::FocusField(Id::EditorName)),
             Event::Keyboard(KeyEvent {
+                code: Key::Char('h'),
+                modifiers: KeyModifiers::NONE,
+            })
+            | Event::Keyboard(KeyEvent {
                 code: Key::Left, ..
             }) => {
                 self.perform(Cmd::Move(Direction::Left));
@@ -87,6 +91,10 @@ impl Component<Msg, NoUserEvent> for EditorGroupSelector {
                 }
             }
             Event::Keyboard(KeyEvent {
+                code: Key::Char('l'),
+                modifiers: KeyModifiers::NONE,
+            })
+            | Event::Keyboard(KeyEvent {
                 code: Key::Right, ..
             }) => {
                 self.perform(Cmd::Move(Direction::Right));
@@ -98,5 +106,76 @@ impl Component<Msg, NoUserEvent> for EditorGroupSelector {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn selected_index(selector: &EditorGroupSelector) -> usize {
+        if let State::One(StateValue::Usize(index)) = selector.state() {
+            index
+        } else {
+            panic!("group selector should always have a selection");
+        }
+    }
+
+    fn sample_groups() -> Vec<String> {
+        vec![
+            "group-a".to_string(),
+            "group-b".to_string(),
+            "group-c".to_string(),
+        ]
+    }
+
+    #[test]
+    fn vim_keys_move_group_selection() {
+        let groups = sample_groups();
+        let mut selector = EditorGroupSelector::new(&groups, "group-b");
+
+        assert_eq!(selected_index(&selector), 1);
+        assert_eq!(
+            selector.on(Event::Keyboard(KeyEvent::new(
+                Key::Char('h'),
+                KeyModifiers::NONE,
+            ))),
+            Some(Msg::GroupSelected(0))
+        );
+        assert_eq!(selected_index(&selector), 0);
+
+        assert_eq!(
+            selector.on(Event::Keyboard(KeyEvent::new(
+                Key::Char('l'),
+                KeyModifiers::NONE,
+            ))),
+            Some(Msg::GroupSelected(1))
+        );
+        assert_eq!(selected_index(&selector), 1);
+    }
+
+    #[test]
+    fn arrow_keys_still_move_group_selection() {
+        let groups = sample_groups();
+        let mut selector = EditorGroupSelector::new(&groups, "group-b");
+
+        assert_eq!(selected_index(&selector), 1);
+        assert_eq!(
+            selector.on(Event::Keyboard(KeyEvent::new(
+                Key::Left,
+                KeyModifiers::NONE
+            ))),
+            Some(Msg::GroupSelected(0))
+        );
+        assert_eq!(selected_index(&selector), 0);
+
+        assert_eq!(
+            selector.on(Event::Keyboard(KeyEvent::new(
+                Key::Right,
+                KeyModifiers::NONE
+            ))),
+            Some(Msg::GroupSelected(1))
+        );
+        assert_eq!(selected_index(&selector), 1);
     }
 }

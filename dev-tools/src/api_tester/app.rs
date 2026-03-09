@@ -595,7 +595,7 @@ impl AppModel {
                 }
                 EditorSectionKind::Help => {
                     let help = Paragraph::new(
-                        "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | j/k or Up/Down: Scroll",
+                        "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Radio choice | j/k or Up/Down: Scroll",
                     )
                     .style(Style::default().fg(Color::DarkGray));
                     frame.render_widget(help, *chunk);

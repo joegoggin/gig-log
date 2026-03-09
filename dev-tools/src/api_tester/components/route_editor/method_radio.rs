@@ -65,6 +65,10 @@ impl Component<Msg, NoUserEvent> for EditorMethodRadio {
                 code: Key::BackTab, ..
             }) => Some(Msg::FocusField(Id::EditorGroup)),
             Event::Keyboard(KeyEvent {
+                code: Key::Char('h'),
+                modifiers: KeyModifiers::NONE,
+            })
+            | Event::Keyboard(KeyEvent {
                 code: Key::Left, ..
             }) => {
                 self.perform(Cmd::Move(Direction::Left));
@@ -75,6 +79,10 @@ impl Component<Msg, NoUserEvent> for EditorMethodRadio {
                 }
             }
             Event::Keyboard(KeyEvent {
+                code: Key::Char('l'),
+                modifiers: KeyModifiers::NONE,
+            })
+            | Event::Keyboard(KeyEvent {
                 code: Key::Right, ..
             }) => {
                 self.perform(Cmd::Move(Direction::Right));
@@ -86,5 +94,66 @@ impl Component<Msg, NoUserEvent> for EditorMethodRadio {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn selected_index(radio: &EditorMethodRadio) -> usize {
+        if let State::One(StateValue::Usize(index)) = radio.state() {
+            index
+        } else {
+            panic!("method radio should always have a selection");
+        }
+    }
+
+    #[test]
+    fn vim_keys_move_method_selection() {
+        let mut radio = EditorMethodRadio::new(&HttpMethod::Put);
+
+        assert_eq!(selected_index(&radio), 2);
+        assert_eq!(
+            radio.on(Event::Keyboard(KeyEvent::new(
+                Key::Char('h'),
+                KeyModifiers::NONE,
+            ))),
+            Some(Msg::MethodChanged(1))
+        );
+        assert_eq!(selected_index(&radio), 1);
+
+        assert_eq!(
+            radio.on(Event::Keyboard(KeyEvent::new(
+                Key::Char('l'),
+                KeyModifiers::NONE,
+            ))),
+            Some(Msg::MethodChanged(2))
+        );
+        assert_eq!(selected_index(&radio), 2);
+    }
+
+    #[test]
+    fn arrow_keys_still_move_method_selection() {
+        let mut radio = EditorMethodRadio::new(&HttpMethod::Put);
+
+        assert_eq!(selected_index(&radio), 2);
+        assert_eq!(
+            radio.on(Event::Keyboard(KeyEvent::new(
+                Key::Left,
+                KeyModifiers::NONE
+            ))),
+            Some(Msg::MethodChanged(1))
+        );
+        assert_eq!(selected_index(&radio), 1);
+
+        assert_eq!(
+            radio.on(Event::Keyboard(KeyEvent::new(
+                Key::Right,
+                KeyModifiers::NONE
+            ))),
+            Some(Msg::MethodChanged(2))
+        );
+        assert_eq!(selected_index(&radio), 2);
     }
 }
