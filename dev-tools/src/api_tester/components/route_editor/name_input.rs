@@ -70,6 +70,32 @@ impl Component<Msg, NoUserEvent> for EditorNameInput {
                 Some(Msg::FocusField(Id::EditorHeaders)) // Wrap to last field
             }
             Event::Keyboard(KeyEvent {
+                code: Key::Char('h'),
+                modifiers: KeyModifiers::NONE,
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Left));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Char('l'),
+                modifiers: KeyModifiers::NONE,
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Right));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Left, ..
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Left));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Right, ..
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Right));
+                None
+            }
+            Event::Keyboard(KeyEvent {
                 code: Key::Char(ch),
                 modifiers: KeyModifiers::NONE,
             })
@@ -146,5 +172,39 @@ mod tests {
         )));
 
         assert_eq!(value(&input), "x");
+    }
+
+    #[test]
+    fn normal_mode_moves_cursor_with_vim_keys() {
+        let mut input = EditorNameInput::new("ab");
+
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('h'),
+            KeyModifiers::NONE,
+        )));
+        input.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('x'),
+            KeyModifiers::NONE,
+        )));
+
+        assert_eq!(value(&input), "axb");
+    }
+
+    #[test]
+    fn normal_mode_moves_cursor_with_arrow_keys() {
+        let mut input = EditorNameInput::new("ab");
+
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Left,
+            KeyModifiers::NONE,
+        )));
+        input.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('x'),
+            KeyModifiers::NONE,
+        )));
+
+        assert_eq!(value(&input), "axb");
     }
 }

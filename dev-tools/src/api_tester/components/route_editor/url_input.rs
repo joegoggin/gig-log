@@ -68,6 +68,32 @@ impl Component<Msg, NoUserEvent> for EditorUrlInput {
                 code: Key::BackTab, ..
             }) => Some(Msg::FocusField(Id::EditorMethod)),
             Event::Keyboard(KeyEvent {
+                code: Key::Char('h'),
+                modifiers: KeyModifiers::NONE,
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Left));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Char('l'),
+                modifiers: KeyModifiers::NONE,
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Right));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Left, ..
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Left));
+                None
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Right, ..
+            }) if self.input_mode == InputMode::Normal => {
+                self.perform(Cmd::Move(Direction::Right));
+                None
+            }
+            Event::Keyboard(KeyEvent {
                 code: Key::Char(ch),
                 modifiers: KeyModifiers::NONE,
             })
@@ -105,5 +131,52 @@ impl Component<Msg, NoUserEvent> for EditorUrlInput {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn value(input: &EditorUrlInput) -> String {
+        if let State::One(tuirealm::StateValue::String(current)) = input.state() {
+            current
+        } else {
+            String::new()
+        }
+    }
+
+    #[test]
+    fn normal_mode_moves_cursor_with_vim_keys() {
+        let mut input = EditorUrlInput::new("ab");
+
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('h'),
+            KeyModifiers::NONE,
+        )));
+        input.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('x'),
+            KeyModifiers::NONE,
+        )));
+
+        assert_eq!(value(&input), "axb");
+    }
+
+    #[test]
+    fn normal_mode_moves_cursor_with_arrow_keys() {
+        let mut input = EditorUrlInput::new("ab");
+
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Left,
+            KeyModifiers::NONE,
+        )));
+        input.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+        input.on(Event::Keyboard(KeyEvent::new(
+            Key::Char('x'),
+            KeyModifiers::NONE,
+        )));
+
+        assert_eq!(value(&input), "axb");
     }
 }
