@@ -72,47 +72,60 @@ pub async fn run() -> anyhow::Result<()> {
 
     model.refresh_route_list()?;
 
-    let run_result = (|| -> anyhow::Result<()> {
-        loop {
-            model.app.attr(
-                &Id::GlobalListener,
-                Attribute::Custom("input_mode"),
-                AttrValue::Flag(model.input_mode == InputMode::Insert),
-            )?;
+    let run_result = 'app_loop: loop {
+        model.app.attr(
+            &Id::GlobalListener,
+            Attribute::Custom("input_mode"),
+            AttrValue::Flag(model.input_mode == InputMode::Insert),
+        )?;
 
-            let messages = model.app.tick(PollStrategy::Once)?;
+        let messages = model.app.tick(PollStrategy::Once)?;
 
-            for msg in messages {
-                if matches!(msg, Msg::AppClose) {
-                    return Ok(());
-                }
-
-                match model.update(msg)? {
-                    Some(Msg::AppClose) => return Ok(()),
-                    Some(Msg::OpenBodyEditor) => {
-                        restore_terminal(&mut terminal)?;
-
-                        let current_body = model.editor_draft_body();
-                        let editor_result = open_external_editor(current_body);
-
-                        terminal = init_terminal()?;
-
-                        match editor_result {
-                            Ok(new_body) => {
-                                model.update(Msg::BodyEditorResult(new_body))?;
-                            }
-                            Err(error) => {
-                                eprintln!("Editor error: {error}");
-                            }
-                        }
-                    }
-                    _ => {}
-                }
+        for msg in messages {
+            if matches!(msg, Msg::AppClose) {
+                break 'app_loop Ok(());
             }
 
-            terminal.draw(|frame| model.view(frame))?;
+            match model.update(msg)? {
+                Some(Msg::AppClose) => break 'app_loop Ok(()),
+                Some(Msg::RunRoute(index)) => {
+                    let Some(executor) = model.build_route_executor(index) else {
+                        eprintln!("Route execution skipped: route index {index} no longer exists");
+                        continue;
+                    };
+
+                    match executor.execute().await {
+                        Ok(response) => {
+                            model.update(Msg::RouteExecuted(index, response))?;
+                        }
+                        Err(error) => {
+                            eprintln!("Route execution failed: {error}");
+                        }
+                    }
+                }
+                Some(Msg::OpenBodyEditor) => {
+                    restore_terminal(&mut terminal)?;
+
+                    let current_body = model.editor_draft_body();
+                    let editor_result = open_external_editor(current_body);
+
+                    terminal = init_terminal()?;
+
+                    match editor_result {
+                        Ok(new_body) => {
+                            model.update(Msg::BodyEditorResult(new_body))?;
+                        }
+                        Err(error) => {
+                            eprintln!("Editor error: {error}");
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
-    })();
+
+        terminal.draw(|frame| model.view(frame))?;
+    };
 
     restore_terminal(&mut terminal)?;
     run_result

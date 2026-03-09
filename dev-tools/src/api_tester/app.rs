@@ -13,20 +13,30 @@ use tuirealm::props::{
 };
 use tuirealm::{Application, AttrValue, Attribute, NoUserEvent, State, StateValue};
 
-use crate::api_tester::collection::HttpMethod;
-use crate::api_tester::components::route_editor::group_selector::EditorGroupSelector;
-use crate::api_tester::components::route_editor::headers_input::EditorHeadersInput;
-use crate::api_tester::components::route_editor::method_radio::EditorMethodRadio;
 use crate::api_tester::components::route_editor::name_input::EditorNameInput;
 use crate::api_tester::components::route_editor::new_group_input::EditorNewGroupInput;
 use crate::api_tester::components::route_editor::url_input::EditorUrlInput;
+use crate::api_tester::components::{
+    response_viewer::body_view::ResponseBodyView, route_editor::method_radio::EditorMethodRadio,
+};
+use crate::api_tester::components::{
+    response_viewer::headers_view::ResponseHeadersView,
+    route_editor::headers_input::EditorHeadersInput,
+};
+use crate::api_tester::components::{
+    response_viewer::status_label::ResponseStatusLabel,
+    route_editor::group_selector::EditorGroupSelector,
+};
 use crate::api_tester::{
     body_preview,
     collection::{Collection, DEFAULT_ROUTE_GROUP, Route},
     components::route_list::RouteList,
-    executor::CurlResponse,
+    executor::{CurlExecutor, CurlResponse},
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
     variables::Variables,
+};
+use crate::api_tester::{
+    collection::HttpMethod, components::response_viewer::tab_selector::ResponseTabSelector,
 };
 use crate::utils::sub::SubUtils;
 
@@ -63,6 +73,7 @@ pub enum Msg {
     AppClose,
     SwitchView(ActiveView),
     RunRoute(usize),
+    RouteExecuted(usize, CurlResponse),
     EditRoute(usize),
     NewRoute,
     DeleteRoute(usize),
@@ -189,7 +200,15 @@ impl AppModel {
                 self.selected_route = Some(index);
                 self.select_route_in_state(index, true);
                 self.persist_route_list_state();
-                // Execution will be handled in #124
+                return Ok(Some(Msg::RunRoute(index)));
+            }
+            Msg::RouteExecuted(index, response) => {
+                self.selected_route = Some(index);
+                self.response = Some(response);
+                self.response_tab = 0;
+                self.input_mode = InputMode::Normal;
+                self.active_view = ActiveView::ResponseViewer;
+                self.mount_response_viewer()?;
             }
             Msg::EditRoute(index) => {
                 if self.active_view != ActiveView::RouteList {
@@ -405,6 +424,9 @@ impl AppModel {
                     }
                 }
             }
+            Msg::ResponseTabChanged(tab) => {
+                self.response_tab = tab;
+            }
             _ => {}
         }
 
@@ -478,6 +500,14 @@ impl AppModel {
         Ok(())
     }
 
+    pub fn build_route_executor(&self, index: usize) -> Option<CurlExecutor> {
+        self.collection
+            .routes
+            .get(index)
+            .cloned()
+            .map(|route| CurlExecutor::new(route, self.variables.clone()))
+    }
+
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
         let content_area = Self::content_area(frame.area());
         self.terminal_width = content_area.width;
@@ -492,11 +522,76 @@ impl AppModel {
                 self.render_route_editor(frame, content_area);
             }
             ActiveView::ResponseViewer => {
-                // Draw ResponseViewer component.
+                self.render_response_viewer(frame, content_area);
             }
             ActiveView::VariableManager => {
                 // Draw VariableManager component.
             }
+        }
+    }
+
+    pub fn mount_response_viewer(&mut self) -> anyhow::Result<()> {
+        if let Some(response) = &self.response {
+            let _ = self.app.umount(&Id::ResponseTabs);
+            let _ = self.app.umount(&Id::ResponseStatus);
+            let _ = self.app.umount(&Id::ResponseHeaders);
+            let _ = self.app.umount(&Id::ResponseBody);
+
+            self.app.mount(
+                Id::ResponseTabs,
+                Box::new(ResponseTabSelector::new(self.response_tab)),
+                SubUtils::key_subs([
+                    Key::Left.into(),
+                    Key::Right.into(),
+                    Key::Char('h').into(),
+                    Key::Char('l').into(),
+                ]),
+            )?;
+
+            self.app.mount(
+                Id::ResponseStatus,
+                Box::new(ResponseStatusLabel::new(response)),
+                vec![],
+            )?;
+
+            self.app.mount(
+                Id::ResponseHeaders,
+                Box::new(ResponseHeadersView::new(&response.headers)),
+                SubUtils::key_subs([
+                    Key::Char('j').into(),
+                    Key::Char('k').into(),
+                    Key::Down.into(),
+                    Key::Up.into(),
+                ]),
+            )?;
+
+            self.app.mount(
+                Id::ResponseBody,
+                Box::new(ResponseBodyView::new(&response.body)),
+                SubUtils::key_subs([
+                    Key::Char('j').into(),
+                    Key::Char('k').into(),
+                    Key::Down.into(),
+                    Key::Up.into(),
+                ]),
+            )?;
+
+            self.app.active(&Id::ResponseTabs)?;
+        }
+
+        Ok(())
+    }
+
+    fn render_response_viewer(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        let chunks = Layout::vertical([Constraint::Length(3), Constraint::Min(1)]).split(area);
+
+        self.app.view(&Id::ResponseTabs, frame, chunks[0]);
+
+        match self.response_tab {
+            0 => self.app.view(&Id::ResponseStatus, frame, chunks[1]),
+            1 => self.app.view(&Id::ResponseHeaders, frame, chunks[1]),
+            2 => self.app.view(&Id::ResponseBody, frame, chunks[1]),
+            _ => {}
         }
     }
 
