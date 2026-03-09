@@ -5,6 +5,9 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Padding, Paragraph, Wrap},
 };
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
+use tuirealm::props::{
+    BorderType as InputBorderType, Borders as InputBorders, Color as InputColor,
+};
 use tuirealm::{Application, AttrValue, Attribute, NoUserEvent, State, StateValue};
 
 use crate::api_tester::collection::HttpMethod;
@@ -109,8 +112,6 @@ enum EditorSectionKind {
     Headers,
     BodyStatus,
     BodyPreview,
-    ModeIndicator,
-    Help,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -142,6 +143,8 @@ impl AppModel {
     const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
     const BODY_STATUS_HEIGHT: u16 = 3;
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
+    const EDITOR_FOOTER_MAX_HEIGHT: u16 = 2;
+    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll";
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -261,6 +264,7 @@ impl AppModel {
             Msg::EnterInsertMode => {
                 self.input_mode = InputMode::Insert;
                 if self.active_view == ActiveView::RouteEditor {
+                    self.ensure_editor_focus_visible();
                     self.sync_editor_input_mode()?;
                 }
             }
@@ -272,7 +276,9 @@ impl AppModel {
             }
             Msg::FocusField(id) => {
                 let _ = self.app.active(&id);
-                if let Some(section) = Self::editor_section_for_focus(&id) {
+                if self.input_mode == InputMode::Insert
+                    && let Some(section) = Self::editor_section_for_focus(&id)
+                {
                     self.ensure_editor_section_visible(section);
                 }
             }
@@ -492,27 +498,48 @@ impl AppModel {
             return;
         }
 
-        self.ensure_editor_focus_visible();
+        if self.input_mode == InputMode::Insert {
+            self.ensure_editor_focus_visible();
+        }
 
         let body_preview = self.editor_body_preview();
         let sections =
             self.editor_sections(self.editor_show_new_group_selected(), body_preview.as_ref());
 
         if sections.is_empty() {
+            self.render_editor_footer(frame, area, false, false);
             return;
         }
 
         self.clamp_editor_scroll_offset(sections.len());
 
+        let footer_height = Self::editor_footer_height_for_height(area.height);
+        let (editor_area, footer_area) = if footer_height > 0 {
+            let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(footer_height)])
+                .split(area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (area, None)
+        };
+
         let start = self
             .editor_scroll_offset
             .min(sections.len().saturating_sub(1));
-        let (start, end) = Self::editor_visible_range(&sections, start, area.height);
+        let (start, end) = Self::editor_visible_range(&sections, start, editor_area.height);
+        let can_scroll_up = start > 0;
+        let can_scroll_down = end < sections.len();
 
         if start == end {
-            let warning = Paragraph::new("Increase terminal height to edit this route.")
-                .style(Style::default().fg(Color::DarkGray));
-            frame.render_widget(warning, area);
+            if editor_area.height > 0 {
+                let warning = Paragraph::new("Increase terminal height to edit this route.")
+                    .style(Style::default().fg(Color::DarkGray));
+                frame.render_widget(warning, editor_area);
+            }
+
+            if let Some(footer_area) = footer_area {
+                self.render_editor_footer(frame, footer_area, can_scroll_up, can_scroll_down);
+            }
+
             return;
         }
 
@@ -522,9 +549,7 @@ impl AppModel {
             .iter()
             .map(|section| Constraint::Length(section.height))
             .collect();
-        let chunks = Layout::vertical(constraints).split(area);
-        let can_scroll_up = start > 0;
-        let can_scroll_down = end < sections.len();
+        let chunks = Layout::vertical(constraints).split(editor_area);
 
         for (section, chunk) in sections[start..end].iter().zip(chunks.iter()) {
             match section.kind {
@@ -572,36 +597,67 @@ impl AppModel {
                         frame.render_widget(preview_widget, *chunk);
                     }
                 }
-                EditorSectionKind::ModeIndicator => {
-                    let mode_label = match self.input_mode {
-                        InputMode::Normal => "-- NORMAL --",
-                        InputMode::Insert => "-- INSERT --",
-                    };
-                    let mode_text = if can_scroll_up || can_scroll_down {
-                        let direction = match (can_scroll_up, can_scroll_down) {
-                            (true, true) => "up/down",
-                            (true, false) => "up",
-                            (false, true) => "down",
-                            (false, false) => "",
-                        };
-                        format!("{mode_label} | scroll: {direction}")
-                    } else {
-                        mode_label.to_string()
-                    };
-
-                    let mode_widget =
-                        Paragraph::new(mode_text).style(Style::default().fg(Color::Yellow));
-                    frame.render_widget(mode_widget, *chunk);
-                }
-                EditorSectionKind::Help => {
-                    let help = Paragraph::new(
-                        "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Radio or text cursor | j/k or Up/Down: Scroll",
-                    )
-                    .style(Style::default().fg(Color::DarkGray));
-                    frame.render_widget(help, *chunk);
-                }
             }
         }
+
+        if let Some(footer_area) = footer_area {
+            self.render_editor_footer(frame, footer_area, can_scroll_up, can_scroll_down);
+        }
+    }
+
+    fn render_editor_footer(
+        &self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+        can_scroll_up: bool,
+        can_scroll_down: bool,
+    ) {
+        if area.height == 0 {
+            return;
+        }
+
+        let mode_widget = Paragraph::new(self.editor_mode_text(can_scroll_up, can_scroll_down))
+            .style(Style::default().fg(Color::Yellow));
+        let mode_area = Rect {
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: 1,
+        };
+        frame.render_widget(mode_widget, mode_area);
+
+        if area.height < Self::EDITOR_FOOTER_MAX_HEIGHT {
+            return;
+        }
+
+        let help_widget =
+            Paragraph::new(Self::EDITOR_HELP_TEXT).style(Style::default().fg(Color::DarkGray));
+        let help_area = Rect {
+            x: area.x,
+            y: area.y.saturating_add(1),
+            width: area.width,
+            height: 1,
+        };
+        frame.render_widget(help_widget, help_area);
+    }
+
+    fn editor_mode_text(&self, can_scroll_up: bool, can_scroll_down: bool) -> String {
+        let mode_label = match self.input_mode {
+            InputMode::Normal => "-- NORMAL --",
+            InputMode::Insert => "-- INSERT --",
+        };
+
+        if can_scroll_up || can_scroll_down {
+            let direction = match (can_scroll_up, can_scroll_down) {
+                (true, true) => "up/down",
+                (true, false) => "up",
+                (false, true) => "down",
+                (false, false) => "",
+            };
+            return format!("{mode_label} | scroll: {direction}");
+        }
+
+        mode_label.to_string()
     }
 
     fn editor_show_new_group_selected(&self) -> bool {
@@ -677,17 +733,6 @@ impl AppModel {
             });
         }
 
-        sections.extend([
-            EditorSection {
-                kind: EditorSectionKind::ModeIndicator,
-                height: 1,
-            },
-            EditorSection {
-                kind: EditorSectionKind::Help,
-                height: 1,
-            },
-        ]);
-
         sections
     }
 
@@ -732,7 +777,11 @@ impl AppModel {
 
         self.clamp_editor_scroll_offset(sections.len());
 
-        let available_height = self.terminal_height.max(1);
+        let available_height = self.editor_content_viewport_height();
+        if available_height == 0 {
+            return;
+        }
+
         let start = self
             .editor_scroll_offset
             .min(sections.len().saturating_sub(1));
@@ -772,7 +821,12 @@ impl AppModel {
             return;
         };
 
-        let available_height = self.terminal_height.max(1);
+        let available_height = self.editor_content_viewport_height();
+        if available_height == 0 {
+            self.editor_scroll_offset = target_index;
+            return;
+        }
+
         let (start, end) =
             Self::editor_visible_range(&sections, self.editor_scroll_offset, available_height);
 
@@ -804,6 +858,21 @@ impl AppModel {
             self.editor_scroll_offset = 0;
         } else {
             self.editor_scroll_offset = self.editor_scroll_offset.min(section_count - 1);
+        }
+    }
+
+    fn editor_content_viewport_height(&self) -> u16 {
+        self.terminal_height
+            .saturating_sub(Self::editor_footer_height_for_height(self.terminal_height))
+    }
+
+    fn editor_footer_height_for_height(height: u16) -> u16 {
+        if height == 0 {
+            0
+        } else if height < Self::EDITOR_FOOTER_MAX_HEIGHT + 1 {
+            1
+        } else {
+            Self::EDITOR_FOOTER_MAX_HEIGHT
         }
     }
 
@@ -1312,9 +1381,16 @@ impl AppModel {
 
     fn sync_editor_input_mode(&mut self) -> anyhow::Result<()> {
         let is_insert_mode = self.input_mode == InputMode::Insert;
+        let border_color = if is_insert_mode {
+            InputColor::Yellow
+        } else {
+            InputColor::Cyan
+        };
 
         for id in [
             Id::EditorName,
+            Id::EditorGroup,
+            Id::EditorMethod,
             Id::EditorUrl,
             Id::EditorHeaders,
             Id::EditorNewGroup,
@@ -1323,6 +1399,15 @@ impl AppModel {
                 &id,
                 Attribute::Custom("input_mode"),
                 AttrValue::Flag(is_insert_mode),
+            )?;
+            self.app.attr(
+                &id,
+                Attribute::Borders,
+                AttrValue::Borders(
+                    InputBorders::default()
+                        .modifiers(InputBorderType::Rounded)
+                        .color(border_color),
+                ),
             )?;
         }
 
