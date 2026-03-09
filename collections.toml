@@ -1,12 +1,4 @@
 [[groups]]
-name = "Health"
-
-[[groups.routes]]
-name = "Health Check"
-method = "GET"
-url = "http://localhost:8000/health/"
-
-[[groups]]
 name = "Auth"
 
 [[groups.routes]]
@@ -34,16 +26,19 @@ body = '{"email":"{{LOGIN_EMAIL}}","password":"{{LOGIN_PASSWORD}}"}'
 name = "Log Out"
 method = "POST"
 url = "http://localhost:8000/auth/log-out"
+headers = []
 
 [[groups.routes]]
 name = "Refresh"
 method = "POST"
 url = "http://localhost:8000/auth/refresh"
+headers = []
 
 [[groups.routes]]
 name = "Me"
 method = "GET"
 url = "http://localhost:8000/auth/me"
+headers = []
 
 [[groups.routes]]
 name = "Forgot Password"
@@ -70,6 +65,7 @@ body = '{"code":"{{FORGOT_PASSWORD_CODE}}","new_password":"{{RESET_NEW_PASSWORD}
 name = "Request Change Password"
 method = "POST"
 url = "http://localhost:8000/auth/request-change-password"
+headers = []
 
 [[groups.routes]]
 name = "Change Password"

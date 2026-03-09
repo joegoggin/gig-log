@@ -7,8 +7,9 @@ use crossterm::{
 };
 use ratatui::prelude::*;
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
+use tuirealm::{AttrValue, Attribute};
 
-use crate::api_tester::app::{AppModel, Id, Msg};
+use crate::api_tester::app::{AppModel, Id, InputMode, Msg};
 use crate::api_tester::components::global_listener::GlobalListener;
 use crate::api_tester::components::route_list::RouteList;
 use crate::utils::sub::SubUtils;
@@ -57,11 +58,13 @@ pub async fn run() -> anyhow::Result<()> {
 
     model.app.mount(
         Id::GlobalListener,
-        Box::new(GlobalListener::default()),
+        Box::new(GlobalListener::new()),
         SubUtils::key_subs([
             Key::Char('q').into(),
             Key::Char('v').into(),
+            Key::Char('i').into(),
             Key::Esc.into(),
+            KeyEvent::new(Key::Char('s'), KeyModifiers::CONTROL),
         ]),
     )?;
 
@@ -92,6 +95,12 @@ pub async fn run() -> anyhow::Result<()> {
 
     let run_result = (|| -> anyhow::Result<()> {
         loop {
+            model.app.attr(
+                &Id::GlobalListener,
+                Attribute::Custom("input_mode"),
+                AttrValue::Flag(model.input_mode == InputMode::Insert),
+            )?;
+
             let messages = model.app.tick(PollStrategy::Once)?;
 
             for msg in messages {

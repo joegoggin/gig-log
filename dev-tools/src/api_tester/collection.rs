@@ -169,6 +169,18 @@ impl Collection {
         Ok(())
     }
 
+    pub fn group_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .routes
+            .iter()
+            .map(|r| r.group.clone())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+        names.sort();
+        names
+    }
+
     pub fn add_route(&mut self, mut route: Route) {
         route.group = normalize_group_name(&route.group);
         self.routes.push(route);
