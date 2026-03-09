@@ -3,7 +3,7 @@ use tuirealm::{
     AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State, StateValue,
     command::{Cmd, CmdResult},
     event::{Key, KeyEvent, KeyModifiers},
-    props::{Alignment, BorderType, Borders, Color, PropPayload, PropValue, TextSpan},
+    props::{BorderSides, Borders, Color, PropPayload, PropValue, TextSpan},
 };
 
 use crate::api_tester::{
@@ -511,12 +511,7 @@ impl RouteList {
 
     fn build_component(rows: Vec<Vec<TextSpan>>, selected_line: usize) -> List {
         List::default()
-            .borders(
-                Borders::default()
-                    .modifiers(BorderType::Rounded)
-                    .color(Color::Cyan),
-            )
-            .title("Routes", Alignment::Left)
+            .borders(Borders::default().sides(BorderSides::NONE))
             .highlighted_color(Color::LightYellow)
             .highlighted_str(">> ")
             .scroll(true)
@@ -547,7 +542,20 @@ impl RouteList {
 
 impl MockComponent for RouteList {
     fn view(&mut self, frame: &mut ratatui::Frame, area: ratatui::layout::Rect) {
-        self.component.view(frame, area);
+        let block = ratatui::widgets::Block::default()
+            .borders(ratatui::widgets::Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::Green))
+            .title("Routes")
+            .padding(ratatui::widgets::Padding::new(1, 1, 0, 0));
+        let inner = block.inner(area);
+        frame.render_widget(block, area);
+
+        if inner.width == 0 || inner.height == 0 {
+            return;
+        }
+
+        self.component.view(frame, inner);
     }
 
     fn query(&self, attr: Attribute) -> Option<AttrValue> {

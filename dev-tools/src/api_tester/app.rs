@@ -114,6 +114,8 @@ pub struct AppModel {
 
 impl AppModel {
     const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
+    const BODY_STATUS_HEIGHT: u16 = 3;
+    const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -463,12 +465,14 @@ impl AppModel {
                     Constraint::Length(3), // Method
                     Constraint::Length(3), // URL
                     Constraint::Length(3), // Headers
-                    Constraint::Length(3), // Body status
+                    Constraint::Length(Self::BODY_STATUS_HEIGHT), // Body status
                 ]);
 
                 if let Some(preview) = body_preview.as_ref() {
-                    let preview_height = preview.lines.len().clamp(1, 8) as u16;
-                    constraints.push(Constraint::Length(preview_height + 3));
+                    let preview_height = preview.lines.len().clamp(1, u16::MAX as usize) as u16;
+                    constraints.push(Constraint::Length(
+                        preview_height.saturating_add(Self::BODY_PREVIEW_CHROME_HEIGHT),
+                    ));
                 }
 
                 constraints.extend([
@@ -523,16 +527,11 @@ impl AppModel {
                                 .borders(Borders::ALL)
                                 .border_type(BorderType::Rounded)
                                 .border_style(Style::default().fg(Color::Cyan))
+                                .padding(Padding::new(1, 1, 1, 1))
                                 .title(title),
                         )
                         .wrap(Wrap { trim: false });
-                    let preview_area = Rect {
-                        x: chunks[idx].x,
-                        y: chunks[idx].y,
-                        width: chunks[idx].width,
-                        height: chunks[idx].height.saturating_sub(1),
-                    };
-                    frame.render_widget(preview_widget, preview_area);
+                    frame.render_widget(preview_widget, chunks[idx]);
                     idx += 1;
                 }
 
@@ -634,13 +633,26 @@ impl AppModel {
             .map(|body| body_preview::build(&body))
             .filter(|preview| !preview.lines.is_empty());
 
-        if let Some(preview) = body_preview
-            && inner.height >= summary_height.saturating_add(6)
-        {
+        if let Some(preview) = body_preview {
+            let body_preview_height = preview.lines.len().clamp(1, u16::MAX as usize) as u16;
+            let body_preview_block_height =
+                body_preview_height.saturating_add(Self::BODY_PREVIEW_CHROME_HEIGHT);
+            let required_height = summary_height
+                .saturating_add(Self::BODY_STATUS_HEIGHT)
+                .saturating_add(body_preview_block_height);
+
+            if inner.height < required_height {
+                let mut lines = summary_lines;
+                lines.push(Self::route_body_status_line(route));
+                let lines = Self::interleave_with_blank_lines(lines, inner.height as usize);
+                frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
+                return;
+            }
+
             let chunks = Layout::vertical([
                 Constraint::Length(summary_height),
-                Constraint::Length(3),
-                Constraint::Min(3),
+                Constraint::Length(Self::BODY_STATUS_HEIGHT),
+                Constraint::Length(body_preview_block_height),
             ])
             .split(inner);
 
@@ -664,7 +676,9 @@ impl AppModel {
             };
             let body_preview_lines = Self::truncate_preview_lines(
                 preview.lines,
-                chunks[2].height.saturating_sub(2) as usize,
+                chunks[2]
+                    .height
+                    .saturating_sub(Self::BODY_PREVIEW_CHROME_HEIGHT) as usize,
             );
 
             let body_widget = Paragraph::new(body_preview_lines)
@@ -673,6 +687,7 @@ impl AppModel {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(Color::Cyan))
+                        .padding(Padding::new(1, 1, 1, 1))
                         .title(body_preview_title),
                 )
                 .wrap(Wrap { trim: false });
