@@ -571,7 +571,7 @@ impl AppModel {
             .split(area);
 
         let route_list_area = chunks[0].inner(Margin {
-            vertical: 1,
+            vertical: 0,
             horizontal: 1,
         });
 
