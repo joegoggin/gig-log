@@ -26,6 +26,10 @@ impl GlobalListener {
             Key::Esc => Some(Msg::CancelEdit),
             Key::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::SaveRoute),
             Key::Char('b') => Some(Msg::OpenBodyEditor),
+            Key::Char('k') | Key::Up => Some(Msg::EditorScrollUp),
+            Key::Char('j') | Key::Down => Some(Msg::EditorScrollDown),
+            Key::PageUp => Some(Msg::EditorPageUp),
+            Key::PageDown => Some(Msg::EditorPageDown),
             _ => None,
         }
     }

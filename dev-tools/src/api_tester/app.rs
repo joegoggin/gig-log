@@ -67,6 +67,10 @@ pub enum Msg {
     RefreshList,
     RouteSelected(usize),
     FocusField(Id),
+    EditorScrollUp,
+    EditorScrollDown,
+    EditorPageUp,
+    EditorPageDown,
     MethodChanged(usize),
     BodyEditorResult(Option<String>),
     ResponseTabChanged(usize),
@@ -95,6 +99,26 @@ pub enum InputMode {
     Insert,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum EditorSectionKind {
+    Name,
+    Group,
+    NewGroup,
+    Method,
+    Url,
+    Headers,
+    BodyStatus,
+    BodyPreview,
+    ModeIndicator,
+    Help,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+struct EditorSection {
+    kind: EditorSectionKind,
+    height: u16,
+}
+
 pub struct AppModel {
     pub app: Application<Id, Msg, NoUserEvent>,
     pub collection: Collection,
@@ -110,6 +134,8 @@ pub struct AppModel {
     secrets_visible: bool,
     layout_mode: LayoutMode,
     terminal_width: u16,
+    terminal_height: u16,
+    editor_scroll_offset: usize,
 }
 
 impl AppModel {
@@ -133,6 +159,8 @@ impl AppModel {
             secrets_visible: false,
             layout_mode: LayoutMode::Wide,
             terminal_width: 120,
+            terminal_height: 40,
+            editor_scroll_offset: 0,
         })
     }
 
@@ -169,6 +197,7 @@ impl AppModel {
                 self.editing_route = Some(index);
                 self.editor_draft = Some(route.clone());
                 self.input_mode = InputMode::Normal;
+                self.editor_scroll_offset = 0;
                 self.mount_editor(&route)?;
                 self.active_view = ActiveView::RouteEditor;
             }
@@ -189,6 +218,7 @@ impl AppModel {
                 self.editing_route = None;
                 self.editor_draft = Some(route.clone());
                 self.input_mode = InputMode::Normal;
+                self.editor_scroll_offset = 0;
                 self.mount_editor(&route)?;
                 self.active_view = ActiveView::RouteEditor;
             }
@@ -222,8 +252,9 @@ impl AppModel {
                 self.route_list_state = state;
                 self.persist_route_list_state();
             }
-            Msg::TerminalResize(width, _height) => {
+            Msg::TerminalResize(width, height) => {
                 self.terminal_width = width;
+                self.terminal_height = height.saturating_sub(2);
                 self.layout_mode = Self::layout_mode_for_width(width);
             }
             Msg::RefreshList | Msg::None => {}
@@ -241,7 +272,14 @@ impl AppModel {
             }
             Msg::FocusField(id) => {
                 let _ = self.app.active(&id);
+                if let Some(section) = Self::editor_section_for_focus(&id) {
+                    self.ensure_editor_section_visible(section);
+                }
             }
+            Msg::EditorScrollUp => self.scroll_editor_by(-1),
+            Msg::EditorScrollDown => self.scroll_editor_by(1),
+            Msg::EditorPageUp => self.scroll_editor_page(-1),
+            Msg::EditorPageDown => self.scroll_editor_page(1),
             Msg::GroupSelected(_index) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
@@ -250,6 +288,7 @@ impl AppModel {
             Msg::NewGroupEntered => {
                 // Focus moves to method after entering new group name
                 self.app.active(&Id::EditorMethod)?;
+                self.ensure_editor_section_visible(EditorSectionKind::Method);
             }
             Msg::SaveRoute => {
                 if self.active_view == ActiveView::RouteEditor {
@@ -326,6 +365,7 @@ impl AppModel {
                     self.editing_route = None;
                     self.editor_draft = None;
                     self.input_mode = InputMode::Normal;
+                    self.editor_scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
                     self.refresh_route_list()?;
                 }
@@ -335,6 +375,7 @@ impl AppModel {
                     self.editing_route = None;
                     self.editor_draft = None;
                     self.input_mode = InputMode::Normal;
+                    self.editor_scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
                 }
             }
@@ -427,6 +468,7 @@ impl AppModel {
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
         let content_area = Self::content_area(frame.area());
         self.terminal_width = content_area.width;
+        self.terminal_height = content_area.height;
         self.layout_mode = Self::layout_mode_for_width(self.terminal_width);
 
         match self.active_view {
@@ -434,123 +476,7 @@ impl AppModel {
                 self.render_route_list(frame, content_area);
             }
             ActiveView::RouteEditor => {
-                // Check if "New Group..." is selected to show the new group input
-                let show_new_group = if let Ok(State::One(StateValue::Usize(idx))) =
-                    self.app.state(&Id::EditorGroup)
-                {
-                    let group_names = self.collection.group_names();
-                    idx >= group_names.len()
-                } else {
-                    false
-                };
-
-                let body_preview = self
-                    .editor_draft
-                    .as_ref()
-                    .and_then(|draft| draft.body.as_deref())
-                    .map(|body| self.variables.substitute_for_preview(body))
-                    .map(|body| body_preview::build(&body))
-                    .filter(|preview| !preview.lines.is_empty());
-
-                let mut constraints = vec![
-                    Constraint::Length(3), // Name
-                    Constraint::Length(3), // Group selector
-                ];
-
-                if show_new_group {
-                    constraints.push(Constraint::Length(3)); // New group input
-                }
-
-                constraints.extend([
-                    Constraint::Length(3), // Method
-                    Constraint::Length(3), // URL
-                    Constraint::Length(3), // Headers
-                    Constraint::Length(Self::BODY_STATUS_HEIGHT), // Body status
-                ]);
-
-                if let Some(preview) = body_preview.as_ref() {
-                    let preview_height = preview.lines.len().clamp(1, u16::MAX as usize) as u16;
-                    constraints.push(Constraint::Length(
-                        preview_height.saturating_add(Self::BODY_PREVIEW_CHROME_HEIGHT),
-                    ));
-                }
-
-                constraints.extend([
-                    Constraint::Length(2), // Mode indicator + bottom margin
-                    Constraint::Min(1),    // Help
-                ]);
-
-                let chunks = Layout::vertical(constraints).split(content_area);
-
-                let mut idx = 0;
-                self.app.view(&Id::EditorName, frame, chunks[idx]);
-                idx += 1;
-                self.app.view(&Id::EditorGroup, frame, chunks[idx]);
-                idx += 1;
-
-                if show_new_group {
-                    self.app.view(&Id::EditorNewGroup, frame, chunks[idx]);
-                    idx += 1;
-                }
-
-                self.app.view(&Id::EditorMethod, frame, chunks[idx]);
-                idx += 1;
-                self.app.view(&Id::EditorUrl, frame, chunks[idx]);
-                idx += 1;
-                self.app.view(&Id::EditorHeaders, frame, chunks[idx]);
-                idx += 1;
-
-                // Body status
-                let body_status = if body_preview.is_some() {
-                    "Body: Set (press 'b' to edit in Normal mode)"
-                } else {
-                    "Body: Empty (press 'b' to add in Normal mode)"
-                };
-                let body_widget =
-                    Paragraph::new(body_status).style(Style::default().fg(Color::DarkGray));
-                let body_status_area = chunks[idx].inner(Margin {
-                    vertical: 1,
-                    horizontal: 0,
-                });
-                frame.render_widget(body_widget, body_status_area);
-                idx += 1;
-
-                if let Some(preview) = body_preview {
-                    let title = match preview.format {
-                        body_preview::BodyPreviewFormat::Json => "Body Preview (JSON)",
-                        body_preview::BodyPreviewFormat::Text => "Body Preview",
-                    };
-
-                    let preview_widget = Paragraph::new(preview.lines)
-                        .block(
-                            Block::default()
-                                .borders(Borders::ALL)
-                                .border_type(BorderType::Rounded)
-                                .border_style(Style::default().fg(Color::Cyan))
-                                .padding(Padding::new(1, 1, 1, 1))
-                                .title(title),
-                        )
-                        .wrap(Wrap { trim: false });
-                    frame.render_widget(preview_widget, chunks[idx]);
-                    idx += 1;
-                }
-
-                // Mode indicator
-                let mode_label = match self.input_mode {
-                    InputMode::Normal => "-- NORMAL --",
-                    InputMode::Insert => "-- INSERT --",
-                };
-                let mode_widget =
-                    Paragraph::new(mode_label).style(Style::default().fg(Color::Yellow));
-                frame.render_widget(mode_widget, chunks[idx]);
-                idx += 1;
-
-                // Help text
-                let help = Paragraph::new(
-                    "i: Insert mode | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate",
-                )
-                .style(Style::default().fg(Color::DarkGray));
-                frame.render_widget(help, chunks[idx]);
+                self.render_route_editor(frame, content_area);
             }
             ActiveView::ResponseViewer => {
                 // Draw ResponseViewer component.
@@ -559,6 +485,352 @@ impl AppModel {
                 // Draw VariableManager component.
             }
         }
+    }
+
+    fn render_route_editor(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        if area.height == 0 {
+            return;
+        }
+
+        self.ensure_editor_focus_visible();
+
+        let body_preview = self.editor_body_preview();
+        let sections =
+            self.editor_sections(self.editor_show_new_group_selected(), body_preview.as_ref());
+
+        if sections.is_empty() {
+            return;
+        }
+
+        self.clamp_editor_scroll_offset(sections.len());
+
+        let start = self
+            .editor_scroll_offset
+            .min(sections.len().saturating_sub(1));
+        let (start, end) = Self::editor_visible_range(&sections, start, area.height);
+
+        if start == end {
+            let warning = Paragraph::new("Increase terminal height to edit this route.")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(warning, area);
+            return;
+        }
+
+        self.editor_scroll_offset = start;
+
+        let constraints: Vec<Constraint> = sections[start..end]
+            .iter()
+            .map(|section| Constraint::Length(section.height))
+            .collect();
+        let chunks = Layout::vertical(constraints).split(area);
+        let can_scroll_up = start > 0;
+        let can_scroll_down = end < sections.len();
+
+        for (section, chunk) in sections[start..end].iter().zip(chunks.iter()) {
+            match section.kind {
+                EditorSectionKind::Name => self.app.view(&Id::EditorName, frame, *chunk),
+                EditorSectionKind::Group => self.app.view(&Id::EditorGroup, frame, *chunk),
+                EditorSectionKind::NewGroup => self.app.view(&Id::EditorNewGroup, frame, *chunk),
+                EditorSectionKind::Method => self.app.view(&Id::EditorMethod, frame, *chunk),
+                EditorSectionKind::Url => self.app.view(&Id::EditorUrl, frame, *chunk),
+                EditorSectionKind::Headers => self.app.view(&Id::EditorHeaders, frame, *chunk),
+                EditorSectionKind::BodyStatus => {
+                    let body_status = if body_preview.is_some() {
+                        "Body: Set (press 'b' to edit in Normal mode)"
+                    } else {
+                        "Body: Empty (press 'b' to add in Normal mode)"
+                    };
+                    let body_widget =
+                        Paragraph::new(body_status).style(Style::default().fg(Color::DarkGray));
+                    let body_status_area = if chunk.height > 2 {
+                        chunk.inner(Margin {
+                            vertical: 1,
+                            horizontal: 0,
+                        })
+                    } else {
+                        *chunk
+                    };
+                    frame.render_widget(body_widget, body_status_area);
+                }
+                EditorSectionKind::BodyPreview => {
+                    if let Some(preview) = body_preview.as_ref() {
+                        let title = match preview.format {
+                            body_preview::BodyPreviewFormat::Json => "Body Preview (JSON)",
+                            body_preview::BodyPreviewFormat::Text => "Body Preview",
+                        };
+
+                        let preview_widget = Paragraph::new(preview.lines.clone())
+                            .block(
+                                Block::default()
+                                    .borders(Borders::ALL)
+                                    .border_type(BorderType::Rounded)
+                                    .border_style(Style::default().fg(Color::Cyan))
+                                    .padding(Padding::new(1, 1, 1, 1))
+                                    .title(title),
+                            )
+                            .wrap(Wrap { trim: false });
+                        frame.render_widget(preview_widget, *chunk);
+                    }
+                }
+                EditorSectionKind::ModeIndicator => {
+                    let mode_label = match self.input_mode {
+                        InputMode::Normal => "-- NORMAL --",
+                        InputMode::Insert => "-- INSERT --",
+                    };
+                    let mode_text = if can_scroll_up || can_scroll_down {
+                        let direction = match (can_scroll_up, can_scroll_down) {
+                            (true, true) => "up/down",
+                            (true, false) => "up",
+                            (false, true) => "down",
+                            (false, false) => "",
+                        };
+                        format!("{mode_label} | scroll: {direction}")
+                    } else {
+                        mode_label.to_string()
+                    };
+
+                    let mode_widget =
+                        Paragraph::new(mode_text).style(Style::default().fg(Color::Yellow));
+                    frame.render_widget(mode_widget, *chunk);
+                }
+                EditorSectionKind::Help => {
+                    let help = Paragraph::new(
+                        "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | j/k or Up/Down: Scroll",
+                    )
+                    .style(Style::default().fg(Color::DarkGray));
+                    frame.render_widget(help, *chunk);
+                }
+            }
+        }
+    }
+
+    fn editor_show_new_group_selected(&self) -> bool {
+        if let Ok(State::One(StateValue::Usize(index))) = self.app.state(&Id::EditorGroup) {
+            let group_names = self.collection.group_names();
+            index >= group_names.len()
+        } else {
+            false
+        }
+    }
+
+    fn editor_body_preview(&self) -> Option<body_preview::BodyPreview> {
+        self.editor_draft
+            .as_ref()
+            .and_then(|draft| draft.body.as_deref())
+            .map(|body| self.variables.substitute_for_preview(body))
+            .map(|body| body_preview::build(&body))
+            .filter(|preview| !preview.lines.is_empty())
+    }
+
+    fn current_editor_sections(&self) -> Vec<EditorSection> {
+        let body_preview = self.editor_body_preview();
+        self.editor_sections(self.editor_show_new_group_selected(), body_preview.as_ref())
+    }
+
+    fn editor_sections(
+        &self,
+        show_new_group: bool,
+        body_preview: Option<&body_preview::BodyPreview>,
+    ) -> Vec<EditorSection> {
+        let mut sections = vec![
+            EditorSection {
+                kind: EditorSectionKind::Name,
+                height: 3,
+            },
+            EditorSection {
+                kind: EditorSectionKind::Group,
+                height: 3,
+            },
+        ];
+
+        if show_new_group {
+            sections.push(EditorSection {
+                kind: EditorSectionKind::NewGroup,
+                height: 3,
+            });
+        }
+
+        sections.extend([
+            EditorSection {
+                kind: EditorSectionKind::Method,
+                height: 3,
+            },
+            EditorSection {
+                kind: EditorSectionKind::Url,
+                height: 3,
+            },
+            EditorSection {
+                kind: EditorSectionKind::Headers,
+                height: 3,
+            },
+            EditorSection {
+                kind: EditorSectionKind::BodyStatus,
+                height: Self::BODY_STATUS_HEIGHT,
+            },
+        ]);
+
+        if let Some(preview) = body_preview {
+            let preview_height = preview.lines.len().clamp(1, u16::MAX as usize) as u16;
+            sections.push(EditorSection {
+                kind: EditorSectionKind::BodyPreview,
+                height: preview_height.saturating_add(Self::BODY_PREVIEW_CHROME_HEIGHT),
+            });
+        }
+
+        sections.extend([
+            EditorSection {
+                kind: EditorSectionKind::ModeIndicator,
+                height: 1,
+            },
+            EditorSection {
+                kind: EditorSectionKind::Help,
+                height: 1,
+            },
+        ]);
+
+        sections
+    }
+
+    fn editor_section_for_focus(id: &Id) -> Option<EditorSectionKind> {
+        match id {
+            Id::EditorName => Some(EditorSectionKind::Name),
+            Id::EditorGroup => Some(EditorSectionKind::Group),
+            Id::EditorNewGroup => Some(EditorSectionKind::NewGroup),
+            Id::EditorMethod => Some(EditorSectionKind::Method),
+            Id::EditorUrl => Some(EditorSectionKind::Url),
+            Id::EditorHeaders => Some(EditorSectionKind::Headers),
+            _ => None,
+        }
+    }
+
+    fn scroll_editor_by(&mut self, delta: isize) {
+        if self.active_view != ActiveView::RouteEditor {
+            return;
+        }
+
+        let section_count = self.current_editor_sections().len();
+        if section_count == 0 {
+            self.editor_scroll_offset = 0;
+            return;
+        }
+
+        let max_offset = section_count.saturating_sub(1) as isize;
+        let next = (self.editor_scroll_offset as isize + delta).clamp(0, max_offset);
+        self.editor_scroll_offset = next as usize;
+    }
+
+    fn scroll_editor_page(&mut self, direction: isize) {
+        if self.active_view != ActiveView::RouteEditor {
+            return;
+        }
+
+        let sections = self.current_editor_sections();
+        if sections.is_empty() {
+            self.editor_scroll_offset = 0;
+            return;
+        }
+
+        self.clamp_editor_scroll_offset(sections.len());
+
+        let available_height = self.terminal_height.max(1);
+        let start = self
+            .editor_scroll_offset
+            .min(sections.len().saturating_sub(1));
+        let (start, end) = Self::editor_visible_range(&sections, start, available_height);
+        let visible_count = end.saturating_sub(start);
+        let step = visible_count.saturating_sub(1).max(1) as isize;
+
+        self.scroll_editor_by(direction * step);
+    }
+
+    fn ensure_editor_focus_visible(&mut self) {
+        if let Some(focus_id) = self.app.focus().cloned()
+            && let Some(section) = Self::editor_section_for_focus(&focus_id)
+        {
+            self.ensure_editor_section_visible(section);
+        }
+    }
+
+    fn ensure_editor_section_visible(&mut self, section_kind: EditorSectionKind) {
+        if self.active_view != ActiveView::RouteEditor {
+            return;
+        }
+
+        let sections = self.current_editor_sections();
+        if sections.is_empty() {
+            self.editor_scroll_offset = 0;
+            return;
+        }
+
+        self.clamp_editor_scroll_offset(sections.len());
+
+        let target_index = sections
+            .iter()
+            .position(|section| section.kind == section_kind);
+
+        let Some(target_index) = target_index else {
+            return;
+        };
+
+        let available_height = self.terminal_height.max(1);
+        let (start, end) =
+            Self::editor_visible_range(&sections, self.editor_scroll_offset, available_height);
+
+        if target_index < start {
+            self.editor_scroll_offset = target_index;
+            return;
+        }
+
+        if target_index >= end {
+            let mut new_start = target_index;
+            let mut used_height = sections[target_index].height;
+
+            while new_start > 0 {
+                let previous_height = sections[new_start - 1].height;
+                if used_height.saturating_add(previous_height) > available_height {
+                    break;
+                }
+
+                used_height = used_height.saturating_add(previous_height);
+                new_start -= 1;
+            }
+
+            self.editor_scroll_offset = new_start;
+        }
+    }
+
+    fn clamp_editor_scroll_offset(&mut self, section_count: usize) {
+        if section_count == 0 {
+            self.editor_scroll_offset = 0;
+        } else {
+            self.editor_scroll_offset = self.editor_scroll_offset.min(section_count - 1);
+        }
+    }
+
+    fn editor_visible_range(
+        sections: &[EditorSection],
+        start: usize,
+        available_height: u16,
+    ) -> (usize, usize) {
+        if sections.is_empty() || available_height == 0 {
+            return (0, 0);
+        }
+
+        let start = start.min(sections.len().saturating_sub(1));
+        let mut end = start;
+        let mut used_height: u16 = 0;
+
+        while end < sections.len() {
+            let next_height = sections[end].height;
+            if used_height.saturating_add(next_height) > available_height {
+                break;
+            }
+
+            used_height = used_height.saturating_add(next_height);
+            end += 1;
+        }
+
+        (start, end)
     }
 
     fn render_route_list(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
@@ -1031,6 +1303,7 @@ impl AppModel {
         )?;
 
         // Focus the name field initially
+        self.editor_scroll_offset = 0;
         self.app.active(&Id::EditorName)?;
         self.sync_editor_input_mode()?;
 

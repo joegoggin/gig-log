@@ -68,6 +68,12 @@ pub async fn run() -> anyhow::Result<()> {
             Key::Esc.into(),
             KeyEvent::new(Key::Char('s'), KeyModifiers::CONTROL),
             Key::Char('b').into(),
+            Key::Char('j').into(),
+            Key::Char('k').into(),
+            Key::Up.into(),
+            Key::Down.into(),
+            Key::PageUp.into(),
+            Key::PageDown.into(),
         ]),
     )?;
 
