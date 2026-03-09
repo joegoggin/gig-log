@@ -6,3 +6,4 @@ dist
 api-tester.env
 issues
 cookies.txt
+dev-tools/api-tester/route-list-state.toml

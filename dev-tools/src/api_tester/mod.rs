@@ -12,7 +12,6 @@ use tuirealm::{AttrValue, Attribute};
 use crate::api_tester::app::{AppModel, Id, InputMode, Msg};
 use crate::api_tester::components::body_editor::open_external_editor;
 use crate::api_tester::components::global_listener::GlobalListener;
-use crate::api_tester::components::route_list::RouteList;
 use crate::utils::sub::SubUtils;
 
 pub mod app;
@@ -21,6 +20,7 @@ pub mod collection;
 pub mod components;
 pub mod executor;
 pub mod paths;
+pub mod route_list_state;
 pub mod variables;
 
 type AppTerminal = Terminal<CrosstermBackend<Stdout>>;
@@ -71,30 +71,7 @@ pub async fn run() -> anyhow::Result<()> {
         ]),
     )?;
 
-    model.app.mount(
-        Id::RouteList,
-        Box::new(RouteList::new(&model.collection.routes)),
-        SubUtils::key_subs([
-            Key::Char('j').into(),
-            Key::Char('k').into(),
-            Key::Char('g').into(),
-            Key::Char('G').into(),
-            KeyEvent::new(Key::Char('g'), KeyModifiers::SHIFT),
-            KeyEvent::new(Key::Char('G'), KeyModifiers::SHIFT),
-            Key::Up.into(),
-            Key::Down.into(),
-            Key::Home.into(),
-            Key::End.into(),
-            Key::Tab.into(),
-            Key::BackTab.into(),
-            KeyEvent::new(Key::Tab, KeyModifiers::SHIFT),
-            KeyEvent::new(Key::BackTab, KeyModifiers::SHIFT),
-            Key::Enter.into(),
-            Key::Char('e').into(),
-            Key::Char('d').into(),
-            Key::Char('n').into(),
-        ]),
-    )?;
+    model.refresh_route_list()?;
 
     let run_result = (|| -> anyhow::Result<()> {
         loop {

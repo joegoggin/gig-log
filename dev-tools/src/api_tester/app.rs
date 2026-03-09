@@ -13,6 +13,7 @@ use crate::api_tester::{
     collection::{Collection, DEFAULT_ROUTE_GROUP, Route},
     components::route_list::RouteList,
     executor::CurlResponse,
+    route_list_state::{RouteListState, RouteSelection, SelectedItem},
     variables::Variables,
 };
 use crate::utils::sub::SubUtils;
@@ -53,6 +54,7 @@ pub enum Msg {
     EditRoute(usize),
     NewRoute,
     DeleteRoute(usize),
+    RouteListStateChanged(RouteListState),
     SaveRoute,
     CancelEdit,
     OpenBodyEditor,
@@ -92,6 +94,7 @@ pub struct AppModel {
     pub collection: Collection,
     pub input_mode: InputMode,
     variables: Variables,
+    route_list_state: RouteListState,
     active_view: ActiveView,
     response: Option<CurlResponse>,
     selected_route: Option<usize>,
@@ -110,6 +113,7 @@ impl AppModel {
             collection: Collection::load()?,
             input_mode: InputMode::Normal,
             variables: Variables::load()?,
+            route_list_state: RouteListState::load(),
             active_view: ActiveView::RouteList,
             response: None,
             selected_route: None,
@@ -131,7 +135,13 @@ impl AppModel {
                     return Ok(None);
                 }
 
+                if index >= self.collection.routes.len() {
+                    return Ok(None);
+                }
+
                 self.selected_route = Some(index);
+                self.select_route_in_state(index, true);
+                self.persist_route_list_state();
                 // Execution will be handled in #124
             }
             Msg::EditRoute(index) => {
@@ -139,7 +149,13 @@ impl AppModel {
                     return Ok(None);
                 }
 
+                if index >= self.collection.routes.len() {
+                    return Ok(None);
+                }
+
                 let route = self.collection.routes[index].clone();
+                self.select_route_in_state(index, true);
+                self.persist_route_list_state();
                 self.editing_route = Some(index);
                 self.editor_draft = Some(route.clone());
                 self.input_mode = InputMode::Normal;
@@ -171,9 +187,30 @@ impl AppModel {
                     return Ok(None);
                 }
 
+                if index >= self.collection.routes.len() {
+                    return Ok(None);
+                }
+
                 self.collection.delete_route(index)?;
                 self.collection.save()?;
+
+                if self.collection.routes.is_empty() {
+                    self.route_list_state.selected = None;
+                } else {
+                    let next_index = if index < self.collection.routes.len() {
+                        index
+                    } else {
+                        self.collection.routes.len() - 1
+                    };
+                    self.select_route_in_state(next_index, true);
+                }
+
+                self.persist_route_list_state();
                 self.refresh_route_list()?;
+            }
+            Msg::RouteListStateChanged(state) => {
+                self.route_list_state = state;
+                self.persist_route_list_state();
             }
             Msg::RefreshList | Msg::None => {}
             Msg::EnterInsertMode => {
@@ -191,7 +228,7 @@ impl AppModel {
             Msg::FocusField(id) => {
                 let _ = self.app.active(&id);
             }
-            Msg::GroupSelected(index) => {
+            Msg::GroupSelected(_index) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
             }
@@ -263,11 +300,15 @@ impl AppModel {
 
                     if let Some(index) = self.editing_route {
                         self.collection.update_route(index, route)?;
+                        self.select_route_in_state(index, true);
                     } else {
                         self.collection.add_route(route);
+                        let new_index = self.collection.routes.len().saturating_sub(1);
+                        self.select_route_in_state(new_index, true);
                     }
 
                     self.collection.save()?;
+                    self.persist_route_list_state();
                     self.editing_route = None;
                     self.editor_draft = None;
                     self.input_mode = InputMode::Normal;
@@ -308,11 +349,43 @@ impl AppModel {
             .and_then(|draft| draft.body.as_deref())
     }
 
+    fn select_route_in_state(&mut self, route_index: usize, expand_group: bool) {
+        if let Some(route) = self.collection.routes.get(route_index) {
+            let group_name = if route.group.trim().is_empty() {
+                DEFAULT_ROUTE_GROUP.to_string()
+            } else {
+                route.group.clone()
+            };
+
+            if expand_group
+                && !self
+                    .route_list_state
+                    .expanded_groups
+                    .iter()
+                    .any(|name| name == &group_name)
+            {
+                self.route_list_state.expanded_groups.push(group_name);
+            }
+
+            self.route_list_state.selected =
+                Some(SelectedItem::Route(RouteSelection::from_route(route)));
+        }
+    }
+
+    fn persist_route_list_state(&self) {
+        if let Err(error) = self.route_list_state.save() {
+            eprintln!("Warning: failed to persist route list state: {error}");
+        }
+    }
+
     pub fn refresh_route_list(&mut self) -> anyhow::Result<()> {
-        self.app.umount(&Id::RouteList)?;
+        let _ = self.app.umount(&Id::RouteList);
         self.app.mount(
             Id::RouteList,
-            Box::new(RouteList::new(&self.collection.routes)),
+            Box::new(RouteList::new(
+                &self.collection.routes,
+                &self.route_list_state,
+            )),
             SubUtils::key_subs([
                 Key::Char('j').into(),
                 Key::Char('k').into(),

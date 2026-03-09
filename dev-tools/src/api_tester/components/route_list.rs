@@ -9,6 +9,7 @@ use tuirealm::{
 use crate::api_tester::{
     app::Msg,
     collection::{DEFAULT_ROUTE_GROUP, HttpMethod, Route},
+    route_list_state::{RouteListState, RouteSelection, SelectedItem},
 };
 
 struct RouteGroup {
@@ -33,6 +34,7 @@ impl RowKind {
 
 enum SelectionTarget {
     GroupHeader(usize),
+    Route(usize),
 }
 
 pub struct RouteList {
@@ -44,7 +46,7 @@ pub struct RouteList {
 }
 
 impl RouteList {
-    pub fn new(routes: &[Route]) -> Self {
+    pub fn new(routes: &[Route], persisted_state: &RouteListState) -> Self {
         let mut groups: Vec<RouteGroup> = vec![];
 
         for (route_index, route) in routes.iter().enumerate() {
@@ -61,6 +63,16 @@ impl RouteList {
             }
         }
 
+        for group in &mut groups {
+            group.expanded = persisted_state
+                .expanded_groups
+                .iter()
+                .any(|name| name == &group.name);
+        }
+
+        let initial_selection_target =
+            Self::selection_target_from_state(persisted_state, routes, &mut groups);
+
         let mut list = Self {
             component: List::default(),
             routes: routes.to_vec(),
@@ -68,8 +80,49 @@ impl RouteList {
             row_kinds: vec![],
             pending_g: false,
         };
-        list.rebuild_rows(None);
+        list.rebuild_rows(initial_selection_target);
         list
+    }
+
+    fn selection_target_from_state(
+        persisted_state: &RouteListState,
+        routes: &[Route],
+        groups: &mut [RouteGroup],
+    ) -> Option<SelectionTarget> {
+        match persisted_state.selected.as_ref() {
+            Some(SelectedItem::Route(saved_route)) => {
+                if let Some(route_index) = routes
+                    .iter()
+                    .position(|route| Self::route_matches_selection(route, saved_route))
+                {
+                    if let Some(group_index) = groups
+                        .iter()
+                        .position(|group| group.route_indexes.contains(&route_index))
+                    {
+                        groups[group_index].expanded = true;
+                    }
+
+                    Some(SelectionTarget::Route(route_index))
+                } else {
+                    groups
+                        .iter()
+                        .position(|group| group.name == saved_route.group)
+                        .map(SelectionTarget::GroupHeader)
+                }
+            }
+            Some(SelectedItem::Group { name }) => groups
+                .iter()
+                .position(|group| &group.name == name)
+                .map(SelectionTarget::GroupHeader),
+            None => None,
+        }
+    }
+
+    fn route_matches_selection(route: &Route, saved_route: &RouteSelection) -> bool {
+        Self::group_name(route) == saved_route.group
+            && route.name == saved_route.name
+            && Self::method_label(&route.method).eq_ignore_ascii_case(&saved_route.method)
+            && route.url == saved_route.url
     }
 
     fn group_name(route: &Route) -> String {
@@ -214,13 +267,45 @@ impl RouteList {
             || (key.code == Key::Tab && key.modifiers.intersects(KeyModifiers::SHIFT))
     }
 
+    fn snapshot_state(&self) -> RouteListState {
+        let expanded_groups = self
+            .groups
+            .iter()
+            .filter(|group| group.expanded)
+            .map(|group| group.name.clone())
+            .collect();
+
+        let selected = if let Some(route_index) = self.selected_route_index() {
+            self.routes
+                .get(route_index)
+                .map(|route| SelectedItem::Route(RouteSelection::from_route(route)))
+        } else if let Some(group_index) = self.selected_group_index() {
+            self.groups
+                .get(group_index)
+                .map(|group| SelectedItem::Group {
+                    name: group.name.clone(),
+                })
+        } else {
+            None
+        };
+
+        RouteListState {
+            expanded_groups,
+            selected,
+        }
+    }
+
+    fn route_list_state_changed_msg(&self) -> Msg {
+        Msg::RouteListStateChanged(self.snapshot_state())
+    }
+
     fn on_keyboard(&mut self, key: KeyEvent) -> Option<Msg> {
         if self.pending_g {
             self.pending_g = false;
 
             if Self::is_plain_g(&key) {
                 self.move_selection_home();
-                return None;
+                return Some(self.route_list_state_changed_msg());
             }
         }
 
@@ -231,17 +316,17 @@ impl RouteList {
 
         if Self::is_jump_to_end(&key) {
             self.move_selection_end();
-            return None;
+            return Some(self.route_list_state_changed_msg());
         }
 
         if Self::is_reverse_group_cycle(&key) {
             self.move_selection_to_previous_group_header();
-            return None;
+            return Some(self.route_list_state_changed_msg());
         }
 
         if Self::is_forward_group_cycle(&key) {
             self.move_selection_to_next_group_header();
-            return None;
+            return Some(self.route_list_state_changed_msg());
         }
 
         match key {
@@ -250,34 +335,34 @@ impl RouteList {
                 modifiers: KeyModifiers::NONE,
             } => {
                 self.move_selection_down();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent {
                 code: Key::Char('k'),
                 modifiers: KeyModifiers::NONE,
             } => {
                 self.move_selection_up();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent {
                 code: Key::Down, ..
             } => {
                 self.move_selection_down();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent { code: Key::Up, .. } => {
                 self.move_selection_up();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent {
                 code: Key::Home, ..
             } => {
                 self.move_selection_home();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent { code: Key::End, .. } => {
                 self.move_selection_end();
-                None
+                Some(self.route_list_state_changed_msg())
             }
             KeyEvent {
                 code: Key::Enter,
@@ -285,7 +370,7 @@ impl RouteList {
             } => {
                 if let Some(group_index) = self.selected_group_index() {
                     self.toggle_group(group_index);
-                    None
+                    Some(self.route_list_state_changed_msg())
                 } else if let Some(index) = self.selected_route_index() {
                     Some(Msg::RunRoute(index))
                 } else {
@@ -416,6 +501,10 @@ impl RouteList {
                     matches!(kind, RowKind::GroupHeader(current_index) if *current_index == group_index)
                 })
                 .unwrap_or(fallback),
+            Some(SelectionTarget::Route(route_index)) => row_kinds
+                .iter()
+                .position(|kind| matches!(kind, RowKind::Route(current_index) if *current_index == route_index))
+                .unwrap_or(fallback),
             None => fallback,
         }
     }
@@ -509,10 +598,14 @@ mod tests {
         }
     }
 
+    fn new_list(routes: &[Route]) -> RouteList {
+        RouteList::new(routes, &RouteListState::default())
+    }
+
     #[test]
     fn navigation_moves_between_group_headers_when_collapsed() {
         let routes = vec![route("group-a", "first"), route("group-b", "second")];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         assert_eq!(selected_row_index(&list), 0);
         assert_eq!(list.selected_group_index(), Some(0));
@@ -555,18 +648,18 @@ mod tests {
             route("group-a", "second"),
             route("group-b", "third"),
         ];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         assert!(!list.groups[0].expanded);
         assert_eq!(selected_row_index(&list), 0);
 
-        assert_eq!(
+        assert!(matches!(
             list.on(Event::Keyboard(KeyEvent::new(
                 Key::Enter,
                 KeyModifiers::NONE,
             ))),
-            None
-        );
+            Some(Msg::RouteListStateChanged(_))
+        ));
         assert!(list.groups[0].expanded);
         assert_eq!(selected_row_index(&list), 0);
         assert_eq!(list.selected_route_index(), None);
@@ -588,13 +681,13 @@ mod tests {
         list.on(Event::Keyboard(KeyEvent::new(Key::Up, KeyModifiers::NONE)));
         assert_eq!(selected_row_index(&list), 0);
 
-        assert_eq!(
+        assert!(matches!(
             list.on(Event::Keyboard(KeyEvent::new(
                 Key::Enter,
                 KeyModifiers::NONE,
             ))),
-            None
-        );
+            Some(Msg::RouteListStateChanged(_))
+        ));
         assert!(!list.groups[0].expanded);
         assert_eq!(selected_row_index(&list), 0);
     }
@@ -602,7 +695,7 @@ mod tests {
     #[test]
     fn route_actions_only_apply_to_route_rows() {
         let routes = vec![route("group-a", "first")];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         assert_eq!(
             list.on(Event::Keyboard(KeyEvent::new(
@@ -648,7 +741,7 @@ mod tests {
     #[test]
     fn navigation_wraps_between_first_and_last_selectable_rows() {
         let routes = vec![route("group-a", "first"), route("group-b", "second")];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         assert_eq!(selected_row_index(&list), 0);
 
@@ -671,7 +764,7 @@ mod tests {
     #[test]
     fn vim_style_gg_and_g_jump_to_top_and_bottom() {
         let routes = vec![route("group-a", "first"), route("group-b", "second")];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         list.on(Event::Keyboard(KeyEvent::new(
             Key::Down,
@@ -701,7 +794,7 @@ mod tests {
     #[test]
     fn tab_and_backtab_cycle_between_group_headers() {
         let routes = vec![route("group-a", "first"), route("group-b", "second")];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         assert_eq!(selected_row_index(&list), 0);
         assert_eq!(list.selected_group_index(), Some(0));
@@ -736,7 +829,7 @@ mod tests {
             route("group-a", "second"),
             route("group-b", "third"),
         ];
-        let mut list = RouteList::new(&routes);
+        let mut list = new_list(&routes);
 
         list.on(Event::Keyboard(KeyEvent::new(
             Key::Enter,
@@ -761,8 +854,47 @@ mod tests {
     }
 
     #[test]
+    fn restores_expanded_groups_and_selected_route_from_state() {
+        let routes = vec![route("group-a", "first"), route("group-b", "second")];
+        let state = RouteListState {
+            expanded_groups: vec!["group-a".to_string()],
+            selected: Some(SelectedItem::Route(RouteSelection {
+                group: "group-a".to_string(),
+                name: "first".to_string(),
+                method: "GET".to_string(),
+                url: "https://example.com".to_string(),
+            })),
+        };
+
+        let list = RouteList::new(&routes, &state);
+
+        assert!(list.groups[0].expanded);
+        assert!(!list.groups[1].expanded);
+        assert_eq!(list.selected_route_index(), Some(0));
+    }
+
+    #[test]
+    fn falls_back_to_group_when_selected_route_is_missing() {
+        let routes = vec![route("group-a", "first"), route("group-b", "second")];
+        let state = RouteListState {
+            expanded_groups: vec![],
+            selected: Some(SelectedItem::Route(RouteSelection {
+                group: "group-b".to_string(),
+                name: "missing".to_string(),
+                method: "GET".to_string(),
+                url: "https://example.com/missing".to_string(),
+            })),
+        };
+
+        let list = RouteList::new(&routes, &state);
+
+        assert_eq!(list.selected_group_index(), Some(1));
+        assert_eq!(list.selected_route_index(), None);
+    }
+
+    #[test]
     fn empty_route_list_has_no_selectable_rows() {
-        let mut list = RouteList::new(&[]);
+        let mut list = new_list(&[]);
 
         assert_eq!(selected_row_index(&list), 0);
         assert_eq!(list.selected_route_index(), None);
