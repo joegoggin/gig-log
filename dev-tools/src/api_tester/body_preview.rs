@@ -85,13 +85,24 @@ fn highlight_json_line(line: &str) -> Line<'static> {
                 }
             }
 
-            let style = if matches!(lookahead.peek(), Some(':')) {
+            let is_key = matches!(lookahead.peek(), Some(':'));
+            let is_hidden_value = !is_key && token == "\"hidden\"";
+
+            let style = if is_key {
                 key_style()
+            } else if is_hidden_value {
+                hidden_style()
             } else {
                 string_style()
             };
 
-            spans.push(Span::styled(token, style));
+            let content = if is_hidden_value {
+                "hidden".to_string()
+            } else {
+                token
+            };
+
+            spans.push(Span::styled(content, style));
             continue;
         }
 
@@ -218,6 +229,12 @@ fn string_style() -> Style {
     Style::default().fg(Color::Green)
 }
 
+fn hidden_style() -> Style {
+    Style::default()
+        .fg(Color::DarkGray)
+        .add_modifier(Modifier::ITALIC)
+}
+
 fn number_style() -> Style {
     Style::default().fg(Color::Yellow)
 }
@@ -266,6 +283,21 @@ mod tests {
             .find(|span| span.content == "true")
             .expect("boolean span should be present");
         assert_eq!(bool_span.style.fg, Some(Color::Magenta));
+    }
+
+    #[test]
+    fn hidden_string_values_render_without_quotes() {
+        let preview = build("{\"password\":\"hidden\"}");
+
+        assert_eq!(preview.format, BodyPreviewFormat::Json);
+        assert_eq!(line_text(&preview.lines[1]), "  \"password\": hidden");
+
+        let hidden_span = preview.lines[1]
+            .spans
+            .iter()
+            .find(|span| span.content == "hidden")
+            .expect("hidden span should be present");
+        assert_eq!(hidden_span.style.fg, Some(Color::DarkGray));
     }
 
     #[test]

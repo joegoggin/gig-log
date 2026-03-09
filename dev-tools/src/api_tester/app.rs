@@ -446,7 +446,8 @@ impl AppModel {
                     .editor_draft
                     .as_ref()
                     .and_then(|draft| draft.body.as_deref())
-                    .map(body_preview::build)
+                    .map(|body| self.variables.substitute_for_preview(body))
+                    .map(|body| body_preview::build(&body))
                     .filter(|preview| !preview.lines.is_empty());
 
                 let mut constraints = vec![
@@ -629,7 +630,8 @@ impl AppModel {
         let body_preview = route
             .body
             .as_deref()
-            .map(body_preview::build)
+            .map(|body| self.variables.substitute_for_preview(body))
+            .map(|body| body_preview::build(&body))
             .filter(|preview| !preview.lines.is_empty());
 
         if let Some(preview) = body_preview
