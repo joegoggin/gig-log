@@ -20,3 +20,4 @@ rand = "0.9"
 toml = "1.0.4"
 tuirealm = "3.3.0"
 serde = { version = "1.0.228", features = ["derive"] }
+tui-realm-stdlib = "3.1.0"

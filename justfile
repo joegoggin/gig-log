@@ -79,6 +79,12 @@ dev-tools *args:
 dev-tools-build:
 	cargo build -p gig-log-dev-tools
 
+dev-tools-add *args:
+	cd dev-tools && cargo add {{args}}
+
+dev-tools-remove *args:
+	cd dev-tools && cargo add {{args}}
+
 docs:
     cargo run -p gig-log-dev-tools -- docs
 

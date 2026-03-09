@@ -2,5 +2,7 @@ target
 dist
 .env
 *.env
+!example.api-tester.env
+api-tester.env
 issues
 cookies.txt

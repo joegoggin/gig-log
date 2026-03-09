@@ -1,6 +1,6 @@
 use axum::{
-    http::{HeaderName, Method},
     Router,
+    http::{HeaderName, Method},
 };
 use sqlx::{Pool, Postgres};
 use tower_http::cors::{AllowOrigin, CorsLayer};

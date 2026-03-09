@@ -1,11 +1,10 @@
+use std::fs;
 use std::path::Path;
 
 use anyhow::Context;
 use tokio::process::Command;
 
-use crate::api_tester::{collection::Route, variables::Variables};
-
-const COOKIE_JAR_PATH: &str = "dev-tools/api-tester/cookies.txt";
+use crate::api_tester::{collection::Route, paths, variables::Variables};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurlResponse {
@@ -25,7 +24,15 @@ impl CurlExecutor {
     }
 
     pub async fn execute(&self) -> anyhow::Result<CurlResponse> {
-        let args = Self::build_args(&self);
+        let cookie_path = paths::cookie_jar_path();
+
+        if let Some(parent) = cookie_path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create cookie directory: {}", parent.display())
+            })?;
+        }
+
+        let args = Self::build_args(&self, &cookie_path);
         let output = Command::new("curl")
             .args(&args)
             .output()
@@ -41,8 +48,7 @@ impl CurlExecutor {
         Self::parse_response(&stdout)
     }
 
-    fn build_args(&self) -> Vec<String> {
-        let cookie_path = Path::new(COOKIE_JAR_PATH);
+    fn build_args(&self, cookie_path: &Path) -> Vec<String> {
         let cookie = cookie_path.to_string_lossy().to_string();
         let mut args = vec![
             "-s".to_string(),

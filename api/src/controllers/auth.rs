@@ -276,8 +276,7 @@ impl AuthController {
         }
 
         let response = MessageResponse {
-            message: "If an account exists for this email, a reset code has been sent."
-                .to_string(),
+            message: "If an account exists for this email, a reset code has been sent.".to_string(),
         };
 
         Ok(Json(response))

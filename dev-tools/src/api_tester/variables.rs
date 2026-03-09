@@ -2,9 +2,8 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
 
-const VARIABLES_PATH: &str = "dev-tools/api-tester/.env";
+use crate::api_tester::paths;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Variables {
@@ -13,7 +12,7 @@ pub struct Variables {
 
 impl Variables {
     pub fn load() -> anyhow::Result<Self> {
-        let path = Path::new(VARIABLES_PATH);
+        let path = paths::variables_path();
 
         if !path.exists() {
             return Ok(Self {
@@ -21,7 +20,7 @@ impl Variables {
             });
         }
 
-        let content = fs::read_to_string(path)
+        let content = fs::read_to_string(&path)
             .with_context(|| format!("failed to read variables file: {}", path.display()))?;
 
         let mut variables = HashMap::new();
@@ -36,11 +35,11 @@ impl Variables {
 
             let (raw_key, raw_value) = line
                 .split_once('=')
-                .ok_or_else(|| anyhow::anyhow!("invalid .env line {line_number}: {line}"))?;
+                .ok_or_else(|| anyhow::anyhow!("invalid env line {line_number}: {line}"))?;
 
             let key = raw_key.trim();
             if key.is_empty() {
-                anyhow::bail!("empty key on .env line {line_number}");
+                anyhow::bail!("empty key on env line {line_number}");
             }
 
             let mut value = raw_value.trim().to_string();
@@ -92,7 +91,7 @@ impl Variables {
     }
 
     pub fn save(&self) -> anyhow::Result<()> {
-        let path = Path::new(VARIABLES_PATH);
+        let path = paths::variables_path();
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -115,7 +114,7 @@ impl Variables {
             }
         }
 
-        fs::write(path, content)
+        fs::write(&path, content)
             .with_context(|| format!("failed to write variables file: {}", path.display()))?;
 
         Ok(())
@@ -127,5 +126,15 @@ impl Variables {
 
     pub fn delete(&mut self, key: &str) {
         self.variables.remove(key);
+    }
+
+    pub fn entries(&self) -> Vec<(&String, &String)> {
+        let mut entries: Vec<_> = self.variables.iter().collect();
+        entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+        entries
+    }
+
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.variables.get(key)
     }
 }

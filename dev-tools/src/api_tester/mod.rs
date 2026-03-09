@@ -6,16 +6,18 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::prelude::*;
-use tuirealm::event::Key;
-use tuirealm::{NoUserEvent, Sub, SubClause, SubEventClause};
+use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 
 use crate::api_tester::app::{AppModel, Id, Msg};
 use crate::api_tester::components::global_listener::GlobalListener;
+use crate::api_tester::components::route_list::RouteList;
+use crate::utils::sub::SubUtils;
 
 pub mod app;
 pub mod collection;
 pub mod components;
 pub mod executor;
+pub mod paths;
 pub mod variables;
 
 type AppTerminal = Terminal<CrosstermBackend<Stdout>>;
@@ -49,31 +51,48 @@ pub async fn run() -> anyhow::Result<()> {
 
     install_panic_hook();
     let mut terminal = init_terminal()?;
-    let mut model = AppModel::init()?;
     let listener =
         EventListenerCfg::default().crossterm_input_listener(Duration::from_millis(10), 10);
-    let mut app: Application<Id, Msg, NoUserEvent> = Application::init(listener);
+    let mut model = AppModel::new(Application::init(listener))?;
 
-    app.mount(
+    model.app.mount(
         Id::GlobalListener,
         Box::new(GlobalListener::default()),
-        vec![
-            Sub::new(
-                SubEventClause::Keyboard(Key::Char('q').into()),
-                SubClause::Always,
-            ),
-            Sub::new(
-                SubEventClause::Keyboard(Key::Char('v').into()),
-                SubClause::Always,
-            ),
-            Sub::new(SubEventClause::Keyboard(Key::Esc.into()), SubClause::Always),
-        ],
+        SubUtils::key_subs([
+            Key::Char('q').into(),
+            Key::Char('v').into(),
+            Key::Esc.into(),
+        ]),
     )?;
-    // app.mount(Id::RouteList, RouteList::default(), vec![]);
+
+    model.app.mount(
+        Id::RouteList,
+        Box::new(RouteList::new(&model.collection.routes)),
+        SubUtils::key_subs([
+            Key::Char('j').into(),
+            Key::Char('k').into(),
+            Key::Char('g').into(),
+            Key::Char('G').into(),
+            KeyEvent::new(Key::Char('g'), KeyModifiers::SHIFT),
+            KeyEvent::new(Key::Char('G'), KeyModifiers::SHIFT),
+            Key::Up.into(),
+            Key::Down.into(),
+            Key::Home.into(),
+            Key::End.into(),
+            Key::Tab.into(),
+            Key::BackTab.into(),
+            KeyEvent::new(Key::Tab, KeyModifiers::SHIFT),
+            KeyEvent::new(Key::BackTab, KeyModifiers::SHIFT),
+            Key::Enter.into(),
+            Key::Char('e').into(),
+            Key::Char('d').into(),
+            Key::Char('n').into(),
+        ]),
+    )?;
 
     let run_result = (|| -> anyhow::Result<()> {
         loop {
-            let messages = app.tick(PollStrategy::Once)?;
+            let messages = model.app.tick(PollStrategy::Once)?;
 
             for msg in messages {
                 if matches!(msg, Msg::AppClose) {
