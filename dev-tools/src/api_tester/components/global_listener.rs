@@ -25,6 +25,7 @@ impl GlobalListener {
             Key::Char('i') => Some(Msg::EnterInsertMode),
             Key::Esc => Some(Msg::CancelEdit),
             Key::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::SaveRoute),
+            Key::Char('b') => Some(Msg::OpenBodyEditor),
             _ => None,
         }
     }

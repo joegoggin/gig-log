@@ -10,11 +10,13 @@ use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::{AttrValue, Attribute};
 
 use crate::api_tester::app::{AppModel, Id, InputMode, Msg};
+use crate::api_tester::components::body_editor::open_external_editor;
 use crate::api_tester::components::global_listener::GlobalListener;
 use crate::api_tester::components::route_list::RouteList;
 use crate::utils::sub::SubUtils;
 
 pub mod app;
+pub mod body_preview;
 pub mod collection;
 pub mod components;
 pub mod executor;
@@ -65,6 +67,7 @@ pub async fn run() -> anyhow::Result<()> {
             Key::Char('i').into(),
             Key::Esc.into(),
             KeyEvent::new(Key::Char('s'), KeyModifiers::CONTROL),
+            Key::Char('b').into(),
         ]),
     )?;
 
@@ -108,8 +111,26 @@ pub async fn run() -> anyhow::Result<()> {
                     return Ok(());
                 }
 
-                if matches!(model.update(msg)?, Some(Msg::AppClose)) {
-                    return Ok(());
+                match model.update(msg)? {
+                    Some(Msg::AppClose) => return Ok(()),
+                    Some(Msg::OpenBodyEditor) => {
+                        restore_terminal(&mut terminal)?;
+
+                        let current_body = model.editor_draft_body();
+                        let editor_result = open_external_editor(current_body);
+
+                        terminal = init_terminal()?;
+
+                        match editor_result {
+                            Ok(new_body) => {
+                                model.update(Msg::BodyEditorResult(new_body))?;
+                            }
+                            Err(error) => {
+                                eprintln!("Editor error: {error}");
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
 

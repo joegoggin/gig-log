@@ -9,7 +9,8 @@ use crate::api_tester::components::route_editor::name_input::EditorNameInput;
 use crate::api_tester::components::route_editor::new_group_input::EditorNewGroupInput;
 use crate::api_tester::components::route_editor::url_input::EditorUrlInput;
 use crate::api_tester::{
-    collection::{Collection, Route, DEFAULT_ROUTE_GROUP},
+    body_preview,
+    collection::{Collection, DEFAULT_ROUTE_GROUP, Route},
     components::route_list::RouteList,
     executor::CurlResponse,
     variables::Variables,
@@ -282,10 +283,29 @@ impl AppModel {
                     self.active_view = ActiveView::RouteList;
                 }
             }
+            Msg::OpenBodyEditor => {
+                if self.active_view == ActiveView::RouteEditor {
+                    // Signal to the event loop that we need to suspend for external editor
+                    return Ok(Some(Msg::OpenBodyEditor));
+                }
+            }
+            Msg::BodyEditorResult(body) => {
+                if self.active_view == ActiveView::RouteEditor {
+                    if let Some(draft) = &mut self.editor_draft {
+                        draft.body = body;
+                    }
+                }
+            }
             _ => {}
         }
 
         Ok(None)
+    }
+
+    pub fn editor_draft_body(&self) -> Option<&str> {
+        self.editor_draft
+            .as_ref()
+            .and_then(|draft| draft.body.as_deref())
     }
 
     pub fn refresh_route_list(&mut self) -> anyhow::Result<()> {
@@ -318,12 +338,16 @@ impl AppModel {
     }
 
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
+        let content_area = Self::content_area(frame.area());
+
         match self.active_view {
             ActiveView::RouteList => {
-                self.app.view(&Id::RouteList, frame, frame.area());
+                self.app.view(&Id::RouteList, frame, content_area);
             }
             ActiveView::RouteEditor => {
-                use ratatui::layout::{Constraint, Layout};
+                use ratatui::layout::{Constraint, Layout, Margin, Rect};
+                use ratatui::style::{Color, Style};
+                use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Wrap};
 
                 // Check if "New Group..." is selected to show the new group input
                 let show_new_group = if let Ok(State::One(StateValue::Usize(idx))) =
@@ -334,6 +358,13 @@ impl AppModel {
                 } else {
                     false
                 };
+
+                let body_preview = self
+                    .editor_draft
+                    .as_ref()
+                    .and_then(|draft| draft.body.as_deref())
+                    .map(body_preview::build)
+                    .filter(|preview| !preview.lines.is_empty());
 
                 let mut constraints = vec![
                     Constraint::Length(3), // Name
@@ -348,12 +379,20 @@ impl AppModel {
                     Constraint::Length(3), // Method
                     Constraint::Length(3), // URL
                     Constraint::Length(3), // Headers
-                    Constraint::Length(1), // Body status
-                    Constraint::Length(1), // Mode indicator
+                    Constraint::Length(3), // Body status
+                ]);
+
+                if let Some(preview) = body_preview.as_ref() {
+                    let preview_height = preview.lines.len().clamp(1, 8) as u16;
+                    constraints.push(Constraint::Length(preview_height + 3));
+                }
+
+                constraints.extend([
+                    Constraint::Length(2), // Mode indicator + bottom margin
                     Constraint::Min(1),    // Help
                 ]);
 
-                let chunks = Layout::vertical(constraints).split(frame.area());
+                let chunks = Layout::vertical(constraints).split(content_area);
 
                 let mut idx = 0;
                 self.app.view(&Id::EditorName, frame, chunks[idx]);
@@ -374,36 +413,60 @@ impl AppModel {
                 idx += 1;
 
                 // Body status
-                let body_status = if self
-                    .editor_draft
-                    .as_ref()
-                    .and_then(|d| d.body.as_ref())
-                    .is_some()
-                {
+                let body_status = if body_preview.is_some() {
                     "Body: Set (press 'b' to edit in Normal mode)"
                 } else {
                     "Body: Empty (press 'b' to add in Normal mode)"
                 };
-                let body_widget = ratatui::widgets::Paragraph::new(body_status)
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray));
-                frame.render_widget(body_widget, chunks[idx]);
+                let body_widget =
+                    Paragraph::new(body_status).style(Style::default().fg(Color::DarkGray));
+                let body_status_area = chunks[idx].inner(Margin {
+                    vertical: 1,
+                    horizontal: 0,
+                });
+                frame.render_widget(body_widget, body_status_area);
                 idx += 1;
+
+                if let Some(preview) = body_preview {
+                    let title = match preview.format {
+                        body_preview::BodyPreviewFormat::Json => "Body Preview (JSON)",
+                        body_preview::BodyPreviewFormat::Text => "Body Preview",
+                    };
+
+                    let preview_widget = Paragraph::new(preview.lines)
+                        .block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .border_type(BorderType::Rounded)
+                                .border_style(Style::default().fg(Color::Cyan))
+                                .title(title),
+                        )
+                        .wrap(Wrap { trim: false });
+                    let preview_area = Rect {
+                        x: chunks[idx].x,
+                        y: chunks[idx].y,
+                        width: chunks[idx].width,
+                        height: chunks[idx].height.saturating_sub(1),
+                    };
+                    frame.render_widget(preview_widget, preview_area);
+                    idx += 1;
+                }
 
                 // Mode indicator
                 let mode_label = match self.input_mode {
                     InputMode::Normal => "-- NORMAL --",
                     InputMode::Insert => "-- INSERT --",
                 };
-                let mode_widget = ratatui::widgets::Paragraph::new(mode_label)
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Yellow));
+                let mode_widget =
+                    Paragraph::new(mode_label).style(Style::default().fg(Color::Yellow));
                 frame.render_widget(mode_widget, chunks[idx]);
                 idx += 1;
 
                 // Help text
-                let help = ratatui::widgets::Paragraph::new(
+                let help = Paragraph::new(
                     "i: Insert mode | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate",
                 )
-                .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray));
+                .style(Style::default().fg(Color::DarkGray));
                 frame.render_widget(help, chunks[idx]);
             }
             ActiveView::ResponseViewer => {
@@ -480,5 +543,12 @@ impl AppModel {
             Ok(State::One(StateValue::String(value))) => value,
             _ => String::new(),
         }
+    }
+
+    fn content_area(area: ratatui::layout::Rect) -> ratatui::layout::Rect {
+        area.inner(ratatui::layout::Margin {
+            vertical: 1,
+            horizontal: 2,
+        })
     }
 }

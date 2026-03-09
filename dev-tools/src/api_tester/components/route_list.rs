@@ -1,14 +1,14 @@
 use tui_realm_stdlib::List;
 use tuirealm::{
+    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State, StateValue,
     command::{Cmd, CmdResult},
     event::{Key, KeyEvent, KeyModifiers},
     props::{Alignment, BorderType, Borders, Color, PropPayload, PropValue, TextSpan},
-    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State, StateValue,
 };
 
 use crate::api_tester::{
     app::Msg,
-    collection::{HttpMethod, Route, DEFAULT_ROUTE_GROUP},
+    collection::{DEFAULT_ROUTE_GROUP, HttpMethod, Route},
 };
 
 struct RouteGroup {
@@ -343,7 +343,7 @@ impl RouteList {
         let (rows, row_kinds) = if self.routes.is_empty() {
             (
                 vec![vec![
-                    TextSpan::new("No routes. Press 'n' to create one.").fg(Color::DarkGray)
+                    TextSpan::new("No routes. Press 'n' to create one.").fg(Color::DarkGray),
                 ]],
                 vec![RowKind::EmptyState],
             )
@@ -361,11 +361,9 @@ impl RouteList {
 
             for (group_index, group) in self.groups.iter().enumerate() {
                 let visibility = if group.expanded { "-" } else { "+" };
-                rows.push(vec![TextSpan::new(format!(
-                    "[{}] {}",
-                    visibility, group.name
-                ))
-                .fg(Color::Cyan)]);
+                rows.push(vec![
+                    TextSpan::new(format!("[{}] {}", visibility, group.name)).fg(Color::Cyan),
+                ]);
                 row_kinds.push(RowKind::GroupHeader(group_index));
 
                 if group.expanded {

@@ -6,21 +6,35 @@ name = "Sign Up"
 method = "POST"
 url = "http://localhost:8000/auth/sign-up"
 headers = ["Content-Type: application/json"]
-body = '{"first_name":"{{SIGN_UP_FIRST_NAME}}","last_name":"{{SIGN_UP_LAST_NAME}}","email":"{{SIGN_UP_EMAIL}}","password":"{{SIGN_UP_PASSWORD}}","confirm_password":"{{SIGN_UP_CONFIRM_PASSWORD}}"}'
+body = """
+{
+    "first_name": "{{SIGN_UP_FIRST_NAME}}",
+    "last_name": "{{SIGN_UP_LAST_NAME}}",
+    "email": "{{SIGN_UP_EMAIL}}",
+    "password": "{{SIGN_UP_PASSWORD}}",
+    "confirm_password": "{{SIGN_UP_CONFIRM_PASSWORD}}"
+}"""
 
 [[groups.routes]]
 name = "Confirm Email"
 method = "POST"
 url = "http://localhost:8000/auth/confirm-email"
 headers = ["Content-Type: application/json"]
-body = '{"code":"{{EMAIL_CONFIRMATION_CODE}}"}'
+body = """
+{
+    "code": "{{EMAIL_CONFIRMATION_CODE}}"
+}"""
 
 [[groups.routes]]
 name = "Log In"
 method = "POST"
 url = "http://localhost:8000/auth/log-in"
 headers = ["Content-Type: application/json"]
-body = '{"email":"{{LOGIN_EMAIL}}","password":"{{LOGIN_PASSWORD}}"}'
+body = """
+{
+    "email": "{{LOGIN_EMAIL}}",
+    "password": "{{LOGIN_PASSWORD}}"
+}"""
 
 [[groups.routes]]
 name = "Log Out"
@@ -45,21 +59,32 @@ name = "Forgot Password"
 method = "POST"
 url = "http://localhost:8000/auth/forgot-password"
 headers = ["Content-Type: application/json"]
-body = '{"email":"{{FORGOT_PASSWORD_EMAIL}}"}'
+body = """
+{
+    "email": "{{FORGOT_PASSWORD_EMAIL}}"
+}"""
 
 [[groups.routes]]
 name = "Verify Forgot Password"
 method = "POST"
 url = "http://localhost:8000/auth/verify-forgot-password"
 headers = ["Content-Type: application/json"]
-body = '{"code":"{{FORGOT_PASSWORD_CODE}}"}'
+body = """
+{
+    "code": "{{FORGOT_PASSWORD_CODE}}"
+}"""
 
 [[groups.routes]]
 name = "Set Password"
 method = "POST"
 url = "http://localhost:8000/auth/set-password"
 headers = ["Content-Type: application/json"]
-body = '{"code":"{{FORGOT_PASSWORD_CODE}}","new_password":"{{RESET_NEW_PASSWORD}}","confirm_new_password":"{{RESET_CONFIRM_NEW_PASSWORD}}"}'
+body = """
+{
+    "code": "{{FORGOT_PASSWORD_CODE}}",
+    "new_password": "{{RESET_NEW_PASSWORD}}",
+    "confirm_new_password": "{{RESET_CONFIRM_NEW_PASSWORD}}"
+}"""
 
 [[groups.routes]]
 name = "Request Change Password"
@@ -72,18 +97,30 @@ name = "Change Password"
 method = "POST"
 url = "http://localhost:8000/auth/change-password"
 headers = ["Content-Type: application/json"]
-body = '{"current_password":"{{PASSWORD_CHANGE_CURRENT_PASSWORD}}","new_password":"{{PASSWORD_CHANGE_NEW_PASSWORD}}","confirm_new_password":"{{PASSWORD_CHANGE_CONFIRM_NEW_PASSWORD}}","code":"{{PASSWORD_CHANGE_CODE}}"}'
+body = """
+{
+    "current_password": "{{PASSWORD_CHANGE_CURRENT_PASSWORD}}",
+    "new_password": "{{PASSWORD_CHANGE_NEW_PASSWORD}}",
+    "confirm_new_password": "{{PASSWORD_CHANGE_CONFIRM_NEW_PASSWORD}}",
+    "code": "{{PASSWORD_CHANGE_CODE}}"
+}"""
 
 [[groups.routes]]
 name = "Request Email Change"
 method = "POST"
 url = "http://localhost:8000/auth/request-email-change"
 headers = ["Content-Type: application/json"]
-body = '{"new_email":"{{EMAIL_CHANGE_NEW_EMAIL}}"}'
+body = """
+{
+    "new_email": "{{EMAIL_CHANGE_NEW_EMAIL}}"
+}"""
 
 [[groups.routes]]
 name = "Confirm Email Change"
 method = "POST"
 url = "http://localhost:8000/auth/confirm-email-change"
 headers = ["Content-Type: application/json"]
-body = '{"code":"{{EMAIL_CHANGE_CODE}}"}'
+body = """
+{
+    "code": "{{EMAIL_CHANGE_CODE}}"
+}"""
