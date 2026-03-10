@@ -13,30 +13,20 @@ use tuirealm::props::{
 };
 use tuirealm::{Application, AttrValue, Attribute, NoUserEvent, State, StateValue};
 
+use crate::api_tester::components::response_viewer::details_view::ResponseDetailsView;
+use crate::api_tester::components::route_editor::group_selector::EditorGroupSelector;
+use crate::api_tester::components::route_editor::headers_input::EditorHeadersInput;
+use crate::api_tester::components::route_editor::method_radio::EditorMethodRadio;
 use crate::api_tester::components::route_editor::name_input::EditorNameInput;
 use crate::api_tester::components::route_editor::new_group_input::EditorNewGroupInput;
 use crate::api_tester::components::route_editor::url_input::EditorUrlInput;
-use crate::api_tester::components::{
-    response_viewer::body_view::ResponseBodyView, route_editor::method_radio::EditorMethodRadio,
-};
-use crate::api_tester::components::{
-    response_viewer::headers_view::ResponseHeadersView,
-    route_editor::headers_input::EditorHeadersInput,
-};
-use crate::api_tester::components::{
-    response_viewer::status_label::ResponseStatusLabel,
-    route_editor::group_selector::EditorGroupSelector,
-};
 use crate::api_tester::{
     body_preview,
-    collection::{Collection, DEFAULT_ROUTE_GROUP, Route},
+    collection::{Collection, DEFAULT_ROUTE_GROUP, HttpMethod, Route},
     components::route_list::RouteList,
     executor::{CurlExecutor, CurlResponse},
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
     variables::Variables,
-};
-use crate::api_tester::{
-    collection::HttpMethod, components::response_viewer::tab_selector::ResponseTabSelector,
 };
 use crate::utils::sub::SubUtils;
 
@@ -49,10 +39,7 @@ pub enum Id {
     EditorUrl,
     EditorHeaders,
     EditorBody,
-    ResponseTabs,
-    ResponseStatus,
-    ResponseHeaders,
-    ResponseBody,
+    ResponseDetails,
     VariableTable,
     VariableKeyInput,
     VariableValueInput,
@@ -64,6 +51,7 @@ pub enum Id {
 pub enum ActiveView {
     RouteList,
     RouteEditor,
+    RequestPreview,
     ResponseViewer,
     VariableManager,
 }
@@ -89,9 +77,10 @@ pub enum Msg {
     EditorPageUp,
     EditorPageDown,
     EditorScrollBy(isize),
+    PreviewScrollToTop,
+    PreviewScrollToBottom,
     MethodChanged(usize),
     BodyEditorResult(Option<String>),
-    ResponseTabChanged(usize),
     ToggleSecretVisibility,
     AddVariable,
     DeleteVariable(String),
@@ -101,6 +90,7 @@ pub enum Msg {
     EnterNormalMode,
     GroupSelected(usize),
     NewGroupEntered,
+    ExecutePreviewRequest,
     None,
 }
 
@@ -135,6 +125,19 @@ struct EditorSection {
     height: u16,
 }
 
+#[derive(Debug, Clone)]
+struct RequestPreviewState {
+    route_index: usize,
+    route_name: String,
+    method: HttpMethod,
+    display_url: String,
+    execution_url: String,
+    display_headers: Vec<String>,
+    execution_headers: Vec<String>,
+    display_body: Option<String>,
+    execution_body: Option<String>,
+}
+
 pub struct AppModel {
     pub app: Application<Id, Msg, NoUserEvent>,
     pub collection: Collection,
@@ -146,12 +149,13 @@ pub struct AppModel {
     selected_route: Option<usize>,
     editing_route: Option<usize>,
     editor_draft: Option<Route>,
-    response_tab: usize,
+    request_preview: Option<RequestPreviewState>,
     secrets_visible: bool,
     layout_mode: LayoutMode,
     terminal_width: u16,
     terminal_height: u16,
     editor_scroll_offset: usize,
+    preview_scroll_offset: usize,
 }
 
 impl AppModel {
@@ -159,9 +163,8 @@ impl AppModel {
     const BODY_STATUS_HEIGHT: u16 = 3;
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
     const EDITOR_FOOTER_MAX_HEIGHT: u16 = 2;
-    const EDITOR_SCROLLBAR_MIN_CONTENT_WIDTH: u16 = 30;
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
-    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | Swipe/Mouse Wheel: Scroll";
+    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | gg/G: Top/Bottom | Swipe/Mouse Wheel: Scroll";
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -175,12 +178,13 @@ impl AppModel {
             selected_route: None,
             editing_route: None,
             editor_draft: None,
-            response_tab: 0,
+            request_preview: None,
             secrets_visible: false,
             layout_mode: LayoutMode::Wide,
             terminal_width: 120,
             terminal_height: 40,
             editor_scroll_offset: 0,
+            preview_scroll_offset: 0,
         })
     }
 
@@ -200,13 +204,17 @@ impl AppModel {
                 self.selected_route = Some(index);
                 self.select_route_in_state(index, true);
                 self.persist_route_list_state();
-                return Ok(Some(Msg::RunRoute(index)));
+                self.request_preview = self.build_request_preview_state(index);
+                self.input_mode = InputMode::Normal;
+                self.preview_scroll_offset = 0;
+                self.active_view = ActiveView::RequestPreview;
             }
             Msg::RouteExecuted(index, response) => {
                 self.selected_route = Some(index);
                 self.response = Some(response);
-                self.response_tab = 0;
+                self.request_preview = None;
                 self.input_mode = InputMode::Normal;
+                self.preview_scroll_offset = 0;
                 self.active_view = ActiveView::ResponseViewer;
                 self.mount_response_viewer()?;
             }
@@ -307,11 +315,50 @@ impl AppModel {
                     self.ensure_editor_section_visible(section);
                 }
             }
-            Msg::EditorScrollUp => self.scroll_editor_by(-1),
-            Msg::EditorScrollDown => self.scroll_editor_by(1),
-            Msg::EditorPageUp => self.scroll_editor_page(-1),
-            Msg::EditorPageDown => self.scroll_editor_page(1),
-            Msg::EditorScrollBy(delta) => self.scroll_editor_by(delta),
+            Msg::EditorScrollUp => match self.active_view {
+                ActiveView::RouteEditor => self.scroll_editor_by(-1),
+                ActiveView::RequestPreview => self.scroll_preview_by(-1),
+                _ => {}
+            },
+            Msg::EditorScrollDown => match self.active_view {
+                ActiveView::RouteEditor => self.scroll_editor_by(1),
+                ActiveView::RequestPreview => self.scroll_preview_by(1),
+                _ => {}
+            },
+            Msg::EditorPageUp => match self.active_view {
+                ActiveView::RouteEditor => self.scroll_editor_page(-1),
+                ActiveView::RequestPreview => self.scroll_preview_page(-1),
+                _ => {}
+            },
+            Msg::EditorPageDown => match self.active_view {
+                ActiveView::RouteEditor => self.scroll_editor_page(1),
+                ActiveView::RequestPreview => self.scroll_preview_page(1),
+                _ => {}
+            },
+            Msg::EditorScrollBy(delta) => match self.active_view {
+                ActiveView::RouteEditor => self.scroll_editor_by(delta),
+                ActiveView::RequestPreview => self.scroll_preview_by(delta),
+                _ => {}
+            },
+            Msg::PreviewScrollToTop => match self.active_view {
+                ActiveView::RouteEditor => {
+                    self.editor_scroll_offset = 0;
+                }
+                ActiveView::RequestPreview => {
+                    self.preview_scroll_offset = 0;
+                }
+                _ => {}
+            },
+            Msg::PreviewScrollToBottom => match self.active_view {
+                ActiveView::RouteEditor => {
+                    self.editor_scroll_offset =
+                        self.current_editor_sections().len().saturating_sub(1);
+                }
+                ActiveView::RequestPreview => {
+                    self.preview_scroll_offset = self.preview_scroll_max_offset();
+                }
+                _ => {}
+            },
             Msg::GroupSelected(_index) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
@@ -409,10 +456,18 @@ impl AppModel {
                     self.input_mode = InputMode::Normal;
                     self.editor_scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
+                } else if self.active_view == ActiveView::RequestPreview {
+                    self.request_preview = None;
+                    self.input_mode = InputMode::Normal;
+                    self.preview_scroll_offset = 0;
+                    self.active_view = ActiveView::RouteList;
                 }
             }
             Msg::OpenBodyEditor => {
-                if self.active_view == ActiveView::RouteEditor {
+                if matches!(
+                    self.active_view,
+                    ActiveView::RouteEditor | ActiveView::RequestPreview
+                ) {
                     // Signal to the event loop that we need to suspend for external editor
                     return Ok(Some(Msg::OpenBodyEditor));
                 }
@@ -422,10 +477,22 @@ impl AppModel {
                     if let Some(draft) = &mut self.editor_draft {
                         draft.body = body;
                     }
+                } else if self.active_view == ActiveView::RequestPreview {
+                    let masked_body = body
+                        .as_deref()
+                        .map(|content| self.variables.redact_hidden_values(content));
+
+                    if let Some(preview) = &mut self.request_preview {
+                        preview.execution_body = body;
+                        preview.display_body = masked_body;
+                    }
                 }
             }
-            Msg::ResponseTabChanged(tab) => {
-                self.response_tab = tab;
+            Msg::ExecutePreviewRequest => {
+                if self.active_view == ActiveView::RequestPreview && self.request_preview.is_some()
+                {
+                    return Ok(Some(Msg::ExecutePreviewRequest));
+                }
             }
             _ => {}
         }
@@ -433,10 +500,72 @@ impl AppModel {
         Ok(None)
     }
 
-    pub fn editor_draft_body(&self) -> Option<&str> {
-        self.editor_draft
-            .as_ref()
-            .and_then(|draft| draft.body.as_deref())
+    pub fn body_editor_initial_content(&self) -> Option<&str> {
+        match self.active_view {
+            ActiveView::RouteEditor => self
+                .editor_draft
+                .as_ref()
+                .and_then(|draft| draft.body.as_deref()),
+            ActiveView::RequestPreview => self
+                .request_preview
+                .as_ref()
+                .and_then(|preview| preview.execution_body.as_deref()),
+            _ => None,
+        }
+    }
+
+    pub fn build_preview_executor(&self) -> Option<(usize, CurlExecutor)> {
+        let preview = self.request_preview.as_ref()?;
+        let route = Route {
+            group: DEFAULT_ROUTE_GROUP.to_string(),
+            name: preview.route_name.clone(),
+            method: preview.method.clone(),
+            url: preview.execution_url.clone(),
+            headers: preview.execution_headers.clone(),
+            body: preview.execution_body.clone(),
+        };
+
+        Some((preview.route_index, CurlExecutor::from_prepared(route)))
+    }
+
+    fn build_request_preview_state(&self, index: usize) -> Option<RequestPreviewState> {
+        let route = self.collection.routes.get(index)?;
+
+        let display_url = self.variables.substitute_for_preview(&route.url);
+        let execution_url = self.variables.substitute_for_execution(&route.url);
+        let display_headers = route
+            .headers
+            .iter()
+            .map(|header| self.variables.substitute_for_preview(header))
+            .collect::<Vec<_>>();
+        let execution_headers = route
+            .headers
+            .iter()
+            .map(|header| self.variables.substitute_for_execution(header))
+            .collect::<Vec<_>>();
+
+        let display_body = route
+            .body
+            .as_deref()
+            .map(|body| self.variables.substitute_for_preview(body))
+            .filter(|body| !body.trim().is_empty());
+        let execution_body = route
+            .body
+            .as_deref()
+            .map(|body| self.variables.substitute_for_execution(body))
+            .filter(|body| !body.trim().is_empty());
+
+        Some(RequestPreviewState {
+            route_index: index,
+            route_name: route.name.clone(),
+            method: route.method.clone(),
+            display_url,
+            execution_url,
+            display_headers,
+            execution_headers,
+            display_body,
+            execution_body,
+        })
     }
 
     fn select_route_in_state(&mut self, route_index: usize, expand_group: bool) {
@@ -500,14 +629,6 @@ impl AppModel {
         Ok(())
     }
 
-    pub fn build_route_executor(&self, index: usize) -> Option<CurlExecutor> {
-        self.collection
-            .routes
-            .get(index)
-            .cloned()
-            .map(|route| CurlExecutor::new(route, self.variables.clone()))
-    }
-
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
         let content_area = Self::content_area(frame.area());
         self.terminal_width = content_area.width;
@@ -521,6 +642,9 @@ impl AppModel {
             ActiveView::RouteEditor => {
                 self.render_route_editor(frame, content_area);
             }
+            ActiveView::RequestPreview => {
+                self.render_request_preview(frame, content_area);
+            }
             ActiveView::ResponseViewer => {
                 self.render_response_viewer(frame, content_area);
             }
@@ -532,67 +656,255 @@ impl AppModel {
 
     pub fn mount_response_viewer(&mut self) -> anyhow::Result<()> {
         if let Some(response) = &self.response {
-            let _ = self.app.umount(&Id::ResponseTabs);
-            let _ = self.app.umount(&Id::ResponseStatus);
-            let _ = self.app.umount(&Id::ResponseHeaders);
-            let _ = self.app.umount(&Id::ResponseBody);
+            let _ = self.app.umount(&Id::ResponseDetails);
 
             self.app.mount(
-                Id::ResponseTabs,
-                Box::new(ResponseTabSelector::new(self.response_tab)),
-                SubUtils::key_subs([
-                    Key::Left.into(),
-                    Key::Right.into(),
-                    Key::Char('h').into(),
-                    Key::Char('l').into(),
-                ]),
-            )?;
-
-            self.app.mount(
-                Id::ResponseStatus,
-                Box::new(ResponseStatusLabel::new(response)),
-                vec![],
-            )?;
-
-            self.app.mount(
-                Id::ResponseHeaders,
-                Box::new(ResponseHeadersView::new(&response.headers)),
+                Id::ResponseDetails,
+                Box::new(ResponseDetailsView::new(response)),
                 SubUtils::key_subs([
                     Key::Char('j').into(),
                     Key::Char('k').into(),
+                    Key::Char('g').into(),
+                    Key::Char('G').into(),
+                    KeyEvent::new(Key::Char('g'), KeyModifiers::SHIFT),
+                    KeyEvent::new(Key::Char('G'), KeyModifiers::SHIFT),
                     Key::Down.into(),
                     Key::Up.into(),
+                    Key::PageUp.into(),
+                    Key::PageDown.into(),
+                    Key::Home.into(),
+                    Key::End.into(),
                 ]),
             )?;
 
-            self.app.mount(
-                Id::ResponseBody,
-                Box::new(ResponseBodyView::new(&response.body)),
-                SubUtils::key_subs([
-                    Key::Char('j').into(),
-                    Key::Char('k').into(),
-                    Key::Down.into(),
-                    Key::Up.into(),
-                ]),
-            )?;
-
-            self.app.active(&Id::ResponseTabs)?;
+            self.app.active(&Id::ResponseDetails)?;
         }
 
         Ok(())
     }
 
     fn render_response_viewer(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
-        let chunks = Layout::vertical([Constraint::Length(3), Constraint::Min(1)]).split(area);
+        self.app.view(&Id::ResponseDetails, frame, area);
+    }
 
-        self.app.view(&Id::ResponseTabs, frame, chunks[0]);
+    fn render_request_preview(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        let Some(preview) = self.request_preview.as_ref() else {
+            let placeholder =
+                Paragraph::new("No request selected. Press Enter on a route to preview.")
+                    .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(placeholder, area);
+            return;
+        };
 
-        match self.response_tab {
-            0 => self.app.view(&Id::ResponseStatus, frame, chunks[1]),
-            1 => self.app.view(&Id::ResponseHeaders, frame, chunks[1]),
-            2 => self.app.view(&Id::ResponseBody, frame, chunks[1]),
-            _ => {}
+        let can_render_scrollbar = area.width > Self::EDITOR_SCROLLBAR_WIDTH;
+        let (content_area, scrollbar_area) = if can_render_scrollbar {
+            let chunks = Layout::horizontal([
+                Constraint::Min(0),
+                Constraint::Length(Self::EDITOR_SCROLLBAR_WIDTH),
+            ])
+            .split(area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (area, None)
+        };
+
+        let lines = self.request_preview_lines(preview);
+        let preview_block = Self::request_preview_block();
+        let preview_inner = preview_block.inner(content_area);
+        let (total_lines, viewport_height, max_offset) =
+            Self::request_preview_scroll_metrics(&lines, preview_inner);
+
+        self.preview_scroll_offset = self.preview_scroll_offset.min(max_offset);
+
+        let scroll_y = u16::try_from(self.preview_scroll_offset).unwrap_or(u16::MAX);
+
+        let preview_widget = Paragraph::new(lines)
+            .block(preview_block)
+            .scroll((scroll_y, 0))
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(preview_widget, content_area);
+
+        if let Some(scrollbar_area) = scrollbar_area {
+            self.render_preview_scrollbar(
+                frame,
+                scrollbar_area,
+                total_lines,
+                viewport_height,
+                max_offset,
+            );
         }
+    }
+
+    fn request_preview_lines(&self, preview: &RequestPreviewState) -> Vec<Line<'static>> {
+        let body_preview = preview
+            .display_body
+            .as_deref()
+            .map(body_preview::build)
+            .filter(|rendered| !rendered.lines.is_empty());
+
+        let mut lines = vec![Line::from(Span::styled(
+            "r: Send request | b: Edit body | Esc: Back | j/k: Scroll | gg: Top | G: Bottom | PgUp/PgDn: Page",
+            Style::default().fg(Color::DarkGray),
+        ))];
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("{:<6}", preview.method),
+                Style::default()
+                    .fg(Self::method_color(&preview.method))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" "),
+            Span::raw(preview.route_name.clone()),
+        ]));
+        lines.push(Line::from(format!("URL: {}", preview.display_url)));
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "Headers:",
+            Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )));
+
+        if preview.display_headers.is_empty() {
+            lines.push(Line::from(Span::styled(
+                "  (none)",
+                Style::default().fg(Color::DarkGray),
+            )));
+        } else {
+            lines.extend(preview.display_headers.iter().map(|header| {
+                Line::from(vec![Span::styled(
+                    format!("  - {header}"),
+                    Style::default().fg(Color::White),
+                )])
+            }));
+        }
+
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "Body (hidden values masked):",
+            Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )));
+
+        if let Some(body_preview) = body_preview {
+            lines.extend(body_preview.lines);
+        } else {
+            lines.push(Line::from(Span::styled(
+                "  (empty)",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+
+        lines
+    }
+
+    fn request_preview_block() -> Block<'static> {
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Cyan))
+            .padding(Padding::new(1, 1, 1, 1))
+            .title("Request Preview")
+    }
+
+    fn request_preview_scroll_metrics(
+        lines: &[Line<'static>],
+        preview_inner: Rect,
+    ) -> (usize, usize, usize) {
+        if preview_inner.width == 0 || preview_inner.height == 0 {
+            return (0, 0, 0);
+        }
+
+        let total_lines = Paragraph::new(lines.to_vec())
+            .wrap(Wrap { trim: false })
+            .line_count(preview_inner.width);
+        let viewport_height = preview_inner.height as usize;
+        let max_offset = total_lines.saturating_sub(viewport_height);
+
+        (total_lines, viewport_height, max_offset)
+    }
+
+    fn preview_scroll_max_offset(&self) -> usize {
+        let Some(preview) = self.request_preview.as_ref() else {
+            return 0;
+        };
+
+        if self.terminal_width == 0 || self.terminal_height == 0 {
+            return 0;
+        }
+
+        let lines = self.request_preview_lines(preview);
+        let area = Rect::new(0, 0, self.terminal_width, self.terminal_height);
+        let content_area = if area.width > Self::EDITOR_SCROLLBAR_WIDTH {
+            let chunks = Layout::horizontal([
+                Constraint::Min(0),
+                Constraint::Length(Self::EDITOR_SCROLLBAR_WIDTH),
+            ])
+            .split(area);
+            chunks[0]
+        } else {
+            area
+        };
+        let preview_inner = Self::request_preview_block().inner(content_area);
+        let (_, _, max_offset) = Self::request_preview_scroll_metrics(&lines, preview_inner);
+        max_offset
+    }
+
+    fn render_preview_scrollbar(
+        &self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+        content_length: usize,
+        viewport_height: usize,
+        max_offset: usize,
+    ) {
+        if area.width == 0 || area.height == 0 || viewport_height == 0 {
+            return;
+        }
+
+        if content_length <= viewport_height {
+            return;
+        }
+
+        let position = if self.preview_scroll_offset >= max_offset {
+            content_length.saturating_sub(1)
+        } else {
+            self.preview_scroll_offset
+                .min(content_length.saturating_sub(1))
+        };
+
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_style(Style::default().fg(Color::DarkGray))
+            .thumb_style(Style::default().fg(Color::Cyan));
+        let mut state = ScrollbarState::new(content_length)
+            .position(position)
+            .viewport_content_length(viewport_height);
+
+        frame.render_stateful_widget(scrollbar, area, &mut state);
+    }
+
+    fn scroll_preview_by(&mut self, delta: isize) {
+        if self.active_view != ActiveView::RequestPreview {
+            return;
+        }
+
+        let max_offset = self.preview_scroll_max_offset() as isize;
+        let next_offset = (self.preview_scroll_offset as isize + delta).clamp(0, max_offset);
+        self.preview_scroll_offset = next_offset as usize;
+    }
+
+    fn scroll_preview_page(&mut self, direction: isize) {
+        if self.active_view != ActiveView::RequestPreview {
+            return;
+        }
+
+        let page_step = self.terminal_height.saturating_sub(4).max(1) as isize;
+        self.scroll_preview_by(direction * page_step);
     }
 
     fn render_route_editor(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
@@ -626,8 +938,7 @@ impl AppModel {
 
         let total_content_height = Self::editor_total_height(&sections);
         let can_render_scrollbar = total_content_height > editor_area.height as usize
-            && editor_area.width
-                > Self::EDITOR_SCROLLBAR_MIN_CONTENT_WIDTH + Self::EDITOR_SCROLLBAR_WIDTH;
+            && editor_area.width > Self::EDITOR_SCROLLBAR_WIDTH;
         let (editor_content_area, scrollbar_area) = if can_render_scrollbar {
             let chunks = Layout::horizontal([
                 Constraint::Min(0),
@@ -1647,5 +1958,40 @@ impl AppModel {
             vertical: 1,
             horizontal: 2,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn request_preview_scroll_metrics_detect_one_line_overflow() {
+        let lines = vec![
+            Line::from("line-1"),
+            Line::from("line-2"),
+            Line::from("line-3"),
+            Line::from("line-4"),
+            Line::from("line-5"),
+        ];
+
+        let (total_lines, viewport_height, max_offset) =
+            AppModel::request_preview_scroll_metrics(&lines, Rect::new(0, 0, 40, 4));
+
+        assert_eq!(total_lines, 5);
+        assert_eq!(viewport_height, 4);
+        assert_eq!(max_offset, 1);
+    }
+
+    #[test]
+    fn request_preview_scroll_metrics_account_for_wrapping() {
+        let lines = vec![Line::from("0123456789 0123456789 0123456789")];
+
+        let (total_lines, viewport_height, max_offset) =
+            AppModel::request_preview_scroll_metrics(&lines, Rect::new(0, 0, 10, 2));
+
+        assert!(total_lines > lines.len());
+        assert_eq!(viewport_height, 2);
+        assert!(max_offset > 0);
     }
 }

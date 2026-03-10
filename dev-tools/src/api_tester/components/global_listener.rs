@@ -10,6 +10,7 @@ use crate::api_tester::app::{ActiveView, InputMode, Msg};
 pub struct GlobalListener {
     input_mode: InputMode,
     touch_drag_row: Option<u16>,
+    pending_g: bool,
 }
 
 impl GlobalListener {
@@ -19,10 +20,38 @@ impl GlobalListener {
         Self {
             input_mode: InputMode::Normal,
             touch_drag_row: None,
+            pending_g: false,
         }
     }
 
-    fn map_normal_key(key: KeyEvent) -> Option<Msg> {
+    fn is_plain_g(key: &KeyEvent) -> bool {
+        key.code == Key::Char('g') && key.modifiers == KeyModifiers::NONE
+    }
+
+    fn is_jump_to_end(key: &KeyEvent) -> bool {
+        (key.code == Key::Char('G')
+            && (key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT))
+            || (key.code == Key::Char('g') && key.modifiers == KeyModifiers::SHIFT)
+    }
+
+    fn map_normal_key(&mut self, key: KeyEvent) -> Option<Msg> {
+        if self.pending_g {
+            self.pending_g = false;
+
+            if Self::is_plain_g(&key) {
+                return Some(Msg::PreviewScrollToTop);
+            }
+        }
+
+        if Self::is_plain_g(&key) {
+            self.pending_g = true;
+            return None;
+        }
+
+        if Self::is_jump_to_end(&key) {
+            return Some(Msg::PreviewScrollToBottom);
+        }
+
         match key.code {
             Key::Char('q') => Some(Msg::AppClose),
             Key::Char('v') => Some(Msg::SwitchView(ActiveView::VariableManager)),
@@ -30,6 +59,7 @@ impl GlobalListener {
             Key::Esc => Some(Msg::CancelEdit),
             Key::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::SaveRoute),
             Key::Char('b') => Some(Msg::OpenBodyEditor),
+            Key::Char('r') => Some(Msg::ExecutePreviewRequest),
             Key::Char('k') | Key::Up => Some(Msg::EditorScrollUp),
             Key::Char('j') | Key::Down => Some(Msg::EditorScrollDown),
             Key::PageUp => Some(Msg::EditorPageUp),
@@ -46,6 +76,8 @@ impl GlobalListener {
     }
 
     fn map_mouse(&mut self, mouse: MouseEvent) -> Option<Msg> {
+        self.pending_g = false;
+
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 self.touch_drag_row = None;
@@ -121,7 +153,7 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
     fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
         match ev {
             Event::Keyboard(key) => match self.input_mode {
-                InputMode::Normal => Self::map_normal_key(key),
+                InputMode::Normal => self.map_normal_key(key),
                 InputMode::Insert => Self::map_insert_key(key),
             },
             Event::Mouse(mouse) => self.map_mouse(mouse),
@@ -142,6 +174,10 @@ mod tests {
             column: 0,
             row,
         })
+    }
+
+    fn key_event(code: Key, modifiers: KeyModifiers) -> Event<NoUserEvent> {
+        Event::Keyboard(KeyEvent::new(code, modifiers))
     }
 
     #[test]
@@ -190,6 +226,25 @@ mod tests {
         assert_eq!(
             listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 5)),
             Some(Msg::EditorScrollBy(2))
+        );
+    }
+
+    #[test]
+    fn gg_maps_to_top_and_uppercase_g_maps_to_bottom() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('g'), KeyModifiers::NONE)),
+            None
+        );
+        assert_eq!(
+            listener.on(key_event(Key::Char('g'), KeyModifiers::NONE)),
+            Some(Msg::PreviewScrollToTop)
+        );
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('G'), KeyModifiers::SHIFT)),
+            Some(Msg::PreviewScrollToBottom)
         );
     }
 }

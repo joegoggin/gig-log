@@ -1,3 +1,8 @@
+use ratatui::{
+    layout::{Constraint, Layout},
+    style::{Color as TuiColor, Style},
+    widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState},
+};
 use tui_realm_stdlib::List;
 use tuirealm::{
     AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State, StateValue,
@@ -36,6 +41,8 @@ enum SelectionTarget {
     GroupHeader(usize),
     Route(usize),
 }
+
+const SCROLLBAR_WIDTH: u16 = 1;
 
 pub struct RouteList {
     component: List,
@@ -555,7 +562,43 @@ impl MockComponent for RouteList {
             return;
         }
 
-        self.component.view(frame, inner);
+        let can_render_scrollbar = inner.width > SCROLLBAR_WIDTH;
+        let (content_area, scrollbar_area) = if can_render_scrollbar {
+            let chunks =
+                Layout::horizontal([Constraint::Min(0), Constraint::Length(SCROLLBAR_WIDTH)])
+                    .split(inner);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (inner, None)
+        };
+
+        if content_area.width == 0 || content_area.height == 0 {
+            return;
+        }
+
+        self.component.view(frame, content_area);
+
+        if let Some(scrollbar_area) = scrollbar_area {
+            let row_count = self.row_kinds.len();
+            let viewport_height = content_area.height as usize;
+
+            if row_count > viewport_height && viewport_height > 0 {
+                let position = self
+                    .selected_row_index()
+                    .unwrap_or(0)
+                    .min(row_count.saturating_sub(1));
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                    .begin_symbol(None)
+                    .end_symbol(None)
+                    .track_style(Style::default().fg(TuiColor::DarkGray))
+                    .thumb_style(Style::default().fg(TuiColor::Green));
+                let mut state = ScrollbarState::new(row_count)
+                    .position(position)
+                    .viewport_content_length(viewport_height);
+
+                frame.render_stateful_widget(scrollbar, scrollbar_area, &mut state);
+            }
+        }
     }
 
     fn query(&self, attr: Attribute) -> Option<AttrValue> {

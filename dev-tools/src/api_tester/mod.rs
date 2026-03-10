@@ -88,9 +88,9 @@ pub async fn run() -> anyhow::Result<()> {
 
             match model.update(msg)? {
                 Some(Msg::AppClose) => break 'app_loop Ok(()),
-                Some(Msg::RunRoute(index)) => {
-                    let Some(executor) = model.build_route_executor(index) else {
-                        eprintln!("Route execution skipped: route index {index} no longer exists");
+                Some(Msg::ExecutePreviewRequest) => {
+                    let Some((index, executor)) = model.build_preview_executor() else {
+                        eprintln!("Route execution skipped: request preview was not available");
                         continue;
                     };
 
@@ -106,7 +106,7 @@ pub async fn run() -> anyhow::Result<()> {
                 Some(Msg::OpenBodyEditor) => {
                     restore_terminal(&mut terminal)?;
 
-                    let current_body = model.editor_draft_body();
+                    let current_body = model.body_editor_initial_content();
                     let editor_result = open_external_editor(current_body);
 
                     terminal = init_terminal()?;

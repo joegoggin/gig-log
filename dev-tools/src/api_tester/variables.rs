@@ -1,5 +1,6 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use std::cmp::Reverse;
 use std::collections::BTreeMap;
 use std::fs;
 
@@ -70,6 +71,24 @@ impl Variables {
             VariableMode::Hidden => "hidden",
             VariableMode::Placeholder => variable.value.as_str(),
         })
+    }
+
+    pub fn redact_hidden_values(&self, text: &str) -> String {
+        let mut hidden_values: Vec<&str> = self
+            .variables
+            .values()
+            .filter(|variable| variable.mode == VariableMode::Hidden)
+            .map(|variable| variable.value.as_str())
+            .filter(|value| !value.is_empty())
+            .collect();
+
+        hidden_values.sort_by_key(|value| Reverse(value.len()));
+
+        hidden_values
+            .into_iter()
+            .fold(text.to_string(), |output, hidden_value| {
+                output.replace(hidden_value, "hidden")
+            })
     }
 
     fn substitute_with<F>(&self, template: &str, mut replacement_for: F) -> String
@@ -210,6 +229,44 @@ mod tests {
 
         assert_eq!(preview, "{{MISSING}} and {{KNOWN}}");
         assert_eq!(execution, "{{MISSING}} and {{KNOWN}}");
+    }
+
+    #[test]
+    fn redaction_masks_hidden_values_but_keeps_placeholder_values() {
+        let mut variables = Variables::default();
+        variables.add_with_mode(
+            "LOGIN_EMAIL".to_string(),
+            "you@example.com".to_string(),
+            VariableMode::Placeholder,
+        );
+        variables.add_with_mode(
+            "LOGIN_PASSWORD".to_string(),
+            "super-secret".to_string(),
+            VariableMode::Hidden,
+        );
+
+        let input = "email=you@example.com password=super-secret";
+        let redacted = variables.redact_hidden_values(input);
+
+        assert_eq!(redacted, "email=you@example.com password=hidden");
+    }
+
+    #[test]
+    fn redaction_masks_longer_hidden_values_first() {
+        let mut variables = Variables::default();
+        variables.add_with_mode(
+            "TOKEN_SUFFIX".to_string(),
+            "abc".to_string(),
+            VariableMode::Hidden,
+        );
+        variables.add_with_mode(
+            "TOKEN_FULL".to_string(),
+            "abc123".to_string(),
+            VariableMode::Hidden,
+        );
+
+        let redacted = variables.redact_hidden_values("value=abc123");
+        assert_eq!(redacted, "value=hidden");
     }
 
     #[test]

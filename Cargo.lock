@@ -1445,6 +1445,7 @@ dependencies = [
  "clap",
  "crossterm 0.28.1",
  "dialoguer",
+ "http",
  "libc",
  "rand 0.9.2",
  "ratatui",

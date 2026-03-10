@@ -16,11 +16,22 @@ pub struct CurlResponse {
 pub struct CurlExecutor {
     route: Route,
     variables: Variables,
+    substitute_variables: bool,
 }
 
 impl CurlExecutor {
     pub fn new(route: Route, variables: Variables) -> Self {
-        Self { route, variables }
+        Self {
+            route,
+            variables,
+            substitute_variables: true,
+        }
+    }
+
+    pub fn from_prepared(route: Route) -> Self {
+        let mut executor = Self::new(route, Variables::default());
+        executor.substitute_variables = false;
+        executor
     }
 
     pub async fn execute(&self) -> anyhow::Result<CurlResponse> {
@@ -58,11 +69,11 @@ impl CurlExecutor {
 
         for header in &self.route.headers {
             args.push("-H".to_string());
-            args.push(self.variables.substitute(header));
+            args.push(self.value_for_request(header));
         }
 
         if let Some(body) = &self.route.body {
-            let body = self.variables.substitute(body);
+            let body = self.value_for_request(body);
 
             if !body.is_empty() {
                 args.push("-d".to_string());
@@ -78,9 +89,17 @@ impl CurlExecutor {
         args.push("-".to_string());
         args.push("-w".to_string());
         args.push("\n%{http_code}".to_string());
-        args.push(self.variables.substitute(&self.route.url));
+        args.push(self.value_for_request(&self.route.url));
 
         args
+    }
+
+    fn value_for_request(&self, template: &str) -> String {
+        if self.substitute_variables {
+            self.variables.substitute(template)
+        } else {
+            template.to_string()
+        }
     }
 
     fn parse_response(raw: &str) -> anyhow::Result<CurlResponse> {
@@ -135,5 +154,54 @@ impl CurlExecutor {
         }
 
         headers
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api_tester::collection::HttpMethod;
+
+    fn route_with_template() -> Route {
+        Route {
+            group: "general".to_string(),
+            name: "test".to_string(),
+            method: HttpMethod::Post,
+            url: "https://example.com/{{PATH}}".to_string(),
+            headers: vec!["Authorization: Bearer {{TOKEN}}".to_string()],
+            body: Some("{\"token\":\"{{TOKEN}}\"}".to_string()),
+        }
+    }
+
+    #[test]
+    fn templated_execution_substitutes_variables() {
+        let mut variables = Variables::default();
+        variables.add_with_mode(
+            "PATH".to_string(),
+            "login".to_string(),
+            crate::api_tester::variables::VariableMode::Placeholder,
+        );
+        variables.add_with_mode(
+            "TOKEN".to_string(),
+            "secret-token".to_string(),
+            crate::api_tester::variables::VariableMode::Hidden,
+        );
+
+        let executor = CurlExecutor::new(route_with_template(), variables);
+        let args = executor.build_args(Path::new("cookies.txt"));
+
+        assert!(args.contains(&"Authorization: Bearer secret-token".to_string()));
+        assert!(args.contains(&"{\"token\":\"secret-token\"}".to_string()));
+        assert!(args.contains(&"https://example.com/login".to_string()));
+    }
+
+    #[test]
+    fn prepared_execution_sends_values_as_is() {
+        let executor = CurlExecutor::from_prepared(route_with_template());
+        let args = executor.build_args(Path::new("cookies.txt"));
+
+        assert!(args.contains(&"Authorization: Bearer {{TOKEN}}".to_string()));
+        assert!(args.contains(&"{\"token\":\"{{TOKEN}}\"}".to_string()));
+        assert!(args.contains(&"https://example.com/{{PATH}}".to_string()));
     }
 }
