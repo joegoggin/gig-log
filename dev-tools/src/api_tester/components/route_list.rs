@@ -12,8 +12,9 @@ use tuirealm::{
 };
 
 use crate::api_tester::{
-    app::Msg,
+    app::{Msg, RouteListMsg},
     collection::{DEFAULT_ROUTE_GROUP, HttpMethod, Route},
+    components::core::{keymap, style},
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
 };
 
@@ -256,13 +257,11 @@ impl RouteList {
     }
 
     fn is_plain_g(key: &KeyEvent) -> bool {
-        key.code == Key::Char('g') && key.modifiers == KeyModifiers::NONE
+        keymap::is_plain_g(key)
     }
 
     fn is_jump_to_end(key: &KeyEvent) -> bool {
-        (key.code == Key::Char('G')
-            && (key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT))
-            || (key.code == Key::Char('g') && key.modifiers == KeyModifiers::SHIFT)
+        keymap::is_jump_to_end(key)
     }
 
     fn is_forward_group_cycle(key: &KeyEvent) -> bool {
@@ -303,7 +302,7 @@ impl RouteList {
     }
 
     fn route_list_state_changed_msg(&self) -> Msg {
-        Msg::RouteListStateChanged(self.snapshot_state())
+        Msg::RouteList(RouteListMsg::StateChanged(self.snapshot_state()))
     }
 
     fn on_keyboard(&mut self, key: KeyEvent) -> Option<Msg> {
@@ -379,7 +378,7 @@ impl RouteList {
                     self.toggle_group(group_index);
                     Some(self.route_list_state_changed_msg())
                 } else if let Some(index) = self.selected_route_index() {
-                    Some(Msg::RunRoute(index))
+                    Some(Msg::RouteList(RouteListMsg::RunRoute(index)))
                 } else {
                     None
                 }
@@ -389,7 +388,7 @@ impl RouteList {
                 modifiers: KeyModifiers::NONE,
             } => {
                 if let Some(index) = self.selected_route_index() {
-                    Some(Msg::EditRoute(index))
+                    Some(Msg::RouteList(RouteListMsg::EditRoute(index)))
                 } else {
                     None
                 }
@@ -399,7 +398,7 @@ impl RouteList {
                 modifiers: KeyModifiers::NONE,
             } => {
                 if let Some(index) = self.selected_route_index() {
-                    Some(Msg::DeleteRoute(index))
+                    Some(Msg::RouteList(RouteListMsg::DeleteRoute(index)))
                 } else {
                     None
                 }
@@ -407,7 +406,7 @@ impl RouteList {
             KeyEvent {
                 code: Key::Char('n'),
                 modifiers: KeyModifiers::NONE,
-            } => Some(Msg::NewRoute),
+            } => Some(Msg::RouteList(RouteListMsg::NewRoute)),
             _ => None,
         }
     }
@@ -527,13 +526,7 @@ impl RouteList {
     }
 
     fn method_color(method: &crate::api_tester::collection::HttpMethod) -> Color {
-        match method {
-            HttpMethod::Get => Color::Green,
-            HttpMethod::Post => Color::Blue,
-            HttpMethod::Put => Color::Yellow,
-            HttpMethod::Patch => Color::Magenta,
-            HttpMethod::Delete => Color::Red,
-        }
+        style::method_color(method)
     }
 
     fn method_label(method: &HttpMethod) -> &'static str {
@@ -710,7 +703,7 @@ mod tests {
                 Key::Enter,
                 KeyModifiers::NONE,
             ))),
-            Some(Msg::RouteListStateChanged(_))
+            Some(Msg::RouteList(RouteListMsg::StateChanged(_)))
         ));
         assert!(list.groups[0].expanded);
         assert_eq!(selected_row_index(&list), 0);
@@ -727,7 +720,7 @@ mod tests {
                 Key::Enter,
                 KeyModifiers::NONE,
             ))),
-            Some(Msg::RunRoute(0))
+            Some(Msg::RouteList(RouteListMsg::RunRoute(0)))
         );
 
         list.on(Event::Keyboard(KeyEvent::new(Key::Up, KeyModifiers::NONE)));
@@ -738,7 +731,7 @@ mod tests {
                 Key::Enter,
                 KeyModifiers::NONE,
             ))),
-            Some(Msg::RouteListStateChanged(_))
+            Some(Msg::RouteList(RouteListMsg::StateChanged(_)))
         ));
         assert!(!list.groups[0].expanded);
         assert_eq!(selected_row_index(&list), 0);
@@ -779,14 +772,14 @@ mod tests {
                 Key::Char('e'),
                 KeyModifiers::NONE,
             ))),
-            Some(Msg::EditRoute(0))
+            Some(Msg::RouteList(RouteListMsg::EditRoute(0)))
         );
         assert_eq!(
             list.on(Event::Keyboard(KeyEvent::new(
                 Key::Char('d'),
                 KeyModifiers::NONE,
             ))),
-            Some(Msg::DeleteRoute(0))
+            Some(Msg::RouteList(RouteListMsg::DeleteRoute(0)))
         );
     }
 

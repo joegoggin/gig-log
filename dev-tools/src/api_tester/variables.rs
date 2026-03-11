@@ -78,13 +78,6 @@ impl Variables {
         self.substitute_with_scope(template, scope_id, |variable| variable.value.as_str())
     }
 
-    pub fn substitute_for_preview(&self, template: &str) -> String {
-        self.substitute_with_scope(template, None, |variable| match variable.mode {
-            VariableMode::Hidden => "hidden",
-            VariableMode::Placeholder => variable.value.as_str(),
-        })
-    }
-
     pub fn substitute_for_preview_with_scope(
         &self,
         template: &str,
@@ -94,10 +87,6 @@ impl Variables {
             VariableMode::Hidden => "hidden",
             VariableMode::Placeholder => variable.value.as_str(),
         })
-    }
-
-    pub fn redact_hidden_values(&self, text: &str) -> String {
-        self.redact_hidden_values_with_scope(text, None)
     }
 
     pub fn redact_hidden_values_with_scope(&self, text: &str, scope_id: Option<&str>) -> String {
@@ -223,10 +212,6 @@ impl Variables {
         self.global.insert(key, Variable { value, mode });
     }
 
-    pub fn add(&mut self, key: String, value: String) {
-        self.add_with_mode(key, value, VariableMode::Placeholder);
-    }
-
     pub fn delete(&mut self, key: &str) {
         self.global.remove(key);
     }
@@ -257,10 +242,6 @@ impl Variables {
             .entry(scope_id.into())
             .or_default()
             .insert(key, Variable { value, mode });
-    }
-
-    pub fn scoped_add(&mut self, scope_id: impl Into<String>, key: String, value: String) {
-        self.scoped_add_with_mode(scope_id, key, value, VariableMode::Placeholder);
     }
 
     pub fn scoped_delete(&mut self, scope_id: &str, key: &str) {
@@ -322,7 +303,8 @@ mod tests {
             VariableMode::Placeholder,
         );
 
-        let preview = variables.substitute_for_preview("Token={{API_TOKEN}} Host={{API_HOST}}");
+        let preview = variables
+            .substitute_for_preview_with_scope("Token={{API_TOKEN}} Host={{API_HOST}}", None);
         assert_eq!(preview, "Token=hidden Host=https://api.example.com");
     }
 
@@ -348,7 +330,8 @@ mod tests {
     fn substitution_keeps_unknown_variables() {
         let variables = Variables::default();
 
-        let preview = variables.substitute_for_preview("{{MISSING}} and {{KNOWN}}");
+        let preview =
+            variables.substitute_for_preview_with_scope("{{MISSING}} and {{KNOWN}}", None);
         let execution = variables.substitute_for_execution("{{MISSING}} and {{KNOWN}}");
 
         assert_eq!(preview, "{{MISSING}} and {{KNOWN}}");
@@ -370,7 +353,7 @@ mod tests {
         );
 
         let input = "email=you@example.com password=super-secret";
-        let redacted = variables.redact_hidden_values(input);
+        let redacted = variables.redact_hidden_values_with_scope(input, None);
 
         assert_eq!(redacted, "email=you@example.com password=hidden");
     }
@@ -389,7 +372,7 @@ mod tests {
             VariableMode::Hidden,
         );
 
-        let redacted = variables.redact_hidden_values("value=abc123");
+        let redacted = variables.redact_hidden_values_with_scope("value=abc123", None);
         assert_eq!(redacted, "value=hidden");
     }
 

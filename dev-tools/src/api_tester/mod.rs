@@ -9,7 +9,9 @@ use crossterm::{
 use ratatui::prelude::*;
 use tuirealm::{AttrValue, Attribute, SubEventClause};
 
-use crate::api_tester::app::{AppModel, Id, InputMode, Msg};
+use crate::api_tester::app::{
+    AppEffect, AppModel, AppMsg, Id, InputMode, Msg, ResponseViewerMsg, RouteEditorMsg,
+};
 use crate::api_tester::components::body_editor::open_external_editor;
 use crate::api_tester::components::global_listener::GlobalListener;
 use crate::utils::sub::SubUtils;
@@ -82,13 +84,13 @@ pub async fn run() -> anyhow::Result<()> {
         let messages = model.app.tick(PollStrategy::Once)?;
 
         for msg in messages {
-            if matches!(msg, Msg::AppClose) {
+            if matches!(msg, Msg::App(AppMsg::Close)) {
                 break 'app_loop Ok(());
             }
 
             match model.update(msg)? {
-                Some(Msg::AppClose) => break 'app_loop Ok(()),
-                Some(Msg::ExecutePreviewRequest) => {
+                Some(AppEffect::Close) => break 'app_loop Ok(()),
+                Some(AppEffect::ExecutePreviewRequest) => {
                     let Some((index, executor)) = model.build_preview_executor() else {
                         eprintln!("Route execution skipped: request preview was not available");
                         continue;
@@ -96,14 +98,16 @@ pub async fn run() -> anyhow::Result<()> {
 
                     match executor.execute().await {
                         Ok(response) => {
-                            model.update(Msg::RouteExecuted(index, response))?;
+                            model.update(Msg::ResponseViewer(ResponseViewerMsg::RouteExecuted(
+                                index, response,
+                            )))?;
                         }
                         Err(error) => {
                             eprintln!("Route execution failed: {error}");
                         }
                     }
                 }
-                Some(Msg::OpenBodyEditor) => {
+                Some(AppEffect::OpenBodyEditor) => {
                     restore_terminal(&mut terminal)?;
 
                     let current_body = model.body_editor_initial_content();
@@ -113,7 +117,9 @@ pub async fn run() -> anyhow::Result<()> {
 
                     match editor_result {
                         Ok(new_body) => {
-                            model.update(Msg::BodyEditorResult(new_body))?;
+                            model.update(Msg::RouteEditor(RouteEditorMsg::BodyEditorResult(
+                                new_body,
+                            )))?;
                         }
                         Err(error) => {
                             eprintln!("Editor error: {error}");

@@ -28,7 +28,7 @@ use crate::api_tester::components::variable_manager::{
 use crate::api_tester::{
     body_preview,
     collection::{Collection, DEFAULT_ROUTE_GROUP, HttpMethod, Route},
-    components::route_list::RouteList,
+    components::{core::style as core_style, route_list::RouteList},
     executor::{CurlExecutor, CurlResponse},
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
     variables::{VariableMode, Variables},
@@ -43,7 +43,6 @@ pub enum Id {
     EditorMethod,
     EditorUrl,
     EditorHeaders,
-    EditorBody,
     ResponseDetails,
     VariableTable,
     VariableKeyInput,
@@ -64,47 +63,80 @@ pub enum ActiveView {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Msg {
-    AppClose,
+pub enum AppMsg {
+    Close,
     SwitchView(ActiveView),
-    RunRoute(usize),
-    RouteExecuted(usize, CurlResponse),
-    EditRoute(usize),
-    NewRoute,
-    DeleteRoute(usize),
-    RouteListStateChanged(RouteListState),
-    SaveRoute,
-    CancelEdit,
+    Cancel,
     OpenBodyEditor,
-    RefreshList,
-    RouteSelected(usize),
-    FocusField(Id),
-    EditorScrollUp,
-    EditorScrollDown,
-    EditorPageUp,
-    EditorPageDown,
-    EditorScrollBy(isize),
-    PreviewScrollToTop,
-    PreviewScrollToBottom,
-    MethodChanged(usize),
-    BodyEditorResult(Option<String>),
     ToggleSecretVisibility,
     OpenScopedVariables,
-    AddVariable,
-    VariableSelectionChanged(String),
-    VariableModeChanged(VariableMode),
-    EditVariable(String),
-    SaveVariable,
-    DeleteVariable(String),
-    UpdateVariable(String, String),
     TerminalResize(u16, u16),
     EnterInsertMode,
     EnterNormalMode,
+    ScrollUp,
+    ScrollDown,
+    PageUp,
+    PageDown,
+    ScrollBy(isize),
+    ScrollToTop,
+    ScrollToBottom,
+    ToggleKeymapHelp,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RouteListMsg {
+    RunRoute(usize),
+    EditRoute(usize),
+    NewRoute,
+    DeleteRoute(usize),
+    StateChanged(RouteListState),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RouteEditorMsg {
+    Save,
+    FocusField(Id),
+    MethodChanged(usize),
     GroupSelected(usize),
     NewGroupEntered,
+    BodyEditorResult(Option<String>),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RequestPreviewMsg {
+    Execute,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ResponseViewerMsg {
+    RouteExecuted(usize, CurlResponse),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum VariableManagerMsg {
+    Add,
+    SelectionChanged(String),
+    ModeChanged(VariableMode),
+    Edit(String),
+    Save,
+    Delete(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Msg {
+    App(AppMsg),
+    RouteList(RouteListMsg),
+    RouteEditor(RouteEditorMsg),
+    RequestPreview(RequestPreviewMsg),
+    ResponseViewer(ResponseViewerMsg),
+    VariableManager(VariableManagerMsg),
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum AppEffect {
+    Close,
+    OpenBodyEditor,
     ExecutePreviewRequest,
-    ToggleKeymapHelp,
-    None,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -158,29 +190,108 @@ enum VariableContext {
     Scoped { scope_id: String },
 }
 
+trait Screen {
+    type Message;
+
+    fn apply(&mut self, message: &Self::Message);
+}
+
+#[derive(Debug, Clone)]
+struct RouteListScreenState {
+    list_state: RouteListState,
+    selected_route: Option<usize>,
+}
+
+impl Screen for RouteListScreenState {
+    type Message = RouteListMsg;
+
+    fn apply(&mut self, message: &Self::Message) {
+        if let RouteListMsg::StateChanged(state) = message {
+            self.list_state = state.clone();
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RouteEditorScreenState {
+    editing_route: Option<usize>,
+    draft: Option<Route>,
+    scroll_offset: usize,
+}
+
+impl Screen for RouteEditorScreenState {
+    type Message = RouteEditorMsg;
+
+    fn apply(&mut self, _message: &Self::Message) {}
+}
+
+#[derive(Debug, Clone)]
+struct RequestPreviewScreenState {
+    preview: Option<RequestPreviewState>,
+    scroll_offset: usize,
+}
+
+impl Screen for RequestPreviewScreenState {
+    type Message = RequestPreviewMsg;
+
+    fn apply(&mut self, _message: &Self::Message) {}
+}
+
+#[derive(Debug, Clone)]
+struct ResponseViewerScreenState {
+    response: Option<CurlResponse>,
+}
+
+impl Screen for ResponseViewerScreenState {
+    type Message = ResponseViewerMsg;
+
+    fn apply(&mut self, message: &Self::Message) {
+        let ResponseViewerMsg::RouteExecuted(_, response) = message;
+        self.response = Some(response.clone());
+    }
+}
+
+#[derive(Debug, Clone)]
+struct VariableManagerScreenState {
+    secrets_visible: bool,
+    editing_variable: Option<String>,
+    context: VariableContext,
+}
+
+impl Screen for VariableManagerScreenState {
+    type Message = VariableManagerMsg;
+
+    fn apply(&mut self, _message: &Self::Message) {}
+}
+
+#[derive(Debug, Clone)]
+struct KeymapHelpScreenState {
+    return_view: Option<ActiveView>,
+    scroll_offset: usize,
+    previous_focus: Option<Id>,
+}
+
+impl Screen for KeymapHelpScreenState {
+    type Message = AppMsg;
+
+    fn apply(&mut self, _message: &Self::Message) {}
+}
+
 pub struct AppModel {
     pub app: Application<Id, Msg, NoUserEvent>,
     pub collection: Collection,
     pub input_mode: InputMode,
     variables: Variables,
-    route_list_state: RouteListState,
+    route_list: RouteListScreenState,
     active_view: ActiveView,
-    response: Option<CurlResponse>,
-    selected_route: Option<usize>,
-    editing_route: Option<usize>,
-    editor_draft: Option<Route>,
-    request_preview: Option<RequestPreviewState>,
-    secrets_visible: bool,
-    editing_variable: Option<String>,
-    variable_context: VariableContext,
+    route_editor: RouteEditorScreenState,
+    request_preview: RequestPreviewScreenState,
+    response_viewer: ResponseViewerScreenState,
+    variable_manager: VariableManagerScreenState,
+    keymap_help: KeymapHelpScreenState,
     layout_mode: LayoutMode,
     terminal_width: u16,
     terminal_height: u16,
-    editor_scroll_offset: usize,
-    preview_scroll_offset: usize,
-    keymap_help_return_view: Option<ActiveView>,
-    keymap_help_scroll_offset: usize,
-    keymap_previous_focus: Option<Id>,
 }
 
 impl AppModel {
@@ -196,100 +307,122 @@ impl AppModel {
             collection: Collection::load()?,
             input_mode: InputMode::Normal,
             variables: Variables::load()?,
-            route_list_state: RouteListState::load(),
+            route_list: RouteListScreenState {
+                list_state: RouteListState::load(),
+                selected_route: None,
+            },
             active_view: ActiveView::RouteList,
-            response: None,
-            selected_route: None,
-            editing_route: None,
-            editor_draft: None,
-            request_preview: None,
-            secrets_visible: false,
-            editing_variable: None,
-            variable_context: VariableContext::Global,
+            route_editor: RouteEditorScreenState {
+                editing_route: None,
+                draft: None,
+                scroll_offset: 0,
+            },
+            request_preview: RequestPreviewScreenState {
+                preview: None,
+                scroll_offset: 0,
+            },
+            response_viewer: ResponseViewerScreenState { response: None },
+            variable_manager: VariableManagerScreenState {
+                secrets_visible: false,
+                editing_variable: None,
+                context: VariableContext::Global,
+            },
+            keymap_help: KeymapHelpScreenState {
+                return_view: None,
+                scroll_offset: 0,
+                previous_focus: None,
+            },
             layout_mode: LayoutMode::Wide,
             terminal_width: 120,
             terminal_height: 40,
-            editor_scroll_offset: 0,
-            preview_scroll_offset: 0,
-            keymap_help_return_view: None,
-            keymap_help_scroll_offset: 0,
-            keymap_previous_focus: None,
         })
     }
 
-    pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<Msg>> {
+    pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<AppEffect>> {
         if self.active_view == ActiveView::KeymapHelp {
             match msg {
-                Msg::AppClose => return Ok(Some(Msg::AppClose)),
-                Msg::TerminalResize(width, height) => {
+                Msg::App(AppMsg::Close) => return Ok(Some(AppEffect::Close)),
+                Msg::App(AppMsg::TerminalResize(width, height)) => {
                     self.terminal_width = width;
                     self.terminal_height = height.saturating_sub(2);
                     self.layout_mode = Self::layout_mode_for_width(width);
                     return Ok(None);
                 }
-                Msg::ToggleKeymapHelp | Msg::CancelEdit | Msg::EnterNormalMode => {
+                Msg::App(AppMsg::ToggleKeymapHelp)
+                | Msg::App(AppMsg::Cancel)
+                | Msg::App(AppMsg::EnterNormalMode) => {
                     self.hide_keymap_help();
                     return Ok(None);
                 }
-                Msg::EditorScrollUp => {
+                Msg::App(AppMsg::ScrollUp) => {
                     self.scroll_keymap_help_by(-1);
                     return Ok(None);
                 }
-                Msg::EditorScrollDown => {
+                Msg::App(AppMsg::ScrollDown) => {
                     self.scroll_keymap_help_by(1);
                     return Ok(None);
                 }
-                Msg::EditorScrollBy(delta) => {
+                Msg::App(AppMsg::ScrollBy(delta)) => {
                     self.scroll_keymap_help_by(delta);
                     return Ok(None);
                 }
-                Msg::EditorPageUp => {
+                Msg::App(AppMsg::PageUp) => {
                     self.scroll_keymap_help_page(-1);
                     return Ok(None);
                 }
-                Msg::EditorPageDown => {
+                Msg::App(AppMsg::PageDown) => {
                     self.scroll_keymap_help_page(1);
                     return Ok(None);
                 }
-                Msg::PreviewScrollToTop => {
-                    self.keymap_help_scroll_offset = 0;
+                Msg::App(AppMsg::ScrollToTop) => {
+                    self.keymap_help.scroll_offset = 0;
                     return Ok(None);
                 }
-                Msg::PreviewScrollToBottom => {
-                    self.keymap_help_scroll_offset = self.keymap_help_max_offset();
+                Msg::App(AppMsg::ScrollToBottom) => {
+                    self.keymap_help.scroll_offset = self.keymap_help_max_offset();
                     return Ok(None);
                 }
                 _ => return Ok(None),
             }
         }
 
+        match &msg {
+            Msg::RouteList(screen_msg) => self.route_list.apply(screen_msg),
+            Msg::RouteEditor(screen_msg) => self.route_editor.apply(screen_msg),
+            Msg::RequestPreview(screen_msg) => self.request_preview.apply(screen_msg),
+            Msg::ResponseViewer(screen_msg) => self.response_viewer.apply(screen_msg),
+            Msg::VariableManager(screen_msg) => self.variable_manager.apply(screen_msg),
+            Msg::App(_) => {}
+        }
+
         match msg {
-            Msg::AppClose => return Ok(Some(Msg::AppClose)),
-            Msg::SwitchView(ActiveView::VariableManager) => {
+            Msg::App(AppMsg::Close) => return Ok(Some(AppEffect::Close)),
+            Msg::App(AppMsg::SwitchView(ActiveView::VariableManager)) => {
                 let open_scoped = self.active_view == ActiveView::RouteEditor;
 
                 self.active_view = ActiveView::VariableManager;
                 self.input_mode = InputMode::Normal;
-                self.editing_variable = None;
+                self.variable_manager.editing_variable = None;
 
                 if open_scoped {
                     if let Some(scope_id) = self
-                        .editor_draft
+                        .route_editor
+                        .draft
                         .as_ref()
                         .map(|route| route.scope_id.clone())
                     {
-                        self.variable_context = VariableContext::Scoped { scope_id };
+                        self.variable_manager.context = VariableContext::Scoped { scope_id };
                     } else {
-                        self.variable_context = VariableContext::Global;
+                        self.variable_manager.context = VariableContext::Global;
                     }
                 } else {
-                    self.variable_context = VariableContext::Global;
+                    self.variable_manager.context = VariableContext::Global;
                 }
 
                 self.mount_variable_manager()?;
             }
-            Msg::SwitchView(view) => self.active_view = view,
-            Msg::RunRoute(index) => {
+            Msg::App(AppMsg::SwitchView(view)) => self.active_view = view,
+            Msg::RouteList(RouteListMsg::RunRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
                     return Ok(None);
                 }
@@ -298,24 +431,24 @@ impl AppModel {
                     return Ok(None);
                 }
 
-                self.selected_route = Some(index);
+                self.route_list.selected_route = Some(index);
                 self.select_route_in_state(index, true);
                 self.persist_route_list_state();
-                self.request_preview = self.build_request_preview_state(index);
+                self.request_preview.preview = self.build_request_preview_state(index);
                 self.input_mode = InputMode::Normal;
-                self.preview_scroll_offset = 0;
+                self.request_preview.scroll_offset = 0;
                 self.active_view = ActiveView::RequestPreview;
             }
-            Msg::RouteExecuted(index, response) => {
-                self.selected_route = Some(index);
-                self.response = Some(response);
-                self.request_preview = None;
+            Msg::ResponseViewer(ResponseViewerMsg::RouteExecuted(index, response)) => {
+                self.route_list.selected_route = Some(index);
+                self.response_viewer.response = Some(response);
+                self.request_preview.preview = None;
                 self.input_mode = InputMode::Normal;
-                self.preview_scroll_offset = 0;
+                self.request_preview.scroll_offset = 0;
                 self.active_view = ActiveView::ResponseViewer;
                 self.mount_response_viewer()?;
             }
-            Msg::EditRoute(index) => {
+            Msg::RouteList(RouteListMsg::EditRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
                     return Ok(None);
                 }
@@ -327,14 +460,14 @@ impl AppModel {
                 let route = self.collection.routes[index].clone();
                 self.select_route_in_state(index, true);
                 self.persist_route_list_state();
-                self.editing_route = Some(index);
-                self.editor_draft = Some(route.clone());
+                self.route_editor.editing_route = Some(index);
+                self.route_editor.draft = Some(route.clone());
                 self.input_mode = InputMode::Normal;
-                self.editor_scroll_offset = 0;
+                self.route_editor.scroll_offset = 0;
                 self.mount_editor(&route)?;
                 self.active_view = ActiveView::RouteEditor;
             }
-            Msg::NewRoute => {
+            Msg::RouteList(RouteListMsg::NewRoute) => {
                 if self.active_view != ActiveView::RouteList {
                     return Ok(None);
                 }
@@ -349,14 +482,14 @@ impl AppModel {
                     body: None,
                 };
 
-                self.editing_route = None;
-                self.editor_draft = Some(route.clone());
+                self.route_editor.editing_route = None;
+                self.route_editor.draft = Some(route.clone());
                 self.input_mode = InputMode::Normal;
-                self.editor_scroll_offset = 0;
+                self.route_editor.scroll_offset = 0;
                 self.mount_editor(&route)?;
                 self.active_view = ActiveView::RouteEditor;
             }
-            Msg::DeleteRoute(index) => {
+            Msg::RouteList(RouteListMsg::DeleteRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
                     return Ok(None);
                 }
@@ -374,7 +507,7 @@ impl AppModel {
                 self.variables.save()?;
 
                 if self.collection.routes.is_empty() {
-                    self.route_list_state.selected = None;
+                    self.route_list.list_state.selected = None;
                 } else {
                     let next_index = if index < self.collection.routes.len() {
                         index
@@ -387,17 +520,18 @@ impl AppModel {
                 self.persist_route_list_state();
                 self.refresh_route_list()?;
             }
-            Msg::RouteListStateChanged(state) => {
-                self.route_list_state = state;
+            Msg::RouteList(RouteListMsg::StateChanged(state)) => {
+                self.route_list.list_state = state;
                 self.persist_route_list_state();
             }
-            Msg::OpenScopedVariables => {
+            Msg::App(AppMsg::OpenScopedVariables) => {
                 if self.active_view != ActiveView::RouteEditor {
                     return Ok(None);
                 }
 
                 let Some(scope_id) = self
-                    .editor_draft
+                    .route_editor
+                    .draft
                     .as_ref()
                     .map(|route| route.scope_id.clone())
                 else {
@@ -406,22 +540,22 @@ impl AppModel {
 
                 self.active_view = ActiveView::VariableManager;
                 self.input_mode = InputMode::Normal;
-                self.editing_variable = None;
-                self.variable_context = VariableContext::Scoped { scope_id };
+                self.variable_manager.editing_variable = None;
+                self.variable_manager.context = VariableContext::Scoped { scope_id };
                 self.mount_variable_manager()?;
             }
-            Msg::ToggleSecretVisibility => {
+            Msg::App(AppMsg::ToggleSecretVisibility) => {
                 if self.active_view == ActiveView::VariableManager {
-                    self.secrets_visible = !self.secrets_visible;
+                    self.variable_manager.secrets_visible = !self.variable_manager.secrets_visible;
                     self.sync_variable_value_visibility()?;
                 }
             }
-            Msg::VariableModeChanged(_) => {
+            Msg::VariableManager(VariableManagerMsg::ModeChanged(_)) => {
                 if self.active_view == ActiveView::VariableManager {
                     self.sync_variable_value_visibility()?;
                 }
             }
-            Msg::ToggleKeymapHelp => {
+            Msg::App(AppMsg::ToggleKeymapHelp) => {
                 if self.input_mode == InputMode::Normal {
                     if self.active_view == ActiveView::KeymapHelp {
                         self.hide_keymap_help();
@@ -430,17 +564,17 @@ impl AppModel {
                     }
                 }
             }
-            Msg::AddVariable => {
+            Msg::VariableManager(VariableManagerMsg::Add) => {
                 if self.active_view != ActiveView::VariableManager {
                     return Ok(None);
                 }
 
                 self.input_mode = InputMode::Normal;
-                self.editing_variable = None;
+                self.variable_manager.editing_variable = None;
                 self.mount_variable_inputs("", "", VariableMode::Placeholder)?;
                 self.app.active(&Id::VariableKeyInput)?;
             }
-            Msg::VariableSelectionChanged(key) => {
+            Msg::VariableManager(VariableManagerMsg::SelectionChanged(key)) => {
                 if self.active_view != ActiveView::VariableManager {
                     return Ok(None);
                 }
@@ -448,7 +582,7 @@ impl AppModel {
                 self.load_variable_into_inputs(&key)?;
                 self.app.active(&Id::VariableTable)?;
             }
-            Msg::EditVariable(key) => {
+            Msg::VariableManager(VariableManagerMsg::Edit(key)) => {
                 if self.active_view != ActiveView::VariableManager {
                     return Ok(None);
                 }
@@ -457,7 +591,7 @@ impl AppModel {
                 self.load_variable_into_inputs(&key)?;
                 self.app.active(&Id::VariableKeyInput)?;
             }
-            Msg::SaveVariable => {
+            Msg::VariableManager(VariableManagerMsg::Save) => {
                 if self.active_view != ActiveView::VariableManager {
                     return Ok(None);
                 }
@@ -473,7 +607,7 @@ impl AppModel {
                     return Ok(None);
                 }
 
-                if let Some(old_key) = self.editing_variable.take()
+                if let Some(old_key) = self.variable_manager.editing_variable.take()
                     && old_key != key
                 {
                     if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
@@ -492,10 +626,10 @@ impl AppModel {
                 self.variables.save()?;
 
                 self.input_mode = InputMode::Normal;
-                self.editing_variable = None;
+                self.variable_manager.editing_variable = None;
                 self.mount_variable_manager()?;
             }
-            Msg::DeleteVariable(key) => {
+            Msg::VariableManager(VariableManagerMsg::Delete(key)) => {
                 if self.active_view != ActiveView::VariableManager {
                     return Ok(None);
                 }
@@ -507,32 +641,18 @@ impl AppModel {
                 }
                 self.variables.save()?;
 
-                if self.editing_variable.as_deref() == Some(key.as_str()) {
-                    self.editing_variable = None;
+                if self.variable_manager.editing_variable.as_deref() == Some(key.as_str()) {
+                    self.variable_manager.editing_variable = None;
                 }
 
                 self.mount_variable_manager()?;
             }
-            Msg::UpdateVariable(key, value) => {
-                if self.active_view != ActiveView::VariableManager {
-                    return Ok(None);
-                }
-
-                if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
-                    self.variables.scoped_add(scope_id, key, value);
-                } else {
-                    self.variables.add(key, value);
-                }
-                self.variables.save()?;
-                self.mount_variable_manager()?;
-            }
-            Msg::TerminalResize(width, height) => {
+            Msg::App(AppMsg::TerminalResize(width, height)) => {
                 self.terminal_width = width;
                 self.terminal_height = height.saturating_sub(2);
                 self.layout_mode = Self::layout_mode_for_width(width);
             }
-            Msg::RefreshList | Msg::None => {}
-            Msg::EnterInsertMode => {
+            Msg::App(AppMsg::EnterInsertMode) => {
                 self.input_mode = InputMode::Insert;
                 if self.active_view == ActiveView::RouteEditor {
                     self.ensure_editor_focus_visible();
@@ -541,7 +661,7 @@ impl AppModel {
                     self.sync_variable_input_mode()?;
                 }
             }
-            Msg::EnterNormalMode => {
+            Msg::App(AppMsg::EnterNormalMode) => {
                 self.input_mode = InputMode::Normal;
                 if self.active_view == ActiveView::RouteEditor {
                     self.sync_editor_input_mode()?;
@@ -549,7 +669,7 @@ impl AppModel {
                     self.sync_variable_input_mode()?;
                 }
             }
-            Msg::FocusField(id) => {
+            Msg::RouteEditor(RouteEditorMsg::FocusField(id)) => {
                 let _ = self.app.active(&id);
                 if self.input_mode == InputMode::Insert
                     && let Some(section) = Self::editor_section_for_focus(&id)
@@ -557,62 +677,62 @@ impl AppModel {
                     self.ensure_editor_section_visible(section);
                 }
             }
-            Msg::EditorScrollUp => match self.active_view {
+            Msg::App(AppMsg::ScrollUp) => match self.active_view {
                 ActiveView::RouteEditor => self.scroll_editor_by(-1),
                 ActiveView::RequestPreview => self.scroll_preview_by(-1),
                 _ => {}
             },
-            Msg::EditorScrollDown => match self.active_view {
+            Msg::App(AppMsg::ScrollDown) => match self.active_view {
                 ActiveView::RouteEditor => self.scroll_editor_by(1),
                 ActiveView::RequestPreview => self.scroll_preview_by(1),
                 _ => {}
             },
-            Msg::EditorPageUp => match self.active_view {
+            Msg::App(AppMsg::PageUp) => match self.active_view {
                 ActiveView::RouteEditor => self.scroll_editor_page(-1),
                 ActiveView::RequestPreview => self.scroll_preview_page(-1),
                 _ => {}
             },
-            Msg::EditorPageDown => match self.active_view {
+            Msg::App(AppMsg::PageDown) => match self.active_view {
                 ActiveView::RouteEditor => self.scroll_editor_page(1),
                 ActiveView::RequestPreview => self.scroll_preview_page(1),
                 _ => {}
             },
-            Msg::EditorScrollBy(delta) => match self.active_view {
+            Msg::App(AppMsg::ScrollBy(delta)) => match self.active_view {
                 ActiveView::RouteEditor => self.scroll_editor_by(delta),
                 ActiveView::RequestPreview => self.scroll_preview_by(delta),
                 _ => {}
             },
-            Msg::PreviewScrollToTop => match self.active_view {
+            Msg::App(AppMsg::ScrollToTop) => match self.active_view {
                 ActiveView::RouteEditor => {
-                    self.editor_scroll_offset = 0;
+                    self.route_editor.scroll_offset = 0;
                 }
                 ActiveView::RequestPreview => {
-                    self.preview_scroll_offset = 0;
+                    self.request_preview.scroll_offset = 0;
                 }
                 _ => {}
             },
-            Msg::PreviewScrollToBottom => match self.active_view {
+            Msg::App(AppMsg::ScrollToBottom) => match self.active_view {
                 ActiveView::RouteEditor => {
-                    self.editor_scroll_offset =
+                    self.route_editor.scroll_offset =
                         self.current_editor_sections().len().saturating_sub(1);
                 }
                 ActiveView::RequestPreview => {
-                    self.preview_scroll_offset = self.preview_scroll_max_offset();
+                    self.request_preview.scroll_offset = self.preview_scroll_max_offset();
                 }
                 _ => {}
             },
-            Msg::RouteSelected(_) | Msg::MethodChanged(_) => {}
-            Msg::GroupSelected(_index) => {
+            Msg::RouteEditor(RouteEditorMsg::MethodChanged(_)) => {}
+            Msg::RouteEditor(RouteEditorMsg::GroupSelected(_index)) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
             }
 
-            Msg::NewGroupEntered => {
+            Msg::RouteEditor(RouteEditorMsg::NewGroupEntered) => {
                 // Focus moves to method after entering new group name
                 self.app.active(&Id::EditorMethod)?;
                 self.ensure_editor_section_visible(EditorSectionKind::Method);
             }
-            Msg::SaveRoute => {
+            Msg::RouteEditor(RouteEditorMsg::Save) => {
                 if self.active_view == ActiveView::RouteEditor {
                     let name = self.editor_input_value(&Id::EditorName);
 
@@ -662,9 +782,14 @@ impl AppModel {
                         .filter(|h| !h.is_empty())
                         .collect();
 
-                    let body = self.editor_draft.as_ref().and_then(|d| d.body.clone());
+                    let body = self
+                        .route_editor
+                        .draft
+                        .as_ref()
+                        .and_then(|d| d.body.clone());
                     let scope_id = self
-                        .editor_draft
+                        .route_editor
+                        .draft
                         .as_ref()
                         .map(|draft| draft.scope_id.clone())
                         .unwrap_or_else(|| self.collection.new_scope_id());
@@ -679,7 +804,7 @@ impl AppModel {
                         body,
                     };
 
-                    if let Some(index) = self.editing_route {
+                    if let Some(index) = self.route_editor.editing_route {
                         self.collection.update_route(index, route)?;
                         self.select_route_in_state(index, true);
                     } else {
@@ -690,28 +815,28 @@ impl AppModel {
 
                     self.collection.save()?;
                     self.persist_route_list_state();
-                    self.editing_route = None;
-                    self.editor_draft = None;
+                    self.route_editor.editing_route = None;
+                    self.route_editor.draft = None;
                     self.input_mode = InputMode::Normal;
-                    self.editor_scroll_offset = 0;
+                    self.route_editor.scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
                     self.refresh_route_list()?;
                 }
             }
-            Msg::CancelEdit => {
+            Msg::App(AppMsg::Cancel) => {
                 if self.active_view == ActiveView::RouteEditor {
-                    self.editing_route = None;
-                    self.editor_draft = None;
+                    self.route_editor.editing_route = None;
+                    self.route_editor.draft = None;
                     self.input_mode = InputMode::Normal;
-                    self.editor_scroll_offset = 0;
+                    self.route_editor.scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
                 } else if self.active_view == ActiveView::RequestPreview {
-                    self.request_preview = None;
+                    self.request_preview.preview = None;
                     self.input_mode = InputMode::Normal;
-                    self.preview_scroll_offset = 0;
+                    self.request_preview.scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
                 } else if self.active_view == ActiveView::VariableManager {
-                    self.editing_variable = None;
+                    self.variable_manager.editing_variable = None;
                     self.input_mode = InputMode::Normal;
 
                     if self.is_scoped_variable_context() {
@@ -723,23 +848,24 @@ impl AppModel {
                     }
                 }
             }
-            Msg::OpenBodyEditor => {
+            Msg::App(AppMsg::OpenBodyEditor) => {
                 if matches!(
                     self.active_view,
                     ActiveView::RouteEditor | ActiveView::RequestPreview
                 ) {
                     // Signal to the event loop that we need to suspend for external editor
-                    return Ok(Some(Msg::OpenBodyEditor));
+                    return Ok(Some(AppEffect::OpenBodyEditor));
                 }
             }
-            Msg::BodyEditorResult(body) => {
+            Msg::RouteEditor(RouteEditorMsg::BodyEditorResult(body)) => {
                 if self.active_view == ActiveView::RouteEditor {
-                    if let Some(draft) = &mut self.editor_draft {
+                    if let Some(draft) = &mut self.route_editor.draft {
                         draft.body = body;
                     }
                 } else if self.active_view == ActiveView::RequestPreview {
                     let scope_id = self
                         .request_preview
+                        .preview
                         .as_ref()
                         .map(|preview| preview.route_scope_id.as_str());
                     let masked_body = body.as_deref().map(|content| {
@@ -747,16 +873,17 @@ impl AppModel {
                             .redact_hidden_values_with_scope(content, scope_id)
                     });
 
-                    if let Some(preview) = &mut self.request_preview {
+                    if let Some(preview) = &mut self.request_preview.preview {
                         preview.execution_body = body;
                         preview.display_body = masked_body;
                     }
                 }
             }
-            Msg::ExecutePreviewRequest => {
-                if self.active_view == ActiveView::RequestPreview && self.request_preview.is_some()
+            Msg::RequestPreview(RequestPreviewMsg::Execute) => {
+                if self.active_view == ActiveView::RequestPreview
+                    && self.request_preview.preview.is_some()
                 {
-                    return Ok(Some(Msg::ExecutePreviewRequest));
+                    return Ok(Some(AppEffect::ExecutePreviewRequest));
                 }
             }
         }
@@ -767,11 +894,13 @@ impl AppModel {
     pub fn body_editor_initial_content(&self) -> Option<&str> {
         match self.active_view {
             ActiveView::RouteEditor => self
-                .editor_draft
+                .route_editor
+                .draft
                 .as_ref()
                 .and_then(|draft| draft.body.as_deref()),
             ActiveView::RequestPreview => self
                 .request_preview
+                .preview
                 .as_ref()
                 .and_then(|preview| preview.execution_body.as_deref()),
             _ => None,
@@ -779,7 +908,7 @@ impl AppModel {
     }
 
     pub fn build_preview_executor(&self) -> Option<(usize, CurlExecutor)> {
-        let preview = self.request_preview.as_ref()?;
+        let preview = self.request_preview.preview.as_ref()?;
         let route = Route {
             group: DEFAULT_ROUTE_GROUP.to_string(),
             scope_id: preview.route_scope_id.clone(),
@@ -862,21 +991,22 @@ impl AppModel {
 
             if expand_group
                 && !self
-                    .route_list_state
+                    .route_list
+                    .list_state
                     .expanded_groups
                     .iter()
                     .any(|name| name == &group_name)
             {
-                self.route_list_state.expanded_groups.push(group_name);
+                self.route_list.list_state.expanded_groups.push(group_name);
             }
 
-            self.route_list_state.selected =
+            self.route_list.list_state.selected =
                 Some(SelectedItem::Route(RouteSelection::from_route(route)));
         }
     }
 
     fn persist_route_list_state(&self) {
-        if let Err(error) = self.route_list_state.save() {
+        if let Err(error) = self.route_list.list_state.save() {
             eprintln!("Warning: failed to persist route list state: {error}");
         }
     }
@@ -887,7 +1017,7 @@ impl AppModel {
             Id::RouteList,
             Box::new(RouteList::new(
                 &self.collection.routes,
-                &self.route_list_state,
+                &self.route_list.list_state,
             )),
             SubUtils::key_subs([
                 Key::Char('j').into(),
@@ -942,13 +1072,16 @@ impl AppModel {
     }
 
     pub fn mount_variable_manager(&mut self) -> anyhow::Result<()> {
-        self.editing_variable = None;
+        self.variable_manager.editing_variable = None;
         let entries = self.variable_table_entries();
         let selected_key = entries.first().map(|(key, _, _, _)| key.clone());
 
         self.app.remount(
             Id::VariableTable,
-            Box::new(VariableTable::new(&entries, self.secrets_visible)),
+            Box::new(VariableTable::new(
+                &entries,
+                self.variable_manager.secrets_visible,
+            )),
             vec![],
         )?;
 
@@ -1023,7 +1156,7 @@ impl AppModel {
     }
 
     fn scoped_route_used_global_keys(&self) -> BTreeSet<String> {
-        let Some(route) = self.editor_draft.as_ref() else {
+        let Some(route) = self.route_editor.draft.as_ref() else {
             return BTreeSet::new();
         };
 
@@ -1102,7 +1235,7 @@ impl AppModel {
             return Ok(());
         };
 
-        self.editing_variable = Some(key.to_string());
+        self.variable_manager.editing_variable = Some(key.to_string());
         self.mount_variable_inputs(key, &value, mode)?;
 
         Ok(())
@@ -1136,7 +1269,7 @@ impl AppModel {
     }
 
     pub fn mount_response_viewer(&mut self) -> anyhow::Result<()> {
-        if let Some(response) = &self.response {
+        if let Some(response) = &self.response_viewer.response {
             let _ = self.app.umount(&Id::ResponseDetails);
 
             self.app.mount(
@@ -1202,10 +1335,10 @@ impl AppModel {
             return Ok(());
         }
 
-        self.keymap_help_return_view = Some(self.active_view);
+        self.keymap_help.return_view = Some(self.active_view);
         self.active_view = ActiveView::KeymapHelp;
-        self.keymap_help_scroll_offset = 0;
-        self.keymap_previous_focus = self
+        self.keymap_help.scroll_offset = 0;
+        self.keymap_help.previous_focus = self
             .app
             .focus()
             .cloned()
@@ -1219,15 +1352,16 @@ impl AppModel {
     fn hide_keymap_help(&mut self) {
         if self.active_view == ActiveView::KeymapHelp {
             self.active_view = self
-                .keymap_help_return_view
+                .keymap_help
+                .return_view
                 .take()
                 .unwrap_or(ActiveView::RouteList);
         }
 
-        self.keymap_help_scroll_offset = 0;
+        self.keymap_help.scroll_offset = 0;
         self.app.unlock_subs();
 
-        if let Some(previous_focus) = self.keymap_previous_focus.take()
+        if let Some(previous_focus) = self.keymap_help.previous_focus.take()
             && self.app.mounted(&previous_focus)
         {
             let _ = self.app.active(&previous_focus);
@@ -1266,9 +1400,9 @@ impl AppModel {
 
         let (total_lines, viewport_height, max_offset) =
             Self::keymap_scroll_metrics(&lines, content_inner);
-        self.keymap_help_scroll_offset = self.keymap_help_scroll_offset.min(max_offset);
+        self.keymap_help.scroll_offset = self.keymap_help.scroll_offset.min(max_offset);
 
-        let scroll_y = u16::try_from(self.keymap_help_scroll_offset).unwrap_or(u16::MAX);
+        let scroll_y = u16::try_from(self.keymap_help.scroll_offset).unwrap_or(u16::MAX);
         let content = Paragraph::new(lines)
             .block(page_block)
             .scroll((scroll_y, 0))
@@ -1309,7 +1443,8 @@ impl AppModel {
     }
 
     fn keymap_help_target_view(&self) -> ActiveView {
-        self.keymap_help_return_view
+        self.keymap_help
+            .return_view
             .unwrap_or(match self.active_view {
                 ActiveView::KeymapHelp => ActiveView::RouteList,
                 view => view,
@@ -1445,10 +1580,11 @@ impl AppModel {
             return;
         }
 
-        let position = if self.keymap_help_scroll_offset >= max_offset {
+        let position = if self.keymap_help.scroll_offset >= max_offset {
             content_length.saturating_sub(1)
         } else {
-            self.keymap_help_scroll_offset
+            self.keymap_help
+                .scroll_offset
                 .min(content_length.saturating_sub(1))
         };
 
@@ -1466,8 +1602,8 @@ impl AppModel {
 
     fn scroll_keymap_help_by(&mut self, delta: isize) {
         let max_offset = self.keymap_help_max_offset() as isize;
-        let next_offset = (self.keymap_help_scroll_offset as isize + delta).clamp(0, max_offset);
-        self.keymap_help_scroll_offset = next_offset as usize;
+        let next_offset = (self.keymap_help.scroll_offset as isize + delta).clamp(0, max_offset);
+        self.keymap_help.scroll_offset = next_offset as usize;
     }
 
     fn scroll_keymap_help_page(&mut self, direction: isize) {
@@ -1476,7 +1612,7 @@ impl AppModel {
     }
 
     fn render_request_preview(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
-        let Some(preview) = self.request_preview.as_ref() else {
+        let Some(preview) = self.request_preview.preview.as_ref() else {
             let placeholder =
                 Paragraph::new("No request selected. Press Enter on a route to preview.")
                     .style(Style::default().fg(Color::DarkGray));
@@ -1502,9 +1638,9 @@ impl AppModel {
         let (total_lines, viewport_height, max_offset) =
             Self::request_preview_scroll_metrics(&lines, preview_inner);
 
-        self.preview_scroll_offset = self.preview_scroll_offset.min(max_offset);
+        self.request_preview.scroll_offset = self.request_preview.scroll_offset.min(max_offset);
 
-        let scroll_y = u16::try_from(self.preview_scroll_offset).unwrap_or(u16::MAX);
+        let scroll_y = u16::try_from(self.request_preview.scroll_offset).unwrap_or(u16::MAX);
 
         let preview_widget = Paragraph::new(lines)
             .block(preview_block)
@@ -1612,7 +1748,7 @@ impl AppModel {
     }
 
     fn preview_scroll_max_offset(&self) -> usize {
-        let Some(preview) = self.request_preview.as_ref() else {
+        let Some(preview) = self.request_preview.preview.as_ref() else {
             return 0;
         };
 
@@ -1653,10 +1789,11 @@ impl AppModel {
             return;
         }
 
-        let position = if self.preview_scroll_offset >= max_offset {
+        let position = if self.request_preview.scroll_offset >= max_offset {
             content_length.saturating_sub(1)
         } else {
-            self.preview_scroll_offset
+            self.request_preview
+                .scroll_offset
                 .min(content_length.saturating_sub(1))
         };
 
@@ -1678,8 +1815,9 @@ impl AppModel {
         }
 
         let max_offset = self.preview_scroll_max_offset() as isize;
-        let next_offset = (self.preview_scroll_offset as isize + delta).clamp(0, max_offset);
-        self.preview_scroll_offset = next_offset as usize;
+        let next_offset =
+            (self.request_preview.scroll_offset as isize + delta).clamp(0, max_offset);
+        self.request_preview.scroll_offset = next_offset as usize;
     }
 
     fn scroll_preview_page(&mut self, direction: isize) {
@@ -1735,7 +1873,8 @@ impl AppModel {
         };
 
         let start = self
-            .editor_scroll_offset
+            .route_editor
+            .scroll_offset
             .min(sections.len().saturating_sub(1));
         let start = Self::editor_aligned_start(&sections, start, editor_content_area.height);
         let (start, end) = Self::editor_visible_range(&sections, start, editor_content_area.height);
@@ -1767,7 +1906,7 @@ impl AppModel {
             return;
         }
 
-        self.editor_scroll_offset = start;
+        self.route_editor.scroll_offset = start;
 
         let constraints: Vec<Constraint> = sections[start..end]
             .iter()
@@ -1934,11 +2073,13 @@ impl AppModel {
 
     fn editor_body_preview(&self) -> Option<body_preview::BodyPreview> {
         let scope_id = self
-            .editor_draft
+            .route_editor
+            .draft
             .as_ref()
             .map(|route| route.scope_id.as_str());
 
-        self.editor_draft
+        self.route_editor
+            .draft
             .as_ref()
             .and_then(|draft| draft.body.as_deref())
             .map(|body| {
@@ -2026,13 +2167,13 @@ impl AppModel {
 
         let section_count = self.current_editor_sections().len();
         if section_count == 0 {
-            self.editor_scroll_offset = 0;
+            self.route_editor.scroll_offset = 0;
             return;
         }
 
         let max_offset = section_count.saturating_sub(1) as isize;
-        let next = (self.editor_scroll_offset as isize + delta).clamp(0, max_offset);
-        self.editor_scroll_offset = next as usize;
+        let next = (self.route_editor.scroll_offset as isize + delta).clamp(0, max_offset);
+        self.route_editor.scroll_offset = next as usize;
     }
 
     fn scroll_editor_page(&mut self, direction: isize) {
@@ -2042,7 +2183,7 @@ impl AppModel {
 
         let sections = self.current_editor_sections();
         if sections.is_empty() {
-            self.editor_scroll_offset = 0;
+            self.route_editor.scroll_offset = 0;
             return;
         }
 
@@ -2054,7 +2195,8 @@ impl AppModel {
         }
 
         let start = self
-            .editor_scroll_offset
+            .route_editor
+            .scroll_offset
             .min(sections.len().saturating_sub(1));
         let (start, end) = Self::editor_visible_range(&sections, start, available_height);
         let visible_count = end.saturating_sub(start);
@@ -2078,7 +2220,7 @@ impl AppModel {
 
         let sections = self.current_editor_sections();
         if sections.is_empty() {
-            self.editor_scroll_offset = 0;
+            self.route_editor.scroll_offset = 0;
             return;
         }
 
@@ -2094,15 +2236,18 @@ impl AppModel {
 
         let available_height = self.editor_content_viewport_height();
         if available_height == 0 {
-            self.editor_scroll_offset = target_index;
+            self.route_editor.scroll_offset = target_index;
             return;
         }
 
-        let (start, end) =
-            Self::editor_visible_range(&sections, self.editor_scroll_offset, available_height);
+        let (start, end) = Self::editor_visible_range(
+            &sections,
+            self.route_editor.scroll_offset,
+            available_height,
+        );
 
         if target_index < start {
-            self.editor_scroll_offset = target_index;
+            self.route_editor.scroll_offset = target_index;
             return;
         }
 
@@ -2120,15 +2265,16 @@ impl AppModel {
                 new_start -= 1;
             }
 
-            self.editor_scroll_offset = new_start;
+            self.route_editor.scroll_offset = new_start;
         }
     }
 
     fn clamp_editor_scroll_offset(&mut self, section_count: usize) {
         if section_count == 0 {
-            self.editor_scroll_offset = 0;
+            self.route_editor.scroll_offset = 0;
         } else {
-            self.editor_scroll_offset = self.editor_scroll_offset.min(section_count - 1);
+            self.route_editor.scroll_offset =
+                self.route_editor.scroll_offset.min(section_count - 1);
         }
     }
 
@@ -2231,7 +2377,7 @@ impl AppModel {
     }
 
     fn render_route_preview(&self, frame: &mut ratatui::Frame<'_>, area: Rect) {
-        if let Some(SelectedItem::Route(selection)) = self.route_list_state.selected.as_ref()
+        if let Some(SelectedItem::Route(selection)) = self.route_list.list_state.selected.as_ref()
             && let Some(route) = self.selected_route(selection)
         {
             self.render_selected_route_preview(frame, area, route);
@@ -2357,7 +2503,7 @@ impl AppModel {
     }
 
     fn route_preview_content(&self, max_lines: usize) -> (String, Vec<Line<'static>>) {
-        match self.route_list_state.selected.as_ref() {
+        match self.route_list.list_state.selected.as_ref() {
             Some(SelectedItem::Route(selection)) => {
                 let group_name = Self::normalized_group_name(&selection.group);
                 let routes = self.group_routes(&group_name);
@@ -2569,13 +2715,7 @@ impl AppModel {
     }
 
     fn method_color(method: &HttpMethod) -> Color {
-        match method {
-            HttpMethod::Get => Color::Green,
-            HttpMethod::Post => Color::Blue,
-            HttpMethod::Put => Color::Yellow,
-            HttpMethod::Patch => Color::Magenta,
-            HttpMethod::Delete => Color::Red,
-        }
+        core_style::method_tui_color(method)
     }
 
     fn truncate_preview_lines(
@@ -2686,7 +2826,7 @@ impl AppModel {
         )?;
 
         // Focus the name field initially
-        self.editor_scroll_offset = 0;
+        self.route_editor.scroll_offset = 0;
         self.app.active(&Id::EditorName)?;
         self.sync_editor_input_mode()?;
 
@@ -2761,12 +2901,13 @@ impl AppModel {
     }
 
     fn sync_variable_value_visibility(&mut self) -> anyhow::Result<()> {
-        let input_type =
-            if self.variable_mode_value() == VariableMode::Hidden && !self.secrets_visible {
-                FieldInputType::Password('*')
-            } else {
-                FieldInputType::Text
-            };
+        let input_type = if self.variable_mode_value() == VariableMode::Hidden
+            && !self.variable_manager.secrets_visible
+        {
+            FieldInputType::Password('*')
+        } else {
+            FieldInputType::Text
+        };
 
         self.app.attr(
             &Id::VariableValueInput,
@@ -2778,14 +2919,17 @@ impl AppModel {
     }
 
     fn active_scope_id(&self) -> Option<&str> {
-        match &self.variable_context {
+        match &self.variable_manager.context {
             VariableContext::Global => None,
             VariableContext::Scoped { scope_id } => Some(scope_id.as_str()),
         }
     }
 
     fn is_scoped_variable_context(&self) -> bool {
-        matches!(self.variable_context, VariableContext::Scoped { .. })
+        matches!(
+            self.variable_manager.context,
+            VariableContext::Scoped { .. }
+        )
     }
 
     fn variable_mode_value(&self) -> VariableMode {

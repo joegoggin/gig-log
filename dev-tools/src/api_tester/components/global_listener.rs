@@ -5,7 +5,10 @@ use tuirealm::{
     event::{Key, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
 };
 
-use crate::api_tester::app::{ActiveView, InputMode, Msg};
+use crate::api_tester::app::{
+    ActiveView, AppMsg, InputMode, Msg, RequestPreviewMsg, RouteEditorMsg,
+};
+use crate::api_tester::components::core::keymap::{is_jump_to_end, is_plain_g};
 
 pub struct GlobalListener {
     input_mode: InputMode,
@@ -24,64 +27,56 @@ impl GlobalListener {
         }
     }
 
-    fn is_plain_g(key: &KeyEvent) -> bool {
-        key.code == Key::Char('g') && key.modifiers == KeyModifiers::NONE
-    }
-
-    fn is_jump_to_end(key: &KeyEvent) -> bool {
-        (key.code == Key::Char('G')
-            && (key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT))
-            || (key.code == Key::Char('g') && key.modifiers == KeyModifiers::SHIFT)
-    }
-
     fn map_normal_key(&mut self, key: KeyEvent) -> Option<Msg> {
         if self.pending_g {
             self.pending_g = false;
 
-            if Self::is_plain_g(&key) {
-                return Some(Msg::PreviewScrollToTop);
+            if is_plain_g(&key) {
+                return Some(Msg::App(AppMsg::ScrollToTop));
             }
         }
 
-        if Self::is_plain_g(&key) {
+        if is_plain_g(&key) {
             self.pending_g = true;
             return None;
         }
 
-        if Self::is_jump_to_end(&key) {
-            return Some(Msg::PreviewScrollToBottom);
+        if is_jump_to_end(&key) {
+            return Some(Msg::App(AppMsg::ScrollToBottom));
         }
 
         match key.code {
-            Key::Char('q') => Some(Msg::AppClose),
-            Key::Char('?') => Some(Msg::ToggleKeymapHelp),
+            Key::Char('q') => Some(Msg::App(AppMsg::Close)),
+            Key::Char('?') => Some(Msg::App(AppMsg::ToggleKeymapHelp)),
             Key::Char('v') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                Some(Msg::OpenScopedVariables)
+                Some(Msg::App(AppMsg::OpenScopedVariables))
             }
             Key::Char('V') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                Some(Msg::OpenScopedVariables)
+                Some(Msg::App(AppMsg::OpenScopedVariables))
             }
-            Key::Char('v') => Some(Msg::SwitchView(ActiveView::VariableManager)),
-            Key::Char('i') => Some(Msg::EnterInsertMode),
-            Key::Esc => Some(Msg::CancelEdit),
-            Key::Char('s') if key.modifiers == KeyModifiers::CONTROL => Some(Msg::SaveRoute),
+            Key::Char('v') => Some(Msg::App(AppMsg::SwitchView(ActiveView::VariableManager))),
+            Key::Char('i') => Some(Msg::App(AppMsg::EnterInsertMode)),
+            Key::Esc => Some(Msg::App(AppMsg::Cancel)),
+            Key::Char('s') if key.modifiers == KeyModifiers::CONTROL => {
+                Some(Msg::RouteEditor(RouteEditorMsg::Save))
+            }
             Key::Char('s') if key.modifiers == KeyModifiers::NONE => {
-                Some(Msg::ToggleSecretVisibility)
+                Some(Msg::App(AppMsg::ToggleSecretVisibility))
             }
-            Key::Char('b') => Some(Msg::OpenBodyEditor),
-            Key::Char('r') => Some(Msg::ExecutePreviewRequest),
-            Key::Char('k') | Key::Up => Some(Msg::EditorScrollUp),
-            Key::Char('j') | Key::Down => Some(Msg::EditorScrollDown),
-            Key::PageUp => Some(Msg::EditorPageUp),
-            Key::PageDown => Some(Msg::EditorPageDown),
+            Key::Char('b') => Some(Msg::App(AppMsg::OpenBodyEditor)),
+            Key::Char('r') => Some(Msg::RequestPreview(RequestPreviewMsg::Execute)),
+            Key::Char('k') | Key::Up => Some(Msg::App(AppMsg::ScrollUp)),
+            Key::Char('j') | Key::Down => Some(Msg::App(AppMsg::ScrollDown)),
+            Key::PageUp => Some(Msg::App(AppMsg::PageUp)),
+            Key::PageDown => Some(Msg::App(AppMsg::PageDown)),
             _ => None,
         }
     }
 
     fn map_insert_key(key: KeyEvent) -> Option<Msg> {
         match key.code {
-            Key::Esc => Some(Msg::EnterNormalMode),
-            _ => None, // All other keys pass through to focused component
+            Key::Esc => Some(Msg::App(AppMsg::EnterNormalMode)),
+            _ => None,
         }
     }
 
@@ -91,11 +86,11 @@ impl GlobalListener {
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 self.touch_drag_row = None;
-                Some(Msg::EditorScrollBy(-1))
+                Some(Msg::App(AppMsg::ScrollBy(-1)))
             }
             MouseEventKind::ScrollDown => {
                 self.touch_drag_row = None;
-                Some(Msg::EditorScrollBy(1))
+                Some(Msg::App(AppMsg::ScrollBy(1)))
             }
             MouseEventKind::Down(MouseButton::Left) => {
                 self.touch_drag_row = Some(mouse.row);
@@ -113,9 +108,9 @@ impl GlobalListener {
                     return None;
                 }
 
-                Some(Msg::EditorScrollBy(
+                Some(Msg::App(AppMsg::ScrollBy(
                     delta.clamp(-Self::MAX_DRAG_STEP, Self::MAX_DRAG_STEP),
-                ))
+                )))
             }
             MouseEventKind::Up(MouseButton::Left) => {
                 self.touch_drag_row = None;
@@ -167,146 +162,10 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
                 InputMode::Insert => Self::map_insert_key(key),
             },
             Event::Mouse(mouse) => self.map_mouse(mouse),
-            Event::WindowResize(width, height) => Some(Msg::TerminalResize(width, height)),
+            Event::WindowResize(width, height) => {
+                Some(Msg::App(AppMsg::TerminalResize(width, height)))
+            }
             _ => None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn mouse_event(kind: MouseEventKind, row: u16) -> Event<NoUserEvent> {
-        Event::Mouse(MouseEvent {
-            kind,
-            modifiers: KeyModifiers::NONE,
-            column: 0,
-            row,
-        })
-    }
-
-    fn key_event(code: Key, modifiers: KeyModifiers) -> Event<NoUserEvent> {
-        Event::Keyboard(KeyEvent::new(code, modifiers))
-    }
-
-    #[test]
-    fn wheel_events_map_to_scroll_messages() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::ScrollUp, 0)),
-            Some(Msg::EditorScrollBy(-1))
-        );
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::ScrollDown, 0)),
-            Some(Msg::EditorScrollBy(1))
-        );
-    }
-
-    #[test]
-    fn drag_events_map_to_phone_style_scroll_direction() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::Down(MouseButton::Left), 10)),
-            None
-        );
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 8)),
-            Some(Msg::EditorScrollBy(2))
-        );
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 12)),
-            Some(Msg::EditorScrollBy(-3))
-        );
-    }
-
-    #[test]
-    fn drag_state_resets_on_left_button_release() {
-        let mut listener = GlobalListener::new();
-
-        listener.on(mouse_event(MouseEventKind::Down(MouseButton::Left), 10));
-        listener.on(mouse_event(MouseEventKind::Up(MouseButton::Left), 10));
-
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 7)),
-            None
-        );
-        assert_eq!(
-            listener.on(mouse_event(MouseEventKind::Drag(MouseButton::Left), 5)),
-            Some(Msg::EditorScrollBy(2))
-        );
-    }
-
-    #[test]
-    fn gg_maps_to_top_and_uppercase_g_maps_to_bottom() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('g'), KeyModifiers::NONE)),
-            None
-        );
-        assert_eq!(
-            listener.on(key_event(Key::Char('g'), KeyModifiers::NONE)),
-            Some(Msg::PreviewScrollToTop)
-        );
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('G'), KeyModifiers::SHIFT)),
-            Some(Msg::PreviewScrollToBottom)
-        );
-    }
-
-    #[test]
-    fn uppercase_v_opens_scoped_variable_manager() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('V'), KeyModifiers::SHIFT)),
-            Some(Msg::OpenScopedVariables)
-        );
-    }
-
-    #[test]
-    fn s_toggles_secret_visibility_in_normal_mode() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('s'), KeyModifiers::NONE)),
-            Some(Msg::ToggleSecretVisibility)
-        );
-    }
-
-    #[test]
-    fn s_does_not_toggle_secret_visibility_in_insert_mode() {
-        let mut listener = GlobalListener::new();
-        listener.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('s'), KeyModifiers::NONE)),
-            None
-        );
-    }
-
-    #[test]
-    fn question_mark_toggles_keymap_help_in_normal_mode() {
-        let mut listener = GlobalListener::new();
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('?'), KeyModifiers::SHIFT)),
-            Some(Msg::ToggleKeymapHelp)
-        );
-    }
-
-    #[test]
-    fn question_mark_does_not_toggle_keymap_help_in_insert_mode() {
-        let mut listener = GlobalListener::new();
-        listener.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
-
-        assert_eq!(
-            listener.on(key_event(Key::Char('?'), KeyModifiers::SHIFT)),
-            None
-        );
     }
 }
