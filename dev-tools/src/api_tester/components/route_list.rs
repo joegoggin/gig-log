@@ -634,6 +634,7 @@ mod tests {
     fn route(group: &str, name: &str) -> Route {
         Route {
             group: group.to_string(),
+            scope_id: format!("scope-{group}-{name}"),
             name: name.to_string(),
             method: HttpMethod::Get,
             url: "https://example.com".to_string(),

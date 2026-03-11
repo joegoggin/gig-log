@@ -26,12 +26,15 @@ struct Variable {
 #[serde(deny_unknown_fields)]
 struct VariablesFile {
     #[serde(default)]
-    variables: BTreeMap<String, Variable>,
+    global: BTreeMap<String, Variable>,
+    #[serde(default)]
+    scoped: BTreeMap<String, BTreeMap<String, Variable>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Variables {
-    variables: BTreeMap<String, Variable>,
+    global: BTreeMap<String, Variable>,
+    scoped: BTreeMap<String, BTreeMap<String, Variable>>,
 }
 
 impl Variables {
@@ -54,7 +57,8 @@ impl Variables {
             toml::from_str(content).context("failed to parse variables TOML")?;
 
         Ok(Self {
-            variables: variables_file.variables,
+            global: variables_file.global,
+            scoped: variables_file.scoped,
         })
     }
 
@@ -63,22 +67,50 @@ impl Variables {
     }
 
     pub fn substitute_for_execution(&self, template: &str) -> String {
-        self.substitute_with(template, |variable| variable.value.as_str())
+        self.substitute_with_scope(template, None, |variable| variable.value.as_str())
+    }
+
+    pub fn substitute_for_execution_with_scope(
+        &self,
+        template: &str,
+        scope_id: Option<&str>,
+    ) -> String {
+        self.substitute_with_scope(template, scope_id, |variable| variable.value.as_str())
     }
 
     pub fn substitute_for_preview(&self, template: &str) -> String {
-        self.substitute_with(template, |variable| match variable.mode {
+        self.substitute_with_scope(template, None, |variable| match variable.mode {
+            VariableMode::Hidden => "hidden",
+            VariableMode::Placeholder => variable.value.as_str(),
+        })
+    }
+
+    pub fn substitute_for_preview_with_scope(
+        &self,
+        template: &str,
+        scope_id: Option<&str>,
+    ) -> String {
+        self.substitute_with_scope(template, scope_id, |variable| match variable.mode {
             VariableMode::Hidden => "hidden",
             VariableMode::Placeholder => variable.value.as_str(),
         })
     }
 
     pub fn redact_hidden_values(&self, text: &str) -> String {
+        self.redact_hidden_values_with_scope(text, None)
+    }
+
+    pub fn redact_hidden_values_with_scope(&self, text: &str, scope_id: Option<&str>) -> String {
         let mut hidden_values: Vec<&str> = self
-            .variables
-            .values()
-            .filter(|variable| variable.mode == VariableMode::Hidden)
-            .map(|variable| variable.value.as_str())
+            .resolved_variables(scope_id)
+            .into_iter()
+            .filter_map(|(_, variable)| {
+                if variable.mode == VariableMode::Hidden {
+                    Some(variable.value.as_str())
+                } else {
+                    None
+                }
+            })
             .filter(|value| !value.is_empty())
             .collect();
 
@@ -91,7 +123,12 @@ impl Variables {
             })
     }
 
-    fn substitute_with<F>(&self, template: &str, mut replacement_for: F) -> String
+    fn substitute_with_scope<F>(
+        &self,
+        template: &str,
+        scope_id: Option<&str>,
+        mut replacement_for: F,
+    ) -> String
     where
         F: for<'a> FnMut(&'a Variable) -> &'a str,
     {
@@ -107,7 +144,7 @@ impl Variables {
                     let token = &after_open[..end];
                     let key = token.trim();
 
-                    if let Some(variable) = self.variables.get(key) {
+                    if let Some(variable) = self.resolve_variable(key, scope_id) {
                         output.push_str(replacement_for(variable));
                     } else {
                         output.push_str("{{");
@@ -128,9 +165,39 @@ impl Variables {
         output
     }
 
+    fn resolve_variable<'a>(&'a self, key: &str, scope_id: Option<&str>) -> Option<&'a Variable> {
+        if let Some(scope_id) = scope_id
+            && let Some(scope_variables) = self.scoped.get(scope_id)
+            && let Some(variable) = scope_variables.get(key)
+        {
+            return Some(variable);
+        }
+
+        self.global.get(key)
+    }
+
+    fn resolved_variables<'a>(&'a self, scope_id: Option<&str>) -> BTreeMap<&'a str, &'a Variable> {
+        let mut resolved = BTreeMap::new();
+
+        for (key, variable) in &self.global {
+            resolved.insert(key.as_str(), variable);
+        }
+
+        if let Some(scope_id) = scope_id
+            && let Some(scope_variables) = self.scoped.get(scope_id)
+        {
+            for (key, variable) in scope_variables {
+                resolved.insert(key.as_str(), variable);
+            }
+        }
+
+        resolved
+    }
+
     fn to_toml_string(&self) -> anyhow::Result<String> {
         toml::to_string_pretty(&VariablesFile {
-            variables: self.variables.clone(),
+            global: self.global.clone(),
+            scoped: self.scoped.clone(),
         })
         .context("failed to serialize variables TOML")
     }
@@ -153,7 +220,7 @@ impl Variables {
     }
 
     pub fn add_with_mode(&mut self, key: String, value: String, mode: VariableMode) {
-        self.variables.insert(key, Variable { value, mode });
+        self.global.insert(key, Variable { value, mode });
     }
 
     pub fn add(&mut self, key: String, value: String) {
@@ -161,22 +228,79 @@ impl Variables {
     }
 
     pub fn delete(&mut self, key: &str) {
-        self.variables.remove(key);
+        self.global.remove(key);
     }
 
     pub fn entries(&self) -> Vec<(&String, &String)> {
-        self.variables
+        self.global
             .iter()
             .map(|(key, variable)| (key, &variable.value))
             .collect()
     }
 
     pub fn get(&self, key: &str) -> Option<&String> {
-        self.variables.get(key).map(|variable| &variable.value)
+        self.global.get(key).map(|variable| &variable.value)
     }
 
     pub fn mode(&self, key: &str) -> Option<VariableMode> {
-        self.variables.get(key).map(|variable| variable.mode)
+        self.global.get(key).map(|variable| variable.mode)
+    }
+
+    pub fn scoped_add_with_mode(
+        &mut self,
+        scope_id: impl Into<String>,
+        key: String,
+        value: String,
+        mode: VariableMode,
+    ) {
+        self.scoped
+            .entry(scope_id.into())
+            .or_default()
+            .insert(key, Variable { value, mode });
+    }
+
+    pub fn scoped_add(&mut self, scope_id: impl Into<String>, key: String, value: String) {
+        self.scoped_add_with_mode(scope_id, key, value, VariableMode::Placeholder);
+    }
+
+    pub fn scoped_delete(&mut self, scope_id: &str, key: &str) {
+        if let Some(scope_variables) = self.scoped.get_mut(scope_id) {
+            scope_variables.remove(key);
+
+            if scope_variables.is_empty() {
+                self.scoped.remove(scope_id);
+            }
+        }
+    }
+
+    pub fn delete_scope(&mut self, scope_id: &str) {
+        self.scoped.remove(scope_id);
+    }
+
+    pub fn scoped_entries(&self, scope_id: &str) -> Vec<(&String, &String)> {
+        self.scoped
+            .get(scope_id)
+            .map(|scope_variables| {
+                scope_variables
+                    .iter()
+                    .map(|(key, variable)| (key, &variable.value))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn scoped_get(&self, scope_id: &str, key: &str) -> Option<&String> {
+        self.scoped
+            .get(scope_id)
+            .and_then(|scope_variables| scope_variables.get(key))
+            .map(|variable| &variable.value)
+    }
+
+    pub fn scoped_mode(&self, scope_id: &str, key: &str) -> Option<VariableMode> {
+        self.scoped
+            .get(scope_id)
+            .and_then(|scope_variables| scope_variables.get(key))
+            .map(|variable| variable.mode)
     }
 }
 
@@ -235,7 +359,7 @@ mod tests {
     fn redaction_masks_hidden_values_but_keeps_placeholder_values() {
         let mut variables = Variables::default();
         variables.add_with_mode(
-            "LOGIN_EMAIL".to_string(),
+            "EMAIL".to_string(),
             "you@example.com".to_string(),
             VariableMode::Placeholder,
         );
@@ -270,31 +394,97 @@ mod tests {
     }
 
     #[test]
-    fn parse_supports_explicit_and_default_modes() {
+    fn scoped_substitution_overrides_global_values() {
+        let scope_id = "route_abc123";
+        let mut variables = Variables::default();
+        variables.add_with_mode(
+            "EMAIL".to_string(),
+            "global@example.com".to_string(),
+            VariableMode::Placeholder,
+        );
+        variables.scoped_add_with_mode(
+            scope_id,
+            "EMAIL".to_string(),
+            "scoped@example.com".to_string(),
+            VariableMode::Placeholder,
+        );
+        variables.scoped_add_with_mode(
+            scope_id,
+            "LOGIN_PASSWORD".to_string(),
+            "scoped-secret".to_string(),
+            VariableMode::Hidden,
+        );
+
+        assert_eq!(
+            variables.substitute_for_execution_with_scope("{{EMAIL}}", Some(scope_id)),
+            "scoped@example.com"
+        );
+        assert_eq!(
+            variables
+                .substitute_for_preview_with_scope("{{EMAIL}} {{LOGIN_PASSWORD}}", Some(scope_id),),
+            "scoped@example.com hidden"
+        );
+    }
+
+    #[test]
+    fn scoped_redaction_respects_scope_override_mode() {
+        let scope_id = "route_abc123";
+        let mut variables = Variables::default();
+        variables.add_with_mode(
+            "TOKEN".to_string(),
+            "global-token".to_string(),
+            VariableMode::Hidden,
+        );
+        variables.scoped_add_with_mode(
+            scope_id,
+            "TOKEN".to_string(),
+            "route-token".to_string(),
+            VariableMode::Placeholder,
+        );
+
+        let redacted =
+            variables.redact_hidden_values_with_scope("global-token route-token", Some(scope_id));
+        assert_eq!(redacted, "global-token route-token");
+    }
+
+    #[test]
+    fn parse_supports_global_and_scoped_variables() {
         let toml_content = r#"
-[variables.API_TOKEN]
+[global.EMAIL]
+value = "global@example.com"
+mode = "placeholder"
+
+[scoped.route_abc123.LOGIN_PASSWORD]
 value = "secret-token"
 mode = "hidden"
 
-[variables.API_HOST]
-value = "https://api.example.com"
+[scoped.route_abc123.EMAIL]
+value = "route@example.com"
 "#;
 
         let variables = Variables::parse(toml_content).expect("variables should parse");
 
-        assert_eq!(variables.mode("API_TOKEN"), Some(VariableMode::Hidden));
-        assert_eq!(variables.mode("API_HOST"), Some(VariableMode::Placeholder));
+        assert_eq!(variables.mode("EMAIL"), Some(VariableMode::Placeholder));
+        assert_eq!(
+            variables.scoped_mode("route_abc123", "LOGIN_PASSWORD"),
+            Some(VariableMode::Hidden)
+        );
+        assert_eq!(
+            variables.scoped_mode("route_abc123", "EMAIL"),
+            Some(VariableMode::Placeholder)
+        );
     }
 
     #[test]
-    fn toml_roundtrip_preserves_values_and_modes() {
+    fn toml_roundtrip_preserves_global_and_scoped_variables() {
         let mut variables = Variables::default();
         variables.add_with_mode(
-            "LOGIN_EMAIL".to_string(),
-            "you@example.com".to_string(),
+            "EMAIL".to_string(),
+            "global@example.com".to_string(),
             VariableMode::Placeholder,
         );
-        variables.add_with_mode(
+        variables.scoped_add_with_mode(
+            "route_abc123",
             "LOGIN_PASSWORD".to_string(),
             "super-secret".to_string(),
             VariableMode::Hidden,
@@ -306,12 +496,30 @@ value = "https://api.example.com"
         let reparsed = Variables::parse(&serialized).expect("serialized TOML should parse");
 
         assert_eq!(
-            reparsed.substitute_for_execution("{{LOGIN_EMAIL}} {{LOGIN_PASSWORD}}"),
-            "you@example.com super-secret"
+            reparsed.substitute_for_execution("{{EMAIL}}"),
+            "global@example.com"
         );
         assert_eq!(
-            reparsed.substitute_for_preview("{{LOGIN_EMAIL}} {{LOGIN_PASSWORD}}"),
-            "you@example.com hidden"
+            reparsed.substitute_for_execution_with_scope(
+                "{{EMAIL}} {{LOGIN_PASSWORD}}",
+                Some("route_abc123"),
+            ),
+            "global@example.com super-secret"
         );
+    }
+
+    #[test]
+    fn delete_scope_removes_all_scoped_variables_for_route() {
+        let mut variables = Variables::default();
+        variables.scoped_add_with_mode(
+            "route_abc123",
+            "TOKEN".to_string(),
+            "secret".to_string(),
+            VariableMode::Hidden,
+        );
+
+        variables.delete_scope("route_abc123");
+
+        assert!(variables.scoped_entries("route_abc123").is_empty());
     }
 }

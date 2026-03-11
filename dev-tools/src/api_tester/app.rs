@@ -7,9 +7,11 @@ use ratatui::{
         ScrollbarState, Wrap,
     },
 };
+use std::collections::{BTreeMap, BTreeSet};
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::props::{
     BorderType as InputBorderType, Borders as InputBorders, Color as InputColor,
+    InputType as FieldInputType,
 };
 use tuirealm::{Application, AttrValue, Attribute, NoUserEvent, State, StateValue};
 
@@ -20,13 +22,16 @@ use crate::api_tester::components::route_editor::method_radio::EditorMethodRadio
 use crate::api_tester::components::route_editor::name_input::EditorNameInput;
 use crate::api_tester::components::route_editor::new_group_input::EditorNewGroupInput;
 use crate::api_tester::components::route_editor::url_input::EditorUrlInput;
+use crate::api_tester::components::variable_manager::{
+    VariableKeyInput, VariableModeSelector, VariableTable, VariableValueInput,
+};
 use crate::api_tester::{
     body_preview,
     collection::{Collection, DEFAULT_ROUTE_GROUP, HttpMethod, Route},
     components::route_list::RouteList,
     executor::{CurlExecutor, CurlResponse},
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
-    variables::Variables,
+    variables::{VariableMode, Variables},
 };
 use crate::utils::sub::SubUtils;
 
@@ -43,6 +48,7 @@ pub enum Id {
     VariableTable,
     VariableKeyInput,
     VariableValueInput,
+    VariableMode,
     EditorGroup,
     EditorNewGroup,
 }
@@ -82,7 +88,12 @@ pub enum Msg {
     MethodChanged(usize),
     BodyEditorResult(Option<String>),
     ToggleSecretVisibility,
+    OpenScopedVariables,
     AddVariable,
+    VariableSelectionChanged(String),
+    VariableModeChanged(VariableMode),
+    EditVariable(String),
+    SaveVariable,
     DeleteVariable(String),
     UpdateVariable(String, String),
     TerminalResize(u16, u16),
@@ -128,6 +139,7 @@ struct EditorSection {
 #[derive(Debug, Clone)]
 struct RequestPreviewState {
     route_index: usize,
+    route_scope_id: String,
     route_name: String,
     method: HttpMethod,
     display_url: String,
@@ -136,6 +148,12 @@ struct RequestPreviewState {
     execution_headers: Vec<String>,
     display_body: Option<String>,
     execution_body: Option<String>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum VariableContext {
+    Global,
+    Scoped { scope_id: String },
 }
 
 pub struct AppModel {
@@ -151,6 +169,8 @@ pub struct AppModel {
     editor_draft: Option<Route>,
     request_preview: Option<RequestPreviewState>,
     secrets_visible: bool,
+    editing_variable: Option<String>,
+    variable_context: VariableContext,
     layout_mode: LayoutMode,
     terminal_width: u16,
     terminal_height: u16,
@@ -164,7 +184,7 @@ impl AppModel {
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
     const EDITOR_FOOTER_MAX_HEIGHT: u16 = 2;
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
-    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | gg/G: Top/Bottom | Swipe/Mouse Wheel: Scroll";
+    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | v: Route vars | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | gg/G: Top/Bottom | Swipe/Mouse Wheel: Scroll";
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -180,6 +200,8 @@ impl AppModel {
             editor_draft: None,
             request_preview: None,
             secrets_visible: false,
+            editing_variable: None,
+            variable_context: VariableContext::Global,
             layout_mode: LayoutMode::Wide,
             terminal_width: 120,
             terminal_height: 40,
@@ -191,6 +213,29 @@ impl AppModel {
     pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<Msg>> {
         match msg {
             Msg::AppClose => return Ok(Some(Msg::AppClose)),
+            Msg::SwitchView(ActiveView::VariableManager) => {
+                let open_scoped = self.active_view == ActiveView::RouteEditor;
+
+                self.active_view = ActiveView::VariableManager;
+                self.input_mode = InputMode::Normal;
+                self.editing_variable = None;
+
+                if open_scoped {
+                    if let Some(scope_id) = self
+                        .editor_draft
+                        .as_ref()
+                        .map(|route| route.scope_id.clone())
+                    {
+                        self.variable_context = VariableContext::Scoped { scope_id };
+                    } else {
+                        self.variable_context = VariableContext::Global;
+                    }
+                } else {
+                    self.variable_context = VariableContext::Global;
+                }
+
+                self.mount_variable_manager()?;
+            }
             Msg::SwitchView(view) => self.active_view = view,
             Msg::RunRoute(index) => {
                 if self.active_view != ActiveView::RouteList {
@@ -244,6 +289,7 @@ impl AppModel {
 
                 let route = Route {
                     group: DEFAULT_ROUTE_GROUP.to_string(),
+                    scope_id: self.collection.new_scope_id(),
                     name: String::new(),
                     method: HttpMethod::Get,
                     url: String::new(),
@@ -267,8 +313,13 @@ impl AppModel {
                     return Ok(None);
                 }
 
+                let scope_id = self.collection.routes[index].scope_id.clone();
+
                 self.collection.delete_route(index)?;
                 self.collection.save()?;
+
+                self.variables.delete_scope(&scope_id);
+                self.variables.save()?;
 
                 if self.collection.routes.is_empty() {
                     self.route_list_state.selected = None;
@@ -288,6 +339,132 @@ impl AppModel {
                 self.route_list_state = state;
                 self.persist_route_list_state();
             }
+            Msg::OpenScopedVariables => {
+                if self.active_view != ActiveView::RouteEditor {
+                    return Ok(None);
+                }
+
+                let Some(scope_id) = self
+                    .editor_draft
+                    .as_ref()
+                    .map(|route| route.scope_id.clone())
+                else {
+                    return Ok(None);
+                };
+
+                self.active_view = ActiveView::VariableManager;
+                self.input_mode = InputMode::Normal;
+                self.editing_variable = None;
+                self.variable_context = VariableContext::Scoped { scope_id };
+                self.mount_variable_manager()?;
+            }
+            Msg::ToggleSecretVisibility => {
+                if self.active_view == ActiveView::VariableManager {
+                    self.secrets_visible = !self.secrets_visible;
+                    self.sync_variable_value_visibility()?;
+                }
+            }
+            Msg::VariableModeChanged(_) => {
+                if self.active_view == ActiveView::VariableManager {
+                    self.sync_variable_value_visibility()?;
+                }
+            }
+            Msg::AddVariable => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                self.input_mode = InputMode::Normal;
+                self.editing_variable = None;
+                self.mount_variable_inputs("", "", VariableMode::Placeholder)?;
+                self.app.active(&Id::VariableKeyInput)?;
+            }
+            Msg::VariableSelectionChanged(key) => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                self.load_variable_into_inputs(&key)?;
+                self.app.active(&Id::VariableTable)?;
+            }
+            Msg::EditVariable(key) => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                self.input_mode = InputMode::Normal;
+                self.load_variable_into_inputs(&key)?;
+                self.app.active(&Id::VariableKeyInput)?;
+            }
+            Msg::SaveVariable => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                let key = self
+                    .editor_input_value(&Id::VariableKeyInput)
+                    .trim()
+                    .to_string();
+                let value = self.editor_input_value(&Id::VariableValueInput);
+                let mode = self.variable_mode_value();
+
+                if key.is_empty() {
+                    return Ok(None);
+                }
+
+                if let Some(old_key) = self.editing_variable.take()
+                    && old_key != key
+                {
+                    if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
+                        self.variables.scoped_delete(&scope_id, &old_key);
+                    } else {
+                        self.variables.delete(&old_key);
+                    }
+                }
+
+                if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
+                    self.variables
+                        .scoped_add_with_mode(scope_id, key, value, mode);
+                } else {
+                    self.variables.add_with_mode(key, value, mode);
+                }
+                self.variables.save()?;
+
+                self.input_mode = InputMode::Normal;
+                self.editing_variable = None;
+                self.mount_variable_manager()?;
+            }
+            Msg::DeleteVariable(key) => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
+                    self.variables.scoped_delete(&scope_id, &key);
+                } else {
+                    self.variables.delete(&key);
+                }
+                self.variables.save()?;
+
+                if self.editing_variable.as_deref() == Some(key.as_str()) {
+                    self.editing_variable = None;
+                }
+
+                self.mount_variable_manager()?;
+            }
+            Msg::UpdateVariable(key, value) => {
+                if self.active_view != ActiveView::VariableManager {
+                    return Ok(None);
+                }
+
+                if let Some(scope_id) = self.active_scope_id().map(ToOwned::to_owned) {
+                    self.variables.scoped_add(scope_id, key, value);
+                } else {
+                    self.variables.add(key, value);
+                }
+                self.variables.save()?;
+                self.mount_variable_manager()?;
+            }
             Msg::TerminalResize(width, height) => {
                 self.terminal_width = width;
                 self.terminal_height = height.saturating_sub(2);
@@ -299,12 +476,16 @@ impl AppModel {
                 if self.active_view == ActiveView::RouteEditor {
                     self.ensure_editor_focus_visible();
                     self.sync_editor_input_mode()?;
+                } else if self.active_view == ActiveView::VariableManager {
+                    self.sync_variable_input_mode()?;
                 }
             }
             Msg::EnterNormalMode => {
                 self.input_mode = InputMode::Normal;
                 if self.active_view == ActiveView::RouteEditor {
                     self.sync_editor_input_mode()?;
+                } else if self.active_view == ActiveView::VariableManager {
+                    self.sync_variable_input_mode()?;
                 }
             }
             Msg::FocusField(id) => {
@@ -359,6 +540,7 @@ impl AppModel {
                 }
                 _ => {}
             },
+            Msg::RouteSelected(_) | Msg::MethodChanged(_) => {}
             Msg::GroupSelected(_index) => {
                 // If "New Group..." is selected (last item), the view will show the new group input
                 // Otherwise, store the selected group name for use during save
@@ -420,9 +602,15 @@ impl AppModel {
                         .collect();
 
                     let body = self.editor_draft.as_ref().and_then(|d| d.body.clone());
+                    let scope_id = self
+                        .editor_draft
+                        .as_ref()
+                        .map(|draft| draft.scope_id.clone())
+                        .unwrap_or_else(|| self.collection.new_scope_id());
 
                     let route = Route {
                         group,
+                        scope_id,
                         name,
                         method,
                         url,
@@ -461,6 +649,17 @@ impl AppModel {
                     self.input_mode = InputMode::Normal;
                     self.preview_scroll_offset = 0;
                     self.active_view = ActiveView::RouteList;
+                } else if self.active_view == ActiveView::VariableManager {
+                    self.editing_variable = None;
+                    self.input_mode = InputMode::Normal;
+
+                    if self.is_scoped_variable_context() {
+                        self.active_view = ActiveView::RouteEditor;
+                        self.app.active(&Id::EditorName)?;
+                        self.sync_editor_input_mode()?;
+                    } else {
+                        self.active_view = ActiveView::RouteList;
+                    }
                 }
             }
             Msg::OpenBodyEditor => {
@@ -478,9 +677,14 @@ impl AppModel {
                         draft.body = body;
                     }
                 } else if self.active_view == ActiveView::RequestPreview {
-                    let masked_body = body
-                        .as_deref()
-                        .map(|content| self.variables.redact_hidden_values(content));
+                    let scope_id = self
+                        .request_preview
+                        .as_ref()
+                        .map(|preview| preview.route_scope_id.as_str());
+                    let masked_body = body.as_deref().map(|content| {
+                        self.variables
+                            .redact_hidden_values_with_scope(content, scope_id)
+                    });
 
                     if let Some(preview) = &mut self.request_preview {
                         preview.execution_body = body;
@@ -494,7 +698,6 @@ impl AppModel {
                     return Ok(Some(Msg::ExecutePreviewRequest));
                 }
             }
-            _ => {}
         }
 
         Ok(None)
@@ -518,6 +721,7 @@ impl AppModel {
         let preview = self.request_preview.as_ref()?;
         let route = Route {
             group: DEFAULT_ROUTE_GROUP.to_string(),
+            scope_id: preview.route_scope_id.clone(),
             name: preview.route_name.clone(),
             method: preview.method.clone(),
             url: preview.execution_url.clone(),
@@ -531,32 +735,51 @@ impl AppModel {
     fn build_request_preview_state(&self, index: usize) -> Option<RequestPreviewState> {
         let route = self.collection.routes.get(index)?;
 
-        let display_url = self.variables.substitute_for_preview(&route.url);
-        let execution_url = self.variables.substitute_for_execution(&route.url);
+        let scope_id = Some(route.scope_id.as_str());
+
+        let display_url = self
+            .variables
+            .substitute_for_preview_with_scope(&route.url, scope_id);
+        let execution_url = self
+            .variables
+            .substitute_for_execution_with_scope(&route.url, scope_id);
         let display_headers = route
             .headers
             .iter()
-            .map(|header| self.variables.substitute_for_preview(header))
+            .map(|header| {
+                self.variables
+                    .substitute_for_preview_with_scope(header, scope_id)
+            })
             .collect::<Vec<_>>();
         let execution_headers = route
             .headers
             .iter()
-            .map(|header| self.variables.substitute_for_execution(header))
+            .map(|header| {
+                self.variables
+                    .substitute_for_execution_with_scope(header, scope_id)
+            })
             .collect::<Vec<_>>();
 
         let display_body = route
             .body
             .as_deref()
-            .map(|body| self.variables.substitute_for_preview(body))
+            .map(|body| {
+                self.variables
+                    .substitute_for_preview_with_scope(body, scope_id)
+            })
             .filter(|body| !body.trim().is_empty());
         let execution_body = route
             .body
             .as_deref()
-            .map(|body| self.variables.substitute_for_execution(body))
+            .map(|body| {
+                self.variables
+                    .substitute_for_execution_with_scope(body, scope_id)
+            })
             .filter(|body| !body.trim().is_empty());
 
         Some(RequestPreviewState {
             route_index: index,
+            route_scope_id: route.scope_id.clone(),
             route_name: route.name.clone(),
             method: route.method.clone(),
             display_url,
@@ -649,9 +872,203 @@ impl AppModel {
                 self.render_response_viewer(frame, content_area);
             }
             ActiveView::VariableManager => {
-                // Draw VariableManager component.
+                self.render_variable_manager(frame, content_area);
             }
         }
+    }
+
+    pub fn mount_variable_manager(&mut self) -> anyhow::Result<()> {
+        self.editing_variable = None;
+        let entries = self.variable_table_entries();
+        let selected_key = entries.first().map(|(key, _, _, _)| key.clone());
+
+        self.app.remount(
+            Id::VariableTable,
+            Box::new(VariableTable::new(&entries, self.secrets_visible)),
+            vec![],
+        )?;
+
+        if let Some(key) = selected_key {
+            self.load_variable_into_inputs(&key)?;
+        } else {
+            self.mount_variable_inputs("", "", VariableMode::Placeholder)?;
+        }
+
+        self.app.active(&Id::VariableTable)?;
+        self.sync_variable_input_mode()?;
+
+        Ok(())
+    }
+
+    fn variable_table_entries(&self) -> Vec<(String, String, VariableMode, String)> {
+        if let Some(scope_id) = self.active_scope_id() {
+            let mut merged: BTreeMap<String, (String, VariableMode, String)> = BTreeMap::new();
+
+            for (key, value) in self.variables.scoped_entries(scope_id) {
+                merged.insert(
+                    key.clone(),
+                    (
+                        value.clone(),
+                        self.variables
+                            .scoped_mode(scope_id, key)
+                            .unwrap_or(VariableMode::Placeholder),
+                        "scoped".to_string(),
+                    ),
+                );
+            }
+
+            for key in self.scoped_route_used_global_keys() {
+                if merged.contains_key(&key) {
+                    continue;
+                }
+
+                if let Some(value) = self.variables.get(&key) {
+                    merged.insert(
+                        key.clone(),
+                        (
+                            value.clone(),
+                            self.variables
+                                .mode(&key)
+                                .unwrap_or(VariableMode::Placeholder),
+                            "global".to_string(),
+                        ),
+                    );
+                }
+            }
+
+            merged
+                .into_iter()
+                .map(|(key, (value, mode, source))| (key, value, mode, source))
+                .collect()
+        } else {
+            self.variables
+                .entries()
+                .into_iter()
+                .map(|(key, value)| {
+                    (
+                        key.clone(),
+                        value.clone(),
+                        self.variables
+                            .mode(key)
+                            .unwrap_or(VariableMode::Placeholder),
+                        "global".to_string(),
+                    )
+                })
+                .collect()
+        }
+    }
+
+    fn scoped_route_used_global_keys(&self) -> BTreeSet<String> {
+        let Some(route) = self.editor_draft.as_ref() else {
+            return BTreeSet::new();
+        };
+
+        let url_template = match self.app.state(&Id::EditorUrl) {
+            Ok(State::One(StateValue::String(value))) => value,
+            _ => route.url.clone(),
+        };
+
+        let headers_template = match self.app.state(&Id::EditorHeaders) {
+            Ok(State::One(StateValue::String(value))) => value,
+            _ => route.headers.join(", "),
+        };
+
+        let mut keys = BTreeSet::new();
+
+        Self::collect_variable_tokens(&url_template, &mut keys);
+        for header in headers_template
+            .split(',')
+            .map(str::trim)
+            .filter(|header| !header.is_empty())
+        {
+            Self::collect_variable_tokens(header, &mut keys);
+        }
+        if let Some(body) = route.body.as_deref() {
+            Self::collect_variable_tokens(body, &mut keys);
+        }
+
+        keys.into_iter()
+            .filter(|key| self.variables.get(key).is_some())
+            .collect()
+    }
+
+    fn collect_variable_tokens(template: &str, output: &mut BTreeSet<String>) {
+        let mut rest = template;
+
+        while let Some(start) = rest.find("{{") {
+            let after_open = &rest[start + 2..];
+
+            let Some(end) = after_open.find("}}") else {
+                break;
+            };
+
+            let token = after_open[..end].trim();
+            if !token.is_empty() {
+                output.insert(token.to_string());
+            }
+
+            rest = &after_open[end + 2..];
+        }
+    }
+
+    fn variable_value_mode_for_key(&self, key: &str) -> Option<(String, VariableMode)> {
+        if let Some(scope_id) = self.active_scope_id()
+            && let Some(value) = self.variables.scoped_get(scope_id, key).cloned()
+        {
+            return Some((
+                value,
+                self.variables
+                    .scoped_mode(scope_id, key)
+                    .unwrap_or(VariableMode::Placeholder),
+            ));
+        }
+
+        self.variables.get(key).cloned().map(|value| {
+            (
+                value,
+                self.variables
+                    .mode(key)
+                    .unwrap_or(VariableMode::Placeholder),
+            )
+        })
+    }
+
+    fn load_variable_into_inputs(&mut self, key: &str) -> anyhow::Result<()> {
+        let Some((value, mode)) = self.variable_value_mode_for_key(key) else {
+            return Ok(());
+        };
+
+        self.editing_variable = Some(key.to_string());
+        self.mount_variable_inputs(key, &value, mode)?;
+
+        Ok(())
+    }
+
+    fn mount_variable_inputs(
+        &mut self,
+        key: &str,
+        value: &str,
+        mode: VariableMode,
+    ) -> anyhow::Result<()> {
+        self.app.remount(
+            Id::VariableKeyInput,
+            Box::new(VariableKeyInput::new(key)),
+            vec![],
+        )?;
+        self.app.remount(
+            Id::VariableValueInput,
+            Box::new(VariableValueInput::new(value)),
+            vec![],
+        )?;
+        self.app.remount(
+            Id::VariableMode,
+            Box::new(VariableModeSelector::new(mode)),
+            vec![],
+        )?;
+
+        self.sync_variable_input_mode()?;
+        self.sync_variable_value_visibility()?;
+        Ok(())
     }
 
     pub fn mount_response_viewer(&mut self) -> anyhow::Result<()> {
@@ -685,6 +1102,41 @@ impl AppModel {
 
     fn render_response_viewer(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         self.app.view(&Id::ResponseDetails, frame, area);
+    }
+
+    fn render_variable_manager(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        let chunks = Layout::vertical([
+            Constraint::Min(5),
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(area);
+
+        self.app.view(&Id::VariableTable, frame, chunks[0]);
+        self.app.view(&Id::VariableKeyInput, frame, chunks[1]);
+        self.app.view(&Id::VariableValueInput, frame, chunks[2]);
+        self.app.view(&Id::VariableMode, frame, chunks[3]);
+
+        let mode_label = match self.input_mode {
+            InputMode::Normal => "-- NORMAL --",
+            InputMode::Insert => "-- INSERT --",
+        };
+        let mode_widget = Paragraph::new(mode_label).style(Style::default().fg(Color::Yellow));
+        frame.render_widget(mode_widget, chunks[4]);
+
+        let context_label = if self.is_scoped_variable_context() {
+            "Context: Route-scoped"
+        } else {
+            "Context: Global"
+        };
+        let help = Paragraph::new(format!(
+            "{context_label} | a: Add | e: Edit | d: Delete | s: Toggle hidden | i: Insert | Ctrl+S: Save | Esc: Normal/Back"
+        ))
+        .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(help, chunks[5]);
     }
 
     fn render_request_preview(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
@@ -1163,10 +1615,18 @@ impl AppModel {
     }
 
     fn editor_body_preview(&self) -> Option<body_preview::BodyPreview> {
+        let scope_id = self
+            .editor_draft
+            .as_ref()
+            .map(|route| route.scope_id.as_str());
+
         self.editor_draft
             .as_ref()
             .and_then(|draft| draft.body.as_deref())
-            .map(|body| self.variables.substitute_for_preview(body))
+            .map(|body| {
+                self.variables
+                    .substitute_for_preview_with_scope(body, scope_id)
+            })
             .map(|body| body_preview::build(&body))
             .filter(|preview| !preview.lines.is_empty())
     }
@@ -1499,10 +1959,14 @@ impl AppModel {
         let summary_lines =
             Self::interleave_with_blank_lines(Self::route_summary_lines(route), usize::MAX);
         let summary_height = summary_lines.len() as u16;
+        let scope_id = Some(route.scope_id.as_str());
         let body_preview = route
             .body
             .as_deref()
-            .map(|body| self.variables.substitute_for_preview(body))
+            .map(|body| {
+                self.variables
+                    .substitute_for_preview_with_scope(body, scope_id)
+            })
             .map(|body| body_preview::build(&body))
             .filter(|preview| !preview.lines.is_empty());
 
@@ -1944,6 +2408,73 @@ impl AppModel {
         }
 
         Ok(())
+    }
+
+    fn sync_variable_input_mode(&mut self) -> anyhow::Result<()> {
+        let is_insert_mode = self.input_mode == InputMode::Insert;
+        let border_color = if is_insert_mode {
+            InputColor::Yellow
+        } else {
+            InputColor::Cyan
+        };
+
+        for id in [
+            Id::VariableKeyInput,
+            Id::VariableValueInput,
+            Id::VariableMode,
+        ] {
+            self.app.attr(
+                &id,
+                Attribute::Custom("input_mode"),
+                AttrValue::Flag(is_insert_mode),
+            )?;
+            self.app.attr(
+                &id,
+                Attribute::Borders,
+                AttrValue::Borders(
+                    InputBorders::default()
+                        .modifiers(InputBorderType::Rounded)
+                        .color(border_color),
+                ),
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn sync_variable_value_visibility(&mut self) -> anyhow::Result<()> {
+        let input_type = if self.variable_mode_value() == VariableMode::Hidden && !self.secrets_visible
+        {
+            FieldInputType::Password('*')
+        } else {
+            FieldInputType::Text
+        };
+
+        self.app.attr(
+            &Id::VariableValueInput,
+            Attribute::InputType,
+            AttrValue::InputType(input_type),
+        )?;
+
+        Ok(())
+    }
+
+    fn active_scope_id(&self) -> Option<&str> {
+        match &self.variable_context {
+            VariableContext::Global => None,
+            VariableContext::Scoped { scope_id } => Some(scope_id.as_str()),
+        }
+    }
+
+    fn is_scoped_variable_context(&self) -> bool {
+        matches!(self.variable_context, VariableContext::Scoped { .. })
+    }
+
+    fn variable_mode_value(&self) -> VariableMode {
+        match self.app.state(&Id::VariableMode) {
+            Ok(State::One(StateValue::Usize(1))) => VariableMode::Hidden,
+            _ => VariableMode::Placeholder,
+        }
     }
 
     fn editor_input_value(&self, id: &Id) -> String {

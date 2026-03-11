@@ -1,4 +1,5 @@
 use anyhow::Context;
+use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::{fmt, fs};
@@ -19,6 +20,11 @@ fn normalize_group_name(group: &str) -> String {
     } else {
         trimmed.to_string()
     }
+}
+
+fn generate_scope_id() -> String {
+    let mut random = rng();
+    format!("route_{:08x}", random.random::<u32>())
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,6 +68,7 @@ impl FromStr for HttpMethod {
 pub struct Route {
     #[serde(default = "default_route_group")]
     pub group: String,
+    pub scope_id: String,
     pub name: String,
     pub method: HttpMethod,
     pub url: String,
@@ -89,6 +96,7 @@ struct RouteGroupFile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RouteFile {
+    scope_id: String,
     name: String,
     method: HttpMethod,
     url: String,
@@ -124,6 +132,7 @@ impl Collection {
             for route in group.routes {
                 routes.push(Route {
                     group: group_name.clone(),
+                    scope_id: route.scope_id,
                     name: route.name,
                     method: route.method,
                     url: route.url,
@@ -153,6 +162,7 @@ impl Collection {
         for route in &self.routes {
             let group_name = normalize_group_name(&route.group);
             let route_file = RouteFile {
+                scope_id: route.scope_id.clone(),
                 name: route.name.clone(),
                 method: route.method.clone(),
                 url: route.url.clone(),
@@ -193,6 +203,9 @@ impl Collection {
 
     pub fn add_route(&mut self, mut route: Route) {
         route.group = normalize_group_name(&route.group);
+        if route.scope_id.trim().is_empty() {
+            route.scope_id = self.new_scope_id();
+        }
         self.routes.push(route);
     }
 
@@ -202,6 +215,9 @@ impl Collection {
         }
 
         route.group = normalize_group_name(&route.group);
+        if route.scope_id.trim().is_empty() {
+            route.scope_id = self.new_scope_id();
+        }
         self.routes[index] = route;
         Ok(())
     }
@@ -213,5 +229,15 @@ impl Collection {
 
         self.routes.remove(index);
         Ok(())
+    }
+
+    pub fn new_scope_id(&self) -> String {
+        loop {
+            let candidate = generate_scope_id();
+
+            if !self.routes.iter().any(|route| route.scope_id == candidate) {
+                return candidate;
+            }
+        }
     }
 }

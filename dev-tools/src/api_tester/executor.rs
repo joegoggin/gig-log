@@ -165,6 +165,7 @@ mod tests {
     fn route_with_template() -> Route {
         Route {
             group: "general".to_string(),
+            scope_id: "route_test".to_string(),
             name: "test".to_string(),
             method: HttpMethod::Post,
             url: "https://example.com/{{PATH}}".to_string(),

@@ -1,8 +1,8 @@
-use ratatui::{Frame, layout::Rect};
+use ratatui::{layout::Rect, Frame};
 use tuirealm::{
-    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
     command::{Cmd, CmdResult},
     event::{Key, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
+    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
 };
 
 use crate::api_tester::app::{ActiveView, InputMode, Msg};
@@ -54,10 +54,19 @@ impl GlobalListener {
 
         match key.code {
             Key::Char('q') => Some(Msg::AppClose),
+            Key::Char('v') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                Some(Msg::OpenScopedVariables)
+            }
+            Key::Char('V') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                Some(Msg::OpenScopedVariables)
+            }
             Key::Char('v') => Some(Msg::SwitchView(ActiveView::VariableManager)),
             Key::Char('i') => Some(Msg::EnterInsertMode),
             Key::Esc => Some(Msg::CancelEdit),
-            Key::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::SaveRoute),
+            Key::Char('s') if key.modifiers == KeyModifiers::CONTROL => Some(Msg::SaveRoute),
+            Key::Char('s') if key.modifiers == KeyModifiers::NONE => {
+                Some(Msg::ToggleSecretVisibility)
+            }
             Key::Char('b') => Some(Msg::OpenBodyEditor),
             Key::Char('r') => Some(Msg::ExecutePreviewRequest),
             Key::Char('k') | Key::Up => Some(Msg::EditorScrollUp),
@@ -245,6 +254,37 @@ mod tests {
         assert_eq!(
             listener.on(key_event(Key::Char('G'), KeyModifiers::SHIFT)),
             Some(Msg::PreviewScrollToBottom)
+        );
+    }
+
+    #[test]
+    fn uppercase_v_opens_scoped_variable_manager() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('V'), KeyModifiers::SHIFT)),
+            Some(Msg::OpenScopedVariables)
+        );
+    }
+
+    #[test]
+    fn s_toggles_secret_visibility_in_normal_mode() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('s'), KeyModifiers::NONE)),
+            Some(Msg::ToggleSecretVisibility)
+        );
+    }
+
+    #[test]
+    fn s_does_not_toggle_secret_visibility_in_insert_mode() {
+        let mut listener = GlobalListener::new();
+        listener.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('s'), KeyModifiers::NONE)),
+            None
         );
     }
 }
