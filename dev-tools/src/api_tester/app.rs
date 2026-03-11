@@ -60,6 +60,7 @@ pub enum ActiveView {
     RequestPreview,
     ResponseViewer,
     VariableManager,
+    KeymapHelp,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -102,6 +103,7 @@ pub enum Msg {
     GroupSelected(usize),
     NewGroupEntered,
     ExecutePreviewRequest,
+    ToggleKeymapHelp,
     None,
 }
 
@@ -176,15 +178,17 @@ pub struct AppModel {
     terminal_height: u16,
     editor_scroll_offset: usize,
     preview_scroll_offset: usize,
+    keymap_help_return_view: Option<ActiveView>,
+    keymap_help_scroll_offset: usize,
+    keymap_previous_focus: Option<Id>,
 }
 
 impl AppModel {
     const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
     const BODY_STATUS_HEIGHT: u16 = 3;
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
-    const EDITOR_FOOTER_MAX_HEIGHT: u16 = 2;
+    const EDITOR_FOOTER_MAX_HEIGHT: u16 = 1;
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
-    const EDITOR_HELP_TEXT: &'static str = "i: Insert | Esc: Normal/Cancel | Ctrl+S: Save | v: Route vars | Tab/Shift+Tab: Navigate | h/l or Left/Right: Edit radio (Insert) or move text cursor | j/k or Up/Down: Scroll | gg/G: Top/Bottom | Swipe/Mouse Wheel: Scroll";
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         Ok(Self {
@@ -207,10 +211,58 @@ impl AppModel {
             terminal_height: 40,
             editor_scroll_offset: 0,
             preview_scroll_offset: 0,
+            keymap_help_return_view: None,
+            keymap_help_scroll_offset: 0,
+            keymap_previous_focus: None,
         })
     }
 
     pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<Msg>> {
+        if self.active_view == ActiveView::KeymapHelp {
+            match msg {
+                Msg::AppClose => return Ok(Some(Msg::AppClose)),
+                Msg::TerminalResize(width, height) => {
+                    self.terminal_width = width;
+                    self.terminal_height = height.saturating_sub(2);
+                    self.layout_mode = Self::layout_mode_for_width(width);
+                    return Ok(None);
+                }
+                Msg::ToggleKeymapHelp | Msg::CancelEdit | Msg::EnterNormalMode => {
+                    self.hide_keymap_help();
+                    return Ok(None);
+                }
+                Msg::EditorScrollUp => {
+                    self.scroll_keymap_help_by(-1);
+                    return Ok(None);
+                }
+                Msg::EditorScrollDown => {
+                    self.scroll_keymap_help_by(1);
+                    return Ok(None);
+                }
+                Msg::EditorScrollBy(delta) => {
+                    self.scroll_keymap_help_by(delta);
+                    return Ok(None);
+                }
+                Msg::EditorPageUp => {
+                    self.scroll_keymap_help_page(-1);
+                    return Ok(None);
+                }
+                Msg::EditorPageDown => {
+                    self.scroll_keymap_help_page(1);
+                    return Ok(None);
+                }
+                Msg::PreviewScrollToTop => {
+                    self.keymap_help_scroll_offset = 0;
+                    return Ok(None);
+                }
+                Msg::PreviewScrollToBottom => {
+                    self.keymap_help_scroll_offset = self.keymap_help_max_offset();
+                    return Ok(None);
+                }
+                _ => return Ok(None),
+            }
+        }
+
         match msg {
             Msg::AppClose => return Ok(Some(Msg::AppClose)),
             Msg::SwitchView(ActiveView::VariableManager) => {
@@ -367,6 +419,15 @@ impl AppModel {
             Msg::VariableModeChanged(_) => {
                 if self.active_view == ActiveView::VariableManager {
                     self.sync_variable_value_visibility()?;
+                }
+            }
+            Msg::ToggleKeymapHelp => {
+                if self.input_mode == InputMode::Normal {
+                    if self.active_view == ActiveView::KeymapHelp {
+                        self.hide_keymap_help();
+                    } else {
+                        self.show_keymap_help()?;
+                    }
                 }
             }
             Msg::AddVariable => {
@@ -874,6 +935,9 @@ impl AppModel {
             ActiveView::VariableManager => {
                 self.render_variable_manager(frame, content_area);
             }
+            ActiveView::KeymapHelp => {
+                self.render_keymap_help_page(frame, content_area);
+            }
         }
     }
 
@@ -1111,7 +1175,6 @@ impl AppModel {
             Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Length(1),
-            Constraint::Length(1),
         ])
         .split(area);
 
@@ -1124,19 +1187,292 @@ impl AppModel {
             InputMode::Normal => "-- NORMAL --",
             InputMode::Insert => "-- INSERT --",
         };
-        let mode_widget = Paragraph::new(mode_label).style(Style::default().fg(Color::Yellow));
-        frame.render_widget(mode_widget, chunks[4]);
-
         let context_label = if self.is_scoped_variable_context() {
             "Context: Route-scoped"
         } else {
             "Context: Global"
         };
-        let help = Paragraph::new(format!(
-            "{context_label} | a: Add | e: Edit | d: Delete | s: Toggle hidden | i: Insert | Ctrl+S: Save | Esc: Normal/Back"
+        let status = Paragraph::new(format!("{mode_label} | {context_label}"))
+            .style(Style::default().fg(Color::Yellow));
+        frame.render_widget(status, chunks[4]);
+    }
+
+    fn show_keymap_help(&mut self) -> anyhow::Result<()> {
+        if self.active_view == ActiveView::KeymapHelp {
+            return Ok(());
+        }
+
+        self.keymap_help_return_view = Some(self.active_view);
+        self.active_view = ActiveView::KeymapHelp;
+        self.keymap_help_scroll_offset = 0;
+        self.keymap_previous_focus = self
+            .app
+            .focus()
+            .cloned()
+            .filter(|id| *id != Id::GlobalListener);
+
+        self.app.active(&Id::GlobalListener)?;
+        self.app.lock_subs();
+        Ok(())
+    }
+
+    fn hide_keymap_help(&mut self) {
+        if self.active_view == ActiveView::KeymapHelp {
+            self.active_view = self
+                .keymap_help_return_view
+                .take()
+                .unwrap_or(ActiveView::RouteList);
+        }
+
+        self.keymap_help_scroll_offset = 0;
+        self.app.unlock_subs();
+
+        if let Some(previous_focus) = self.keymap_previous_focus.take()
+            && self.app.mounted(&previous_focus)
+        {
+            let _ = self.app.active(&previous_focus);
+        }
+    }
+
+    fn render_keymap_help_page(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
+        if area.width == 0 || area.height == 0 {
+            return;
+        }
+
+        let lines = self.keymap_help_lines();
+        let can_render_scrollbar = area.width > Self::EDITOR_SCROLLBAR_WIDTH;
+        let (content_area, scrollbar_area) = if can_render_scrollbar {
+            let chunks = Layout::horizontal([
+                Constraint::Min(0),
+                Constraint::Length(Self::EDITOR_SCROLLBAR_WIDTH),
+            ])
+            .split(area);
+            (chunks[0], Some(chunks[1]))
+        } else {
+            (area, None)
+        };
+
+        let page_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Yellow))
+            .padding(Padding::new(1, 1, 1, 1))
+            .title("Keymaps");
+        let content_inner = page_block.inner(content_area);
+
+        if content_inner.width == 0 || content_inner.height == 0 {
+            return;
+        }
+
+        let (total_lines, viewport_height, max_offset) =
+            Self::keymap_scroll_metrics(&lines, content_inner);
+        self.keymap_help_scroll_offset = self.keymap_help_scroll_offset.min(max_offset);
+
+        let scroll_y = u16::try_from(self.keymap_help_scroll_offset).unwrap_or(u16::MAX);
+        let content = Paragraph::new(lines)
+            .block(page_block)
+            .scroll((scroll_y, 0))
+            .wrap(Wrap { trim: false });
+        frame.render_widget(content, content_area);
+
+        if let Some(scrollbar_area) = scrollbar_area {
+            self.render_keymap_help_scrollbar(
+                frame,
+                scrollbar_area,
+                total_lines,
+                viewport_height,
+                max_offset,
+            );
+        }
+    }
+
+    fn keymap_help_lines(&self) -> Vec<Line<'static>> {
+        let mut lines = vec![
+            Self::keymap_help_heading("Global"),
+            Line::from("q: Quit"),
+            Line::from("?: Open/close keymap helper"),
+            Line::from("Esc: Return to previous page"),
+            Line::from("j/k or Up/Down: Scroll helper"),
+            Line::from("PgUp/PgDn or gg/G: Page/top/bottom"),
+            Line::from(""),
+        ];
+
+        let (view_title, view_lines) = Self::view_keymap_entries(self.keymap_help_target_view());
+
+        lines.push(Self::keymap_help_heading(view_title));
+        lines.extend(
+            view_lines
+                .into_iter()
+                .map(|line| Line::from(line.to_string())),
+        );
+        lines
+    }
+
+    fn keymap_help_target_view(&self) -> ActiveView {
+        self.keymap_help_return_view
+            .unwrap_or(match self.active_view {
+                ActiveView::KeymapHelp => ActiveView::RouteList,
+                view => view,
+            })
+    }
+
+    fn view_keymap_entries(view: ActiveView) -> (&'static str, Vec<&'static str>) {
+        match view {
+            ActiveView::RouteList => (
+                "Route List",
+                vec![
+                    "j/k or Up/Down: Move selection",
+                    "Enter: Expand group or open request preview",
+                    "Tab/Shift+Tab: Jump between groups",
+                    "gg/G or Home/End: Jump top/bottom",
+                    "e: Edit route | n: New route | d: Delete route",
+                    "v: Open global variables",
+                ],
+            ),
+            ActiveView::RouteEditor => (
+                "Route Editor",
+                vec![
+                    "i: Enter insert mode",
+                    "Ctrl+S: Save route",
+                    "Esc: Back to route list",
+                    "Tab/Shift+Tab: Focus next/previous field",
+                    "b: Edit request body",
+                    "v: Global vars | V: Route-scoped vars",
+                    "j/k or Up/Down/PgUp/PgDn: Scroll",
+                    "gg/G: Jump top/bottom",
+                ],
+            ),
+            ActiveView::RequestPreview => (
+                "Request Preview",
+                vec![
+                    "r: Execute request",
+                    "b: Edit request body",
+                    "Esc: Back to route list",
+                    "j/k or Up/Down/PgUp/PgDn: Scroll",
+                    "gg/G: Jump top/bottom",
+                ],
+            ),
+            ActiveView::ResponseViewer => (
+                "Response Viewer",
+                vec![
+                    "Esc: Back to route list",
+                    "j/k or Up/Down: Scroll",
+                    "PgUp/PgDn: Page scroll",
+                    "gg/G or Home/End: Jump top/bottom",
+                ],
+            ),
+            ActiveView::VariableManager => (
+                "Variable Manager",
+                vec![
+                    "a: Add variable | e: Edit variable | d: Delete variable",
+                    "i: Enter insert mode",
+                    "Ctrl+S: Save variable",
+                    "Esc: Back (or return to normal mode)",
+                    "Tab/Shift+Tab: Focus next/previous field",
+                    "s: Toggle hidden values",
+                    "j/k or Up/Down: Move selection",
+                    "gg/G or Home/End: Jump top/bottom",
+                ],
+            ),
+            ActiveView::KeymapHelp => ("Keymaps", vec!["Press Esc or ? to return."]),
+        }
+    }
+
+    fn keymap_help_heading(text: &'static str) -> Line<'static> {
+        Line::from(Span::styled(
+            text,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         ))
-        .style(Style::default().fg(Color::DarkGray));
-        frame.render_widget(help, chunks[5]);
+    }
+
+    fn keymap_scroll_metrics(lines: &[Line<'static>], content_area: Rect) -> (usize, usize, usize) {
+        if content_area.width == 0 || content_area.height == 0 {
+            return (0, 0, 0);
+        }
+
+        let total_lines = Paragraph::new(lines.to_vec())
+            .wrap(Wrap { trim: false })
+            .line_count(content_area.width);
+        let viewport_height = content_area.height as usize;
+        let max_offset = total_lines.saturating_sub(viewport_height);
+
+        (total_lines, viewport_height, max_offset)
+    }
+
+    fn keymap_help_max_offset(&self) -> usize {
+        if self.terminal_width == 0 || self.terminal_height == 0 {
+            return 0;
+        }
+
+        let lines = self.keymap_help_lines();
+        let area = Rect::new(0, 0, self.terminal_width, self.terminal_height);
+        let content_area = if area.width > Self::EDITOR_SCROLLBAR_WIDTH {
+            let chunks = Layout::horizontal([
+                Constraint::Min(0),
+                Constraint::Length(Self::EDITOR_SCROLLBAR_WIDTH),
+            ])
+            .split(area);
+            chunks[0]
+        } else {
+            area
+        };
+        let content_inner = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .padding(Padding::new(1, 1, 1, 1))
+            .title("Keymaps")
+            .inner(content_area);
+
+        let (_, _, max_offset) = Self::keymap_scroll_metrics(&lines, content_inner);
+        max_offset
+    }
+
+    fn render_keymap_help_scrollbar(
+        &self,
+        frame: &mut ratatui::Frame<'_>,
+        area: Rect,
+        content_length: usize,
+        viewport_height: usize,
+        max_offset: usize,
+    ) {
+        if area.width == 0 || area.height == 0 || viewport_height == 0 {
+            return;
+        }
+
+        if content_length <= viewport_height {
+            return;
+        }
+
+        let position = if self.keymap_help_scroll_offset >= max_offset {
+            content_length.saturating_sub(1)
+        } else {
+            self.keymap_help_scroll_offset
+                .min(content_length.saturating_sub(1))
+        };
+
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_style(Style::default().fg(Color::DarkGray))
+            .thumb_style(Style::default().fg(Color::Yellow));
+        let mut state = ScrollbarState::new(content_length)
+            .position(position)
+            .viewport_content_length(viewport_height);
+
+        frame.render_stateful_widget(scrollbar, area, &mut state);
+    }
+
+    fn scroll_keymap_help_by(&mut self, delta: isize) {
+        let max_offset = self.keymap_help_max_offset() as isize;
+        let next_offset = (self.keymap_help_scroll_offset as isize + delta).clamp(0, max_offset);
+        self.keymap_help_scroll_offset = next_offset as usize;
+    }
+
+    fn scroll_keymap_help_page(&mut self, direction: isize) {
+        let page_step = self.terminal_height.saturating_sub(4).max(1) as isize;
+        self.scroll_keymap_help_by(direction * page_step);
     }
 
     fn render_request_preview(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
@@ -1195,11 +1531,7 @@ impl AppModel {
             .map(body_preview::build)
             .filter(|rendered| !rendered.lines.is_empty());
 
-        let mut lines = vec![Line::from(Span::styled(
-            "r: Send request | b: Edit body | Esc: Back | j/k: Scroll | gg: Top | G: Bottom | PgUp/PgDn: Page",
-            Style::default().fg(Color::DarkGray),
-        ))];
-        lines.push(Line::from(""));
+        let mut lines = vec![];
         lines.push(Line::from(vec![
             Span::styled(
                 format!("{:<6}", preview.method),
@@ -1570,20 +1902,6 @@ impl AppModel {
             height: 1,
         };
         frame.render_widget(mode_widget, mode_area);
-
-        if area.height < Self::EDITOR_FOOTER_MAX_HEIGHT {
-            return;
-        }
-
-        let help_widget =
-            Paragraph::new(Self::EDITOR_HELP_TEXT).style(Style::default().fg(Color::DarkGray));
-        let help_area = Rect {
-            x: area.x,
-            y: area.y.saturating_add(1),
-            width: area.width,
-            height: 1,
-        };
-        frame.render_widget(help_widget, help_area);
     }
 
     fn editor_mode_text(&self, can_scroll_up: bool, can_scroll_down: bool) -> String {
@@ -2443,12 +2761,12 @@ impl AppModel {
     }
 
     fn sync_variable_value_visibility(&mut self) -> anyhow::Result<()> {
-        let input_type = if self.variable_mode_value() == VariableMode::Hidden && !self.secrets_visible
-        {
-            FieldInputType::Password('*')
-        } else {
-            FieldInputType::Text
-        };
+        let input_type =
+            if self.variable_mode_value() == VariableMode::Hidden && !self.secrets_visible {
+                FieldInputType::Password('*')
+            } else {
+                FieldInputType::Text
+            };
 
         self.app.attr(
             &Id::VariableValueInput,
@@ -2520,6 +2838,37 @@ mod tests {
 
         let (total_lines, viewport_height, max_offset) =
             AppModel::request_preview_scroll_metrics(&lines, Rect::new(0, 0, 10, 2));
+
+        assert!(total_lines > lines.len());
+        assert_eq!(viewport_height, 2);
+        assert!(max_offset > 0);
+    }
+
+    #[test]
+    fn keymap_entries_include_expected_route_editor_shortcuts() {
+        let (title, entries) = AppModel::view_keymap_entries(ActiveView::RouteEditor);
+
+        assert_eq!(title, "Route Editor");
+        assert!(entries.iter().any(|entry| entry.contains("Ctrl+S")));
+        assert!(entries.iter().any(|entry| entry.contains("v: Global vars")));
+    }
+
+    #[test]
+    fn keymap_entries_include_keymap_help_fallback() {
+        let (title, entries) = AppModel::view_keymap_entries(ActiveView::KeymapHelp);
+
+        assert_eq!(title, "Keymaps");
+        assert!(entries.iter().any(|entry| entry.contains("Esc")));
+    }
+
+    #[test]
+    fn keymap_scroll_metrics_account_for_wrapping() {
+        let lines = vec![Line::from(
+            "a: Add variable | e: Edit variable | d: Delete variable | Ctrl+S: Save variable",
+        )];
+
+        let (total_lines, viewport_height, max_offset) =
+            AppModel::keymap_scroll_metrics(&lines, Rect::new(0, 0, 16, 2));
 
         assert!(total_lines > lines.len());
         assert_eq!(viewport_height, 2);

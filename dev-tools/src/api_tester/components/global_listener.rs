@@ -1,8 +1,8 @@
-use ratatui::{layout::Rect, Frame};
+use ratatui::{Frame, layout::Rect};
 use tuirealm::{
+    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
     command::{Cmd, CmdResult},
     event::{Key, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind},
-    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
 };
 
 use crate::api_tester::app::{ActiveView, InputMode, Msg};
@@ -54,6 +54,7 @@ impl GlobalListener {
 
         match key.code {
             Key::Char('q') => Some(Msg::AppClose),
+            Key::Char('?') => Some(Msg::ToggleKeymapHelp),
             Key::Char('v') if key.modifiers.contains(KeyModifiers::SHIFT) => {
                 Some(Msg::OpenScopedVariables)
             }
@@ -284,6 +285,27 @@ mod tests {
 
         assert_eq!(
             listener.on(key_event(Key::Char('s'), KeyModifiers::NONE)),
+            None
+        );
+    }
+
+    #[test]
+    fn question_mark_toggles_keymap_help_in_normal_mode() {
+        let mut listener = GlobalListener::new();
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('?'), KeyModifiers::SHIFT)),
+            Some(Msg::ToggleKeymapHelp)
+        );
+    }
+
+    #[test]
+    fn question_mark_does_not_toggle_keymap_help_in_insert_mode() {
+        let mut listener = GlobalListener::new();
+        listener.attr(Attribute::Custom("input_mode"), AttrValue::Flag(true));
+
+        assert_eq!(
+            listener.on(key_event(Key::Char('?'), KeyModifiers::SHIFT)),
             None
         );
     }
