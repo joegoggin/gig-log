@@ -1,11 +1,13 @@
 use ansi_to_tui::IntoText as _;
-use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::Frame;
 
 use super::log_store::{LogEntry, Service};
+
+const SERVICE_LABEL_ALIGN_WIDTH: usize = "DEV-TOOLS".len();
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ViewMetrics {
@@ -97,12 +99,15 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
 
 fn build_log_line(entry: &LogEntry) -> Line<'static> {
     let color = service_color(entry.service);
+    let label = entry.service.label();
+    let label_padding = SERVICE_LABEL_ALIGN_WIDTH.saturating_sub(label.len());
     let mut spans = vec![
         Span::styled(
-            format!(" [{}] ", entry.service.label()),
+            format!(" [{label}]"),
             Style::default().fg(color).add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" | ", Style::default().fg(Color::DarkGray)),
+        Span::raw(" ".repeat(label_padding)),
+        Span::styled("| ", Style::default().fg(Color::DarkGray)),
     ];
 
     if let Ok(text) = entry.line.as_bytes().into_text() {
@@ -112,6 +117,58 @@ fn build_log_line(entry: &LogEntry) -> Line<'static> {
     }
 
     Line::from(spans)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_log_line;
+    use crate::dev::log_store::{LogEntry, Service};
+
+    fn rendered_text(entry: LogEntry) -> String {
+        build_log_line(&entry)
+            .spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>()
+    }
+
+    #[test]
+    fn aligns_service_pipe_column_for_all_labels() {
+        let samples = [
+            LogEntry {
+                service: Service::Api,
+                line: "api log".to_string(),
+            },
+            LogEntry {
+                service: Service::Web,
+                line: "web log".to_string(),
+            },
+            LogEntry {
+                service: Service::Docs,
+                line: "docs log".to_string(),
+            },
+            LogEntry {
+                service: Service::System,
+                line: "system log".to_string(),
+            },
+            LogEntry {
+                service: Service::DevTools,
+                line: "dev-tools log".to_string(),
+            },
+        ];
+
+        let pipe_columns: Vec<usize> = samples
+            .into_iter()
+            .map(rendered_text)
+            .map(|line| line.find('|').expect("line should include pipe separator"))
+            .collect();
+
+        let expected_column = pipe_columns[0];
+        assert!(
+            pipe_columns.iter().all(|column| *column == expected_column),
+            "pipe columns should match: {pipe_columns:?}"
+        );
+    }
 }
 
 fn render_logs(

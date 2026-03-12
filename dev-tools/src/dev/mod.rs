@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use anyhow::Result;
+use tokio::net::TcpStream;
 use tokio::process::Command;
 use tokio::sync::{mpsc, watch};
 
@@ -20,7 +21,33 @@ use watcher::IntentBatch;
 const WATCH_PATHS: [&str; 4] = ["web", "api", "common", "dev-tools"];
 const DEBOUNCE_DURATION: Duration = Duration::from_millis(400);
 const WEB_BUILD_TIMEOUT: Duration = Duration::from_secs(60);
+const API_READY_TIMEOUT: Duration = Duration::from_secs(30);
+const API_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const ORCHESTRATOR_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(300);
+const API_READY_ADDR: &str = "127.0.0.1:8000";
+const DOCS_TARGET_DIR: &str = "target/docs";
+const DOCS_SERVE_DIR: &str = "target/docs/doc";
+const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
+const DOCS_BUILD_ENVS: [(&str, &str); 2] = [
+    ("CARGO_TARGET_DIR", DOCS_TARGET_DIR),
+    ("CARGO_HOME", DOCS_CARGO_HOME),
+];
+const DOCS_ARGS: [&str; 14] = [
+    "doc",
+    "-p",
+    "gig-log-api",
+    "-p",
+    "gig-log-common",
+    "-p",
+    "gig-log-dev-tools",
+    "-p",
+    "gig-log-frontend",
+    "--no-deps",
+    "--document-private-items",
+    "--color",
+    "always",
+    "--locked",
+];
 
 #[derive(Debug, Clone, Copy)]
 enum TrunkEvent {
@@ -78,6 +105,18 @@ async fn run_orchestrator(
     }
 
     let _miniserve = start_docs_prerequisites().await?;
+    if let Some(docs_tx) = log_senders
+        .iter()
+        .find(|(service, _)| *service == Service::Docs)
+        .map(|(_, tx)| tx.clone())
+    {
+        let _ = docs_tx
+            .send(LogEntry {
+                service: Service::Docs,
+                line: "Docs server running at http://localhost:7007 (port 7007)".to_string(),
+            })
+            .await;
+    }
 
     for service in [Service::Api, Service::Web] {
         let (proc, mut log_rx) = ServiceProcess::spawn(service)?;
@@ -226,18 +265,21 @@ async fn run_initial_docs_after_startup(
             )
             .await;
 
+            if let Err(error) = reset_docs_output_dir().await {
+                system_log(
+                    system_tx,
+                    format!("Skipping initial docs generation: {error}"),
+                )
+                .await;
+                return;
+            }
+
             let docs_ok = run_build_step(
                 Service::Docs,
                 "cargo",
-                &[
-                    "doc",
-                    "--workspace",
-                    "--no-deps",
-                    "--document-private-items",
-                    "--color",
-                    "always",
-                ],
+                &DOCS_ARGS,
                 None,
+                Some(&DOCS_BUILD_ENVS),
                 tui_tx,
                 log_senders,
             )
@@ -249,6 +291,7 @@ async fn run_initial_docs_after_startup(
                     "cargo",
                     &["run", "-p", "gig-log-dev-tools", "--", "docs-index"],
                     None,
+                    Some(&DOCS_BUILD_ENVS),
                     tui_tx,
                     log_senders,
                 )
@@ -275,6 +318,7 @@ async fn execute_batch(
     web_baseline: (u64, u64),
 ) {
     let mut docs_needed = false;
+    let mut docs_after_api_restart = false;
 
     if batch.common {
         if run_build_step(
@@ -282,49 +326,23 @@ async fn execute_batch(
             "cargo",
             &["build", "-p", "gig-log-common"],
             None,
-            tui_tx,
-            log_senders,
-        )
-        .await
-        {
-            if run_build_step(
-                Service::Web,
-                "cargo",
-                &["build", "-p", "gig-log-frontend"],
-                None,
-                tui_tx,
-                log_senders,
-            )
-            .await
-                && run_build_step(
-                    Service::Api,
-                    "cargo",
-                    &["build", "-p", "gig-log-api"],
-                    None,
-                    tui_tx,
-                    log_senders,
-                )
-                .await
-            {
-                restart_api(processes, tui_tx, system_tx, log_senders).await;
-                docs_needed = true;
-            }
-        }
-    }
-
-    if batch.api {
-        if run_build_step(
-            Service::Api,
-            "cargo",
-            &["build", "-p", "gig-log-api"],
             None,
             tui_tx,
             log_senders,
         )
         .await
         {
-            restart_api(processes, tui_tx, system_tx, log_senders).await;
+            if restart_api(processes, tui_tx, system_tx, log_senders).await {
+                docs_needed = true;
+                docs_after_api_restart = true;
+            }
+        }
+    }
+
+    if batch.api {
+        if restart_api(processes, tui_tx, system_tx, log_senders).await {
             docs_needed = true;
+            docs_after_api_restart = true;
         }
     }
 
@@ -350,6 +368,7 @@ async fn execute_batch(
             "cargo",
             &["build", "-p", "gig-log-dev-tools"],
             None,
+            None,
             tui_tx,
             log_senders,
         )
@@ -359,18 +378,34 @@ async fn execute_batch(
     }
 
     if docs_needed {
+        if docs_after_api_restart {
+            match wait_for_api_ready().await {
+                Ok(()) => {
+                    system_log(system_tx, "API is ready. Running docs generation...".to_string())
+                        .await;
+                }
+                Err(error) => {
+                    system_log(
+                        system_tx,
+                        format!("Skipping docs after API restart: {error}"),
+                    )
+                    .await;
+                    return;
+                }
+            }
+        }
+
+        if let Err(error) = reset_docs_output_dir().await {
+            system_log(system_tx, format!("Skipping docs generation: {error}")).await;
+            return;
+        }
+
         let _ = run_build_step(
             Service::Docs,
             "cargo",
-            &[
-                "doc",
-                "--workspace",
-                "--no-deps",
-                "--document-private-items",
-                "--color",
-                "always",
-            ],
+            &DOCS_ARGS,
             None,
+            Some(&DOCS_BUILD_ENVS),
             tui_tx,
             log_senders,
         )
@@ -381,6 +416,7 @@ async fn execute_batch(
             "cargo",
             &["run", "-p", "gig-log-dev-tools", "--", "docs-index"],
             None,
+            Some(&DOCS_BUILD_ENVS),
             tui_tx,
             log_senders,
         )
@@ -393,7 +429,7 @@ async fn restart_api(
     tui_tx: &mpsc::Sender<TuiEvent>,
     system_tx: &mpsc::Sender<LogEntry>,
     log_senders: &[(Service, mpsc::Sender<LogEntry>)],
-) {
+) -> bool {
     system_log(system_tx, "Restarting API process...".to_string()).await;
 
     if let Some(index) = processes
@@ -426,9 +462,12 @@ async fn restart_api(
                 }
                 let _ = tx.send(TuiEvent::ServiceExited(Service::Api)).await;
             });
+
+            true
         }
         Err(error) => {
             system_log(system_tx, format!("Failed to restart API process: {error}")).await;
+            false
         }
     }
 }
@@ -438,6 +477,7 @@ async fn run_build_step(
     cmd: &str,
     args: &[&str],
     working_dir: Option<&str>,
+    envs: Option<&[(&str, &str)]>,
     tui_tx: &mpsc::Sender<TuiEvent>,
     log_senders: &[(Service, mpsc::Sender<LogEntry>)],
 ) -> bool {
@@ -450,7 +490,7 @@ async fn run_build_step(
     };
 
     let _ = tui_tx.send(TuiEvent::ServiceStarted(service)).await;
-    let result = run_job(service, cmd, args, working_dir, log_tx).await;
+    let result = run_job(service, cmd, args, working_dir, envs, log_tx).await;
     let _ = tui_tx.send(TuiEvent::ServiceExited(service)).await;
 
     match result {
@@ -465,6 +505,25 @@ async fn run_build_step(
             false
         }
     }
+}
+
+async fn wait_for_api_ready() -> Result<()> {
+    let fut = async {
+        loop {
+            if TcpStream::connect(API_READY_ADDR).await.is_ok() {
+                break;
+            }
+            tokio::time::sleep(API_READY_POLL_INTERVAL).await;
+        }
+
+        Ok::<(), anyhow::Error>(())
+    };
+
+    tokio::time::timeout(API_READY_TIMEOUT, fut)
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out waiting for API to bind to {API_READY_ADDR}"))??;
+
+    Ok(())
 }
 
 async fn wait_for_web_build(
@@ -581,16 +640,24 @@ async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
         .status()
         .await;
 
-    tokio::fs::create_dir_all("target/doc").await?;
+    tokio::fs::create_dir_all(DOCS_SERVE_DIR).await?;
 
     let child = Command::new("miniserve")
-        .args(["--index", "index.html", "-p", "7007", "target/doc"])
+        .args(["--index", "index.html", "-p", "7007", DOCS_SERVE_DIR])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .kill_on_drop(true)
         .spawn()?;
 
     Ok(child)
+}
+
+async fn reset_docs_output_dir() -> Result<()> {
+    if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
+        tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;
+    }
+    tokio::fs::create_dir_all(DOCS_SERVE_DIR).await?;
+    Ok(())
 }
 
 #[cfg(test)]

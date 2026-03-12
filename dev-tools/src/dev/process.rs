@@ -105,6 +105,7 @@ pub async fn run_job(
     cmd: &str,
     args: &[&str],
     working_dir: Option<&str>,
+    envs: Option<&[(&str, &str)]>,
     tx: &mpsc::Sender<LogEntry>,
 ) -> Result<bool> {
     let mut command = Command::new(cmd);
@@ -112,6 +113,12 @@ pub async fn run_job(
 
     if let Some(dir) = working_dir {
         command.current_dir(dir);
+    }
+
+    if let Some(envs) = envs {
+        for (key, value) in envs {
+            command.env(key, value);
+        }
     }
 
     command.env("CARGO_TERM_COLOR", "always");
