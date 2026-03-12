@@ -51,6 +51,10 @@ impl IntentBatch {
 }
 
 pub fn classify_path(path: &Path) -> Option<Intent> {
+    if is_ignored_generated_path(path) {
+        return None;
+    }
+
     let first = path.components().next()?.as_os_str().to_string_lossy();
     match first.as_ref() {
         "web" => Some(Intent::Web),
@@ -59,6 +63,28 @@ pub fn classify_path(path: &Path) -> Option<Intent> {
         "dev-tools" => Some(Intent::DevTools),
         _ => None,
     }
+}
+
+fn is_ignored_generated_path(path: &Path) -> bool {
+    let mut components = path.components();
+    let first = match components.next() {
+        Some(component) => component.as_os_str().to_string_lossy(),
+        None => return false,
+    };
+
+    let second = components
+        .next()
+        .map(|component| component.as_os_str().to_string_lossy());
+
+    if first == "web" {
+        if let Some(second) = second {
+            if second == "dist" || second == ".trunk" {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 pub fn is_relevant_event(kind: &EventKind) -> bool {
@@ -188,6 +214,8 @@ mod tests {
             classify_path("dev-tools/src/main.rs".as_ref()),
             Some(Intent::DevTools)
         );
+        assert_eq!(classify_path("web/dist/index.html".as_ref()), None);
+        assert_eq!(classify_path("web/.trunk/state".as_ref()), None);
         assert_eq!(classify_path("README.md".as_ref()), None);
     }
 

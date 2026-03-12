@@ -525,12 +525,16 @@ mod tests {
         assert_eq!(lines.get(2).map(|line| line.as_str()), Some("Headers"));
         assert_eq!(lines.get(5).map(|line| line.as_str()), Some(""));
         assert_eq!(lines.get(6).map(|line| line.as_str()), Some("Body"));
-        assert!(lines
-            .iter()
-            .any(|line| line == "  content-type: application/json"));
-        assert!(lines
-            .iter()
-            .any(|line| line.contains("\"message\": \"not found\"")));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line == "  content-type: application/json")
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("\"message\": \"not found\""))
+        );
     }
 
     #[test]

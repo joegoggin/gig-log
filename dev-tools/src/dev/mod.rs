@@ -129,6 +129,15 @@ async fn run_orchestrator(
         None => return Ok(()),
     };
 
+    run_initial_docs_after_startup(
+        &tui_tx,
+        &system_log_tx,
+        &log_senders,
+        &mut trunk_event_rx,
+        &trunk_state,
+    )
+    .await;
+
     let mut watch_stream = watcher::start(&WATCH_PATHS)?;
 
     system_log(
@@ -189,6 +198,71 @@ async fn run_orchestrator(
     }
 
     Ok(())
+}
+
+async fn run_initial_docs_after_startup(
+    tui_tx: &mpsc::Sender<TuiEvent>,
+    system_tx: &mpsc::Sender<LogEntry>,
+    log_senders: &[(Service, mpsc::Sender<LogEntry>)],
+    trunk_events: &mut mpsc::UnboundedReceiver<TrunkEvent>,
+    trunk_state: &TrunkState,
+) {
+    system_log(
+        system_tx,
+        "Waiting for initial web build before first docs generation...".to_string(),
+    )
+    .await;
+
+    let baseline = (
+        trunk_state.success_count.load(Ordering::SeqCst),
+        trunk_state.fail_count.load(Ordering::SeqCst),
+    );
+
+    match wait_for_web_build(trunk_events, baseline).await {
+        Ok(()) => {
+            system_log(
+                system_tx,
+                "Initial web build completed. Generating docs...".to_string(),
+            )
+            .await;
+
+            let docs_ok = run_build_step(
+                Service::Docs,
+                "cargo",
+                &[
+                    "doc",
+                    "--workspace",
+                    "--no-deps",
+                    "--document-private-items",
+                    "--color",
+                    "always",
+                ],
+                None,
+                tui_tx,
+                log_senders,
+            )
+            .await;
+
+            if docs_ok {
+                let _ = run_build_step(
+                    Service::Docs,
+                    "cargo",
+                    &["run", "-p", "gig-log-dev-tools", "--", "docs-index"],
+                    None,
+                    tui_tx,
+                    log_senders,
+                )
+                .await;
+            }
+        }
+        Err(error) => {
+            system_log(
+                system_tx,
+                format!("Skipping initial docs generation: {error}"),
+            )
+            .await;
+        }
+    }
 }
 
 async fn execute_batch(
@@ -400,23 +474,26 @@ async fn wait_for_web_build(
     let (baseline_success, baseline_fail) = baseline;
     let mut success_count = baseline_success;
     let mut fail_count = baseline_fail;
+    let mut seen_started = false;
 
     let fut = async {
         while let Some(event) = rx.recv().await {
             match event {
+                TrunkEvent::BuildStarted => {
+                    seen_started = true;
+                }
                 TrunkEvent::BuildSucceeded => {
                     success_count += 1;
-                    if success_count > baseline_success {
+                    if seen_started && success_count > baseline_success {
                         return Ok(());
                     }
                 }
                 TrunkEvent::BuildFailed => {
                     fail_count += 1;
-                    if fail_count > baseline_fail {
+                    if seen_started && fail_count > baseline_fail {
                         anyhow::bail!("trunk reported build failure");
                     }
                 }
-                TrunkEvent::BuildStarted => {}
             }
         }
         anyhow::bail!("trunk event stream ended")
@@ -432,11 +509,15 @@ async fn wait_for_web_build(
 fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
     let lower = line.to_lowercase();
 
-    if lower.contains("building") {
+    if lower.contains("starting build") || lower.contains("building") {
         return Some(TrunkEvent::BuildStarted);
     }
 
-    if lower.contains("error") && lower.contains("build") {
+    if lower.contains('❌')
+        || lower.contains("build failed")
+        || lower.contains("failed build")
+        || (lower.contains("error") && lower.contains("build"))
+    {
         return Some(TrunkEvent::BuildFailed);
     }
 
@@ -444,7 +525,7 @@ fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
         return Some(TrunkEvent::BuildSucceeded);
     }
 
-    if lower.contains("success") && lower.contains("build") {
+    if lower.contains('✅') || lower.contains("success") {
         return Some(TrunkEvent::BuildSucceeded);
     }
 
@@ -514,14 +595,24 @@ async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
 
 #[cfg(test)]
 mod tests {
-    use super::{TrunkEvent, parse_trunk_event};
+    use super::{TrunkEvent, parse_trunk_event, wait_for_web_build};
+    use tokio::sync::mpsc;
 
     #[test]
     fn parses_trunk_success_line() {
-        let line = "Finished build in 123ms";
+        let line = "2026-03-12T07:47:41.435056Z  INFO ✅ success";
         assert!(matches!(
             parse_trunk_event(line),
             Some(TrunkEvent::BuildSucceeded)
+        ));
+    }
+
+    #[test]
+    fn parses_trunk_started_line() {
+        let line = "2026-03-12T07:47:40.494783Z  INFO 📦 starting build";
+        assert!(matches!(
+            parse_trunk_event(line),
+            Some(TrunkEvent::BuildStarted)
         ));
     }
 
@@ -532,5 +623,16 @@ mod tests {
             parse_trunk_event(line),
             Some(TrunkEvent::BuildFailed)
         ));
+    }
+
+    #[tokio::test]
+    async fn wait_ignores_success_before_start() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+
+        let _ = tx.send(TrunkEvent::BuildSucceeded);
+        let _ = tx.send(TrunkEvent::BuildStarted);
+        let _ = tx.send(TrunkEvent::BuildSucceeded);
+
+        assert!(wait_for_web_build(&mut rx, (0, 0)).await.is_ok());
     }
 }
