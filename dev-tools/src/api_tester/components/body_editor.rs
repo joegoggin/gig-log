@@ -37,10 +37,9 @@ pub fn open_external_editor(initial_content: Option<&str>) -> anyhow::Result<Opt
     // Read back the content
     let content = fs::read_to_string(&temp_path).context("failed to read edited content")?;
 
-    let trimmed = content.trim();
-    if trimmed.is_empty() {
+    if content.trim().is_empty() {
         Ok(None)
     } else {
-        Ok(Some(trimmed.to_string()))
+        Ok(Some(content))
     }
 }

@@ -1,7 +1,9 @@
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 
 use anyhow::Context;
+use tempfile::NamedTempFile;
 use tokio::process::Command;
 
 use crate::api_tester::{collection::Route, paths, variables::Variables};
@@ -43,7 +45,13 @@ impl CurlExecutor {
             })?;
         }
 
-        let args = Self::build_args(&self, &cookie_path);
+        let mut config_file = Self::build_curl_config(&self, &cookie_path)?;
+        config_file
+            .flush()
+            .context("failed to flush curl config file")?;
+        let config_path = config_file.path().to_string_lossy().to_string();
+
+        let args = vec!["--config".to_string(), config_path];
         let output = Command::new("curl")
             .args(&args)
             .output()
@@ -59,39 +67,46 @@ impl CurlExecutor {
         Self::parse_response(&stdout)
     }
 
-    fn build_args(&self, cookie_path: &Path) -> Vec<String> {
+    fn build_curl_config(&self, cookie_path: &Path) -> anyhow::Result<NamedTempFile> {
         let cookie = cookie_path.to_string_lossy().to_string();
-        let mut args = vec![
-            "-s".to_string(),
-            "-X".to_string(),
-            self.route.method.to_string(),
-        ];
+        let mut config = NamedTempFile::new().context("failed to create curl config file")?;
+
+        writeln!(config, "silent")?;
+        writeln!(config, "request = \"{}\"", self.route.method)?;
 
         for header in &self.route.headers {
-            args.push("-H".to_string());
-            args.push(self.value_for_request(header));
+            let value = Self::escape_curl_config_value(&self.value_for_request(header));
+            writeln!(config, "header = \"{value}\"")?;
         }
 
         if let Some(body) = &self.route.body {
             let body = self.value_for_request(body);
 
             if !body.is_empty() {
-                args.push("-d".to_string());
-                args.push(body);
+                let value = Self::escape_curl_config_value(&body);
+                writeln!(config, "data = \"{value}\"")?;
             }
         }
 
-        args.push("-b".to_string());
-        args.push(cookie.clone());
-        args.push("-c".to_string());
-        args.push(cookie);
-        args.push("-D".to_string());
-        args.push("-".to_string());
-        args.push("-w".to_string());
-        args.push("\n%{http_code}".to_string());
-        args.push(self.value_for_request(&self.route.url));
+        let cookie = Self::escape_curl_config_value(&cookie);
+        writeln!(config, "cookie = \"{cookie}\"")?;
+        writeln!(config, "cookie-jar = \"{cookie}\"")?;
+        writeln!(config, "dump-header = \"-\"")?;
+        writeln!(config, "write-out = \"\\n%{{http_code}}\"")?;
 
-        args
+        let url = Self::escape_curl_config_value(&self.value_for_request(&self.route.url));
+        writeln!(config, "url = \"{url}\"")?;
+
+        Ok(config)
+    }
+
+    fn escape_curl_config_value(value: &str) -> String {
+        value
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+            .replace('\t', "\\t")
     }
 
     fn value_for_request(&self, template: &str) -> String {
@@ -189,20 +204,28 @@ mod tests {
         );
 
         let executor = CurlExecutor::new(route_with_template(), variables);
-        let args = executor.build_args(Path::new("cookies.txt"));
+        let config = executor
+            .build_curl_config(Path::new("cookies.txt"))
+            .expect("config should build");
+        let config_text =
+            std::fs::read_to_string(config.path()).expect("config should be readable as text");
 
-        assert!(args.contains(&"Authorization: Bearer secret-token".to_string()));
-        assert!(args.contains(&"{\"token\":\"secret-token\"}".to_string()));
-        assert!(args.contains(&"https://example.com/login".to_string()));
+        assert!(config_text.contains("header = \"Authorization: Bearer secret-token\""));
+        assert!(config_text.contains("data = \"{\\\"token\\\":\\\"secret-token\\\"}\""));
+        assert!(config_text.contains("url = \"https://example.com/login\""));
     }
 
     #[test]
     fn prepared_execution_sends_values_as_is() {
         let executor = CurlExecutor::from_prepared(route_with_template());
-        let args = executor.build_args(Path::new("cookies.txt"));
+        let config = executor
+            .build_curl_config(Path::new("cookies.txt"))
+            .expect("config should build");
+        let config_text =
+            std::fs::read_to_string(config.path()).expect("config should be readable as text");
 
-        assert!(args.contains(&"Authorization: Bearer {{TOKEN}}".to_string()));
-        assert!(args.contains(&"{\"token\":\"{{TOKEN}}\"}".to_string()));
-        assert!(args.contains(&"https://example.com/{{PATH}}".to_string()));
+        assert!(config_text.contains("header = \"Authorization: Bearer {{TOKEN}}\""));
+        assert!(config_text.contains("data = \"{\\\"token\\\":\\\"{{TOKEN}}\\\"}\""));
+        assert!(config_text.contains("url = \"https://example.com/{{PATH}}\""));
     }
 }
