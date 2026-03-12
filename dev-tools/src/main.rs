@@ -1,7 +1,9 @@
+mod api_tester;
 mod cli;
 mod dev;
 mod docs;
 mod setup;
+mod utils;
 
 use clap::Parser;
 
@@ -33,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
             })
             .await?
         }
+        Command::ApiTester => api_tester::run().await?,
     }
 
     Ok(())

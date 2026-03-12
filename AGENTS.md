@@ -71,7 +71,10 @@ following:
     - DO NOT include multiple issues in one file
     - If file matching the pattern for an issue already exists DO NOT recreate a
       plan for that issue
-- DO NOT implement the plan
+    - These files should be stored in the `issues` directory
+- Include detailed code examples for each step
+- Include steps for manually testing the changes
+- DO NOT implement the plan 
 
 #### Updating Issues
 
@@ -86,6 +89,7 @@ When asked to reevaluate the plan or update issues you should do the following:
         - Variable name changes
 - Compare the updated `issue-*.md` to the existing GitHub issue to ensure they still
   match each other
+- DO NOT implement the plan
 
 
 ## Git

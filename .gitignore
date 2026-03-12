@@ -2,5 +2,7 @@ target
 dist
 .env
 *.env
-issue-*.md
-cookies.txt
+issues
+.api-tester/variables.toml
+.api-tester/cookies.txt
+.api-tester/route-list-state.toml
