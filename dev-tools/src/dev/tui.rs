@@ -133,7 +133,25 @@ fn handle_key_event(
             false
         }
         (KeyCode::Char('3'), _) => {
+            state.filter = Some(Service::Common);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('4'), _) => {
+            state.filter = Some(Service::DevTools);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('5'), _) => {
             state.filter = Some(Service::Docs);
+            state.scroll_offset = 0;
+            state.follow = true;
+            false
+        }
+        (KeyCode::Char('6'), _) => {
+            state.filter = Some(Service::System);
             state.scroll_offset = 0;
             state.follow = true;
             false
@@ -199,12 +217,18 @@ fn apply_tui_event(log_store: &mut LogStore, state: &mut AppState, event: TuiEve
         TuiEvent::ServiceStarted(service) => match service {
             Service::Api => state.services_running[0] = true,
             Service::Web => state.services_running[1] = true,
-            Service::Docs => state.services_running[2] = true,
+            Service::Common => state.services_running[2] = true,
+            Service::DevTools => state.services_running[3] = true,
+            Service::Docs => state.services_running[4] = true,
+            Service::System => state.services_running[5] = true,
         },
         TuiEvent::ServiceExited(service) => match service {
             Service::Api => state.services_running[0] = false,
             Service::Web => state.services_running[1] = false,
-            Service::Docs => state.services_running[2] = false,
+            Service::Common => state.services_running[2] = false,
+            Service::DevTools => state.services_running[3] = false,
+            Service::Docs => state.services_running[4] = false,
+            Service::System => state.services_running[5] = false,
         },
     }
 }

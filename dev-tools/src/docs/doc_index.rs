@@ -1,10 +1,7 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-
-const DOC_DIR: &str = "target/doc";
-const STATIC_DIR: &str = "target/doc/static.files";
 
 struct RustdocAssets {
     normalize_css: String,
@@ -19,9 +16,11 @@ struct RustdocAssets {
 }
 
 pub fn generate() -> Result<()> {
-    let assets = discover_assets(Path::new(STATIC_DIR))?;
+    let doc_dir = doc_dir();
+    let static_dir = static_dir(&doc_dir);
+    let assets = discover_assets(&static_dir)?;
     let html = render_html(&assets);
-    let output_path = Path::new(DOC_DIR).join("index.html");
+    let output_path = doc_dir.join("index.html");
 
     fs::write(&output_path, html)
         .with_context(|| format!("Failed to write {}", output_path.display()))?;
@@ -43,19 +42,19 @@ fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
     names.sort();
 
     Ok(RustdocAssets {
-        normalize_css: find_asset(&names, "normalize-", ".css")?,
-        rustdoc_css: find_asset(&names, "rustdoc-", ".css")?,
-        main_js: find_asset(&names, "main-", ".js")?,
-        search_js: find_asset(&names, "search-", ".js")?,
-        stringdex_js: find_asset(&names, "stringdex-", ".js")?,
-        storage_js: find_asset(&names, "storage-", ".js")?,
-        favicon_svg: find_asset(&names, "favicon-", ".svg")?,
-        favicon_png: find_asset(&names, "favicon-32x32-", ".png")?,
-        noscript_css: find_asset(&names, "noscript-", ".css")?,
+        normalize_css: find_asset(&names, "normalize-", ".css", static_dir)?,
+        rustdoc_css: find_asset(&names, "rustdoc-", ".css", static_dir)?,
+        main_js: find_asset(&names, "main-", ".js", static_dir)?,
+        search_js: find_asset(&names, "search-", ".js", static_dir)?,
+        stringdex_js: find_asset(&names, "stringdex-", ".js", static_dir)?,
+        storage_js: find_asset(&names, "storage-", ".js", static_dir)?,
+        favicon_svg: find_asset(&names, "favicon-", ".svg", static_dir)?,
+        favicon_png: find_asset(&names, "favicon-32x32-", ".png", static_dir)?,
+        noscript_css: find_asset(&names, "noscript-", ".css", static_dir)?,
     })
 }
 
-fn find_asset(names: &[String], prefix: &str, suffix: &str) -> Result<String> {
+fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -> Result<String> {
     names
         .iter()
         .find(|name| name.starts_with(prefix) && name.ends_with(suffix))
@@ -63,9 +62,20 @@ fn find_asset(names: &[String], prefix: &str, suffix: &str) -> Result<String> {
         .with_context(|| {
             format!(
                 "Missing rustdoc asset matching pattern {}*{} in {}",
-                prefix, suffix, STATIC_DIR
+                prefix,
+                suffix,
+                static_dir.display()
             )
         })
+}
+
+fn doc_dir() -> PathBuf {
+    let target = std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string());
+    PathBuf::from(target).join("doc")
+}
+
+fn static_dir(doc_dir: &Path) -> PathBuf {
+    doc_dir.join("static.files")
 }
 
 fn render_html(assets: &RustdocAssets) -> String {

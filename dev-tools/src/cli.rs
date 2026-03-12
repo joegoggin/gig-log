@@ -9,12 +9,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Start all services in TUI mode
-    Dev {
-        /// Comma-separated list of services to start (api,web,docs)
-        #[arg(long, value_delimiter = ',')]
-        services: Option<Vec<String>>,
-    },
+    /// Start the development orchestrator in TUI mode
+    Dev,
     /// Build and serve workspace documentation
     Docs,
     /// Generate workspace documentation index.html

@@ -1,11 +1,13 @@
 use ansi_to_tui::IntoText as _;
-use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::Frame;
 
 use super::log_store::{LogEntry, Service};
+
+const SERVICE_LABEL_ALIGN_WIDTH: usize = "DEV-TOOLS".len();
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ViewMetrics {
@@ -18,7 +20,7 @@ pub struct AppState {
     pub scroll_offset: usize,
     pub follow: bool,
     pub pending_g: bool,
-    pub services_running: [bool; 3], // [api, web, docs]
+    pub services_running: [bool; 6], // [api, web, common, dev-tools, docs, system]
 }
 
 impl AppState {
@@ -28,7 +30,7 @@ impl AppState {
             scroll_offset: 0,
             follow: true,
             pending_g: false,
-            services_running: [false; 3],
+            services_running: [false; 6],
         }
     }
 }
@@ -52,7 +54,10 @@ fn service_color(service: Service) -> Color {
     match service {
         Service::Api => Color::Blue,
         Service::Web => Color::Green,
+        Service::Common => Color::Cyan,
+        Service::DevTools => Color::Magenta,
         Service::Docs => Color::Yellow,
+        Service::System => Color::Red,
     }
 }
 
@@ -60,7 +65,10 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
     let services = [
         (Service::Api, state.services_running[0]),
         (Service::Web, state.services_running[1]),
-        (Service::Docs, state.services_running[2]),
+        (Service::Common, state.services_running[2]),
+        (Service::DevTools, state.services_running[3]),
+        (Service::Docs, state.services_running[4]),
+        (Service::System, state.services_running[5]),
     ];
 
     let mut spans = vec![Span::styled(
@@ -69,15 +77,12 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
     )];
 
     for (service, running) in services {
-        let color = if running {
-            service_color(service)
-        } else {
-            Color::DarkGray
-        };
-        spans.push(Span::styled(
-            format!(" [{}] ", service.label()),
-            Style::default().fg(color).add_modifier(Modifier::BOLD),
-        ));
+        let color = service_color(service);
+        let mut style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+        if !running {
+            style = style.add_modifier(Modifier::DIM);
+        }
+        spans.push(Span::styled(format!(" [{}] ", service.label()), style));
     }
 
     // Right-align quit hint
@@ -94,12 +99,15 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
 
 fn build_log_line(entry: &LogEntry) -> Line<'static> {
     let color = service_color(entry.service);
+    let label = entry.service.label();
+    let label_padding = SERVICE_LABEL_ALIGN_WIDTH.saturating_sub(label.len());
     let mut spans = vec![
         Span::styled(
-            format!(" [{}] ", entry.service.label()),
+            format!(" [{label}]"),
             Style::default().fg(color).add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" | ", Style::default().fg(Color::DarkGray)),
+        Span::raw(" ".repeat(label_padding)),
+        Span::styled("| ", Style::default().fg(Color::DarkGray)),
     ];
 
     if let Ok(text) = entry.line.as_bytes().into_text() {
@@ -109,6 +117,58 @@ fn build_log_line(entry: &LogEntry) -> Line<'static> {
     }
 
     Line::from(spans)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_log_line;
+    use crate::dev::log_store::{LogEntry, Service};
+
+    fn rendered_text(entry: LogEntry) -> String {
+        build_log_line(&entry)
+            .spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<String>()
+    }
+
+    #[test]
+    fn aligns_service_pipe_column_for_all_labels() {
+        let samples = [
+            LogEntry {
+                service: Service::Api,
+                line: "api log".to_string(),
+            },
+            LogEntry {
+                service: Service::Web,
+                line: "web log".to_string(),
+            },
+            LogEntry {
+                service: Service::Docs,
+                line: "docs log".to_string(),
+            },
+            LogEntry {
+                service: Service::System,
+                line: "system log".to_string(),
+            },
+            LogEntry {
+                service: Service::DevTools,
+                line: "dev-tools log".to_string(),
+            },
+        ];
+
+        let pipe_columns: Vec<usize> = samples
+            .into_iter()
+            .map(rendered_text)
+            .map(|line| line.find('|').expect("line should include pipe separator"))
+            .collect();
+
+        let expected_column = pipe_columns[0];
+        assert!(
+            pipe_columns.iter().all(|column| *column == expected_column),
+            "pipe columns should match: {pipe_columns:?}"
+        );
+    }
 }
 
 fn render_logs(
@@ -187,7 +247,10 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
         None => "all",
         Some(Service::Api) => "api",
         Some(Service::Web) => "web",
+        Some(Service::Common) => "common",
+        Some(Service::DevTools) => "dev-tools",
         Some(Service::Docs) => "docs",
+        Some(Service::System) => "system",
     };
 
     let line = Line::from(vec![
@@ -199,7 +262,7 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            "  |  c:clear  1:api  2:web  3:docs  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
+            "  |  c:clear  1:api  2:web  3:common  4:dev-tools  5:docs  6:system  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
             Style::default().fg(Color::DarkGray),
         ),
     ]);
