@@ -323,6 +323,7 @@ pub struct AppModel {
 }
 
 impl AppModel {
+    const MAX_NAVIGATION_HISTORY: usize = 100;
     const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
     const BODY_STATUS_HEIGHT: u16 = 3;
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
@@ -484,7 +485,15 @@ impl AppModel {
             }
             Msg::ResponseViewer(ResponseViewerMsg::RouteExecutionFailed(index, error)) => {
                 self.route_list.selected_route = Some(index);
-                self.response_viewer.response = Some(ResponseViewerResult::Error(error));
+                let scope_id = self
+                    .collection
+                    .routes
+                    .get(index)
+                    .map(|route| route.scope_id.as_str());
+                let redacted_error = self
+                    .variables
+                    .redact_hidden_values_with_scope(&error, scope_id);
+                self.response_viewer.response = Some(ResponseViewerResult::Error(redacted_error));
                 self.input_mode = InputMode::Normal;
                 self.mount_response_viewer()?;
                 self.set_active_view_with_history(ActiveView::ResponseViewer);
@@ -866,11 +875,11 @@ impl AppModel {
 
                     self.collection.save()?;
                     self.persist_route_list_state();
+                    self.input_mode = InputMode::Normal;
+                    self.set_active_view_with_history(ActiveView::RouteList);
                     self.route_editor.editing_route = None;
                     self.route_editor.draft = None;
-                    self.input_mode = InputMode::Normal;
                     self.route_editor.scroll_offset = 0;
-                    self.set_active_view_with_history(ActiveView::RouteList);
                     self.refresh_route_list()?;
                 }
             }
@@ -1651,6 +1660,12 @@ impl AppModel {
 
         self.navigation_history
             .push(self.capture_navigation_snapshot());
+
+        if self.navigation_history.len() > Self::MAX_NAVIGATION_HISTORY {
+            let overflow = self.navigation_history.len() - Self::MAX_NAVIGATION_HISTORY;
+            self.navigation_history.drain(0..overflow);
+        }
+
         self.navigation_index = self.navigation_history.len().saturating_sub(1);
     }
 
