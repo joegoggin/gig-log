@@ -66,7 +66,8 @@ pub enum ActiveView {
 pub enum AppMsg {
     Close,
     SwitchView(ActiveView),
-    Cancel,
+    NavigateBack,
+    NavigateForward,
     OpenBodyEditor,
     ToggleSecretVisibility,
     OpenScopedVariables,
@@ -290,6 +291,18 @@ impl Screen for KeymapHelpScreenState {
     fn apply(&mut self, _message: &Self::Message) {}
 }
 
+#[derive(Debug, Clone)]
+struct NavigationSnapshot {
+    active_view: ActiveView,
+    input_mode: InputMode,
+    route_list: RouteListScreenState,
+    route_editor: RouteEditorScreenState,
+    request_preview: RequestPreviewScreenState,
+    response_viewer: ResponseViewerScreenState,
+    variable_manager: VariableManagerScreenState,
+    focus: Option<Id>,
+}
+
 pub struct AppModel {
     pub app: Application<Id, Msg, NoUserEvent>,
     pub collection: Collection,
@@ -302,6 +315,8 @@ pub struct AppModel {
     response_viewer: ResponseViewerScreenState,
     variable_manager: VariableManagerScreenState,
     keymap_help: KeymapHelpScreenState,
+    navigation_history: Vec<NavigationSnapshot>,
+    navigation_index: usize,
     layout_mode: LayoutMode,
     terminal_width: u16,
     terminal_height: u16,
@@ -315,7 +330,7 @@ impl AppModel {
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
 
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
-        Ok(Self {
+        let mut model = Self {
             app,
             collection: Collection::load()?,
             input_mode: InputMode::Normal,
@@ -345,10 +360,15 @@ impl AppModel {
                 scroll_offset: 0,
                 previous_focus: None,
             },
+            navigation_history: vec![],
+            navigation_index: 0,
             layout_mode: LayoutMode::Wide,
             terminal_width: 120,
             terminal_height: 40,
-        })
+        };
+
+        model.push_current_snapshot_to_history();
+        Ok(model)
     }
 
     pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<AppEffect>> {
@@ -361,9 +381,7 @@ impl AppModel {
                     self.layout_mode = Self::layout_mode_for_width(width);
                     return Ok(None);
                 }
-                Msg::App(AppMsg::ToggleKeymapHelp)
-                | Msg::App(AppMsg::Cancel)
-                | Msg::App(AppMsg::EnterNormalMode) => {
+                Msg::App(AppMsg::ToggleKeymapHelp) => {
                     self.hide_keymap_help();
                     return Ok(None);
                 }
@@ -410,10 +428,14 @@ impl AppModel {
 
         match msg {
             Msg::App(AppMsg::Close) => return Ok(Some(AppEffect::Close)),
+            Msg::App(AppMsg::NavigateBack) => {
+                self.navigate_back_history()?;
+            }
+            Msg::App(AppMsg::NavigateForward) => {
+                self.navigate_forward_history()?;
+            }
             Msg::App(AppMsg::SwitchView(ActiveView::VariableManager)) => {
                 let open_scoped = self.active_view == ActiveView::RouteEditor;
-
-                self.active_view = ActiveView::VariableManager;
                 self.input_mode = InputMode::Normal;
                 self.variable_manager.editing_variable = None;
 
@@ -433,8 +455,9 @@ impl AppModel {
                 }
 
                 self.mount_variable_manager()?;
+                self.set_active_view_with_history(ActiveView::VariableManager);
             }
-            Msg::App(AppMsg::SwitchView(view)) => self.active_view = view,
+            Msg::App(AppMsg::SwitchView(view)) => self.set_active_view_with_history(view),
             Msg::RouteList(RouteListMsg::RunRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
                     return Ok(None);
@@ -450,25 +473,21 @@ impl AppModel {
                 self.request_preview.preview = self.build_request_preview_state(index);
                 self.input_mode = InputMode::Normal;
                 self.request_preview.scroll_offset = 0;
-                self.active_view = ActiveView::RequestPreview;
+                self.set_active_view_with_history(ActiveView::RequestPreview);
             }
             Msg::ResponseViewer(ResponseViewerMsg::RouteExecuted(index, response)) => {
                 self.route_list.selected_route = Some(index);
                 self.response_viewer.response = Some(ResponseViewerResult::Success(response));
-                self.request_preview.preview = None;
                 self.input_mode = InputMode::Normal;
-                self.request_preview.scroll_offset = 0;
-                self.active_view = ActiveView::ResponseViewer;
                 self.mount_response_viewer()?;
+                self.set_active_view_with_history(ActiveView::ResponseViewer);
             }
             Msg::ResponseViewer(ResponseViewerMsg::RouteExecutionFailed(index, error)) => {
                 self.route_list.selected_route = Some(index);
                 self.response_viewer.response = Some(ResponseViewerResult::Error(error));
-                self.request_preview.preview = None;
                 self.input_mode = InputMode::Normal;
-                self.request_preview.scroll_offset = 0;
-                self.active_view = ActiveView::ResponseViewer;
                 self.mount_response_viewer()?;
+                self.set_active_view_with_history(ActiveView::ResponseViewer);
             }
             Msg::RouteList(RouteListMsg::EditRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
@@ -487,7 +506,7 @@ impl AppModel {
                 self.input_mode = InputMode::Normal;
                 self.route_editor.scroll_offset = 0;
                 self.mount_editor(&route)?;
-                self.active_view = ActiveView::RouteEditor;
+                self.set_active_view_with_history(ActiveView::RouteEditor);
             }
             Msg::RouteList(RouteListMsg::NewRoute) => {
                 if self.active_view != ActiveView::RouteList {
@@ -509,7 +528,7 @@ impl AppModel {
                 self.input_mode = InputMode::Normal;
                 self.route_editor.scroll_offset = 0;
                 self.mount_editor(&route)?;
-                self.active_view = ActiveView::RouteEditor;
+                self.set_active_view_with_history(ActiveView::RouteEditor);
             }
             Msg::RouteList(RouteListMsg::DeleteRoute(index)) => {
                 if self.active_view != ActiveView::RouteList {
@@ -560,11 +579,11 @@ impl AppModel {
                     return Ok(None);
                 };
 
-                self.active_view = ActiveView::VariableManager;
                 self.input_mode = InputMode::Normal;
                 self.variable_manager.editing_variable = None;
                 self.variable_manager.context = VariableContext::Scoped { scope_id };
                 self.mount_variable_manager()?;
+                self.set_active_view_with_history(ActiveView::VariableManager);
             }
             Msg::App(AppMsg::ToggleSecretVisibility) => {
                 if self.active_view == ActiveView::VariableManager {
@@ -692,14 +711,15 @@ impl AppModel {
                 }
             }
             Msg::RouteEditor(RouteEditorMsg::FocusField(id)) => {
-                let focus_target = if id == Id::EditorNewGroup && !self.editor_show_new_group_selected() {
-                    match self.app.focus() {
-                        Some(Id::EditorMethod) => Id::EditorGroup,
-                        _ => Id::EditorMethod,
-                    }
-                } else {
-                    id
-                };
+                let focus_target =
+                    if id == Id::EditorNewGroup && !self.editor_show_new_group_selected() {
+                        match self.app.focus() {
+                            Some(Id::EditorMethod) => Id::EditorGroup,
+                            _ => Id::EditorMethod,
+                        }
+                    } else {
+                        id
+                    };
 
                 let _ = self.app.active(&focus_target);
                 if self.input_mode == InputMode::Insert
@@ -850,33 +870,8 @@ impl AppModel {
                     self.route_editor.draft = None;
                     self.input_mode = InputMode::Normal;
                     self.route_editor.scroll_offset = 0;
-                    self.active_view = ActiveView::RouteList;
+                    self.set_active_view_with_history(ActiveView::RouteList);
                     self.refresh_route_list()?;
-                }
-            }
-            Msg::App(AppMsg::Cancel) => {
-                if self.active_view == ActiveView::RouteEditor {
-                    self.route_editor.editing_route = None;
-                    self.route_editor.draft = None;
-                    self.input_mode = InputMode::Normal;
-                    self.route_editor.scroll_offset = 0;
-                    self.active_view = ActiveView::RouteList;
-                } else if self.active_view == ActiveView::RequestPreview {
-                    self.request_preview.preview = None;
-                    self.input_mode = InputMode::Normal;
-                    self.request_preview.scroll_offset = 0;
-                    self.active_view = ActiveView::RouteList;
-                } else if self.active_view == ActiveView::VariableManager {
-                    self.variable_manager.editing_variable = None;
-                    self.input_mode = InputMode::Normal;
-
-                    if self.is_scoped_variable_context() {
-                        self.active_view = ActiveView::RouteEditor;
-                        self.app.active(&Id::EditorName)?;
-                        self.sync_editor_input_mode()?;
-                    } else {
-                        self.active_view = ActiveView::RouteList;
-                    }
                 }
             }
             Msg::App(AppMsg::OpenBodyEditor) => {
@@ -1461,7 +1456,7 @@ impl AppModel {
             Self::keymap_help_heading("Global"),
             Line::from("q: Quit"),
             Line::from("?: Open/close keymap helper"),
-            Line::from("Esc: Return to previous page"),
+            Line::from("H/L: Back/forward in navigation history"),
             Line::from("j/k or Up/Down: Scroll helper"),
             Line::from("PgUp/PgDn or gg/G: Page/top/bottom"),
             Line::from(""),
@@ -1505,7 +1500,7 @@ impl AppModel {
                 vec![
                     "i: Enter insert mode",
                     "Ctrl+S: Save route",
-                    "Esc: Back to route list",
+                    "Esc: Return to normal mode (insert only)",
                     "Tab/Shift+Tab: Focus next/previous field",
                     "b: Edit request body",
                     "v: Global vars | V: Route-scoped vars",
@@ -1518,7 +1513,6 @@ impl AppModel {
                 vec![
                     "r: Execute request",
                     "b: Edit request body",
-                    "Esc: Back to route list",
                     "j/k or Up/Down/PgUp/PgDn: Scroll",
                     "gg/G: Jump top/bottom",
                 ],
@@ -1526,7 +1520,6 @@ impl AppModel {
             ActiveView::ResponseViewer => (
                 "Response Viewer",
                 vec![
-                    "Esc: Back to route list",
                     "j/k or Up/Down: Scroll",
                     "PgUp/PgDn: Page scroll",
                     "gg/G or Home/End: Jump top/bottom",
@@ -1538,15 +1531,210 @@ impl AppModel {
                     "a: Add variable | e: Edit variable | d: Delete variable",
                     "i: Enter insert mode",
                     "Ctrl+S: Save variable",
-                    "Esc: Back (or return to normal mode)",
+                    "Esc: Return to normal mode (insert only)",
                     "Tab/Shift+Tab: Focus next/previous field",
                     "s: Toggle hidden values",
                     "j/k or Up/Down: Move selection",
                     "gg/G or Home/End: Jump top/bottom",
                 ],
             ),
-            ActiveView::KeymapHelp => ("Keymaps", vec!["Press Esc or ? to return."]),
+            ActiveView::KeymapHelp => ("Keymaps", vec!["Press ? to return."]),
         }
+    }
+
+    fn is_history_view(view: ActiveView) -> bool {
+        !matches!(view, ActiveView::KeymapHelp)
+    }
+
+    fn sync_route_editor_draft_from_inputs(&mut self) {
+        if self.active_view != ActiveView::RouteEditor {
+            return;
+        }
+
+        if self.route_editor.draft.is_none() {
+            return;
+        }
+
+        let name = self.editor_input_value(&Id::EditorName);
+        let group = if let Ok(State::One(StateValue::Usize(group_idx))) =
+            self.app.state(&Id::EditorGroup)
+        {
+            let group_names = self.collection.group_names();
+            if group_idx >= group_names.len() {
+                let new_group_name = self.editor_input_value(&Id::EditorNewGroup);
+                if new_group_name.trim().is_empty() {
+                    DEFAULT_ROUTE_GROUP.to_string()
+                } else {
+                    new_group_name
+                }
+            } else {
+                group_names[group_idx].clone()
+            }
+        } else {
+            DEFAULT_ROUTE_GROUP.to_string()
+        };
+
+        let method_index =
+            if let Ok(State::One(StateValue::Usize(i))) = self.app.state(&Id::EditorMethod) {
+                i
+            } else {
+                0
+            };
+        let method = match method_index {
+            0 => HttpMethod::Get,
+            1 => HttpMethod::Post,
+            2 => HttpMethod::Put,
+            3 => HttpMethod::Patch,
+            4 => HttpMethod::Delete,
+            _ => HttpMethod::Get,
+        };
+
+        let url = self.editor_input_value(&Id::EditorUrl);
+        let headers = self
+            .editor_input_value(&Id::EditorHeaders)
+            .split(',')
+            .map(|h| h.trim().to_string())
+            .filter(|h| !h.is_empty())
+            .collect();
+
+        if let Some(draft) = self.route_editor.draft.as_mut() {
+            draft.name = name;
+            draft.group = group;
+            draft.method = method;
+            draft.url = url;
+            draft.headers = headers;
+        }
+    }
+
+    fn sync_active_view_state_from_components(&mut self) {
+        if self.active_view == ActiveView::RouteEditor {
+            self.sync_route_editor_draft_from_inputs();
+        }
+    }
+
+    fn capture_navigation_snapshot(&self) -> NavigationSnapshot {
+        NavigationSnapshot {
+            active_view: self.active_view,
+            input_mode: self.input_mode,
+            route_list: self.route_list.clone(),
+            route_editor: self.route_editor.clone(),
+            request_preview: self.request_preview.clone(),
+            response_viewer: self.response_viewer.clone(),
+            variable_manager: self.variable_manager.clone(),
+            focus: self
+                .app
+                .focus()
+                .cloned()
+                .filter(|id| *id != Id::GlobalListener),
+        }
+    }
+
+    fn replace_current_history_entry(&mut self) {
+        if !Self::is_history_view(self.active_view) || self.navigation_history.is_empty() {
+            return;
+        }
+
+        self.sync_active_view_state_from_components();
+        self.navigation_history[self.navigation_index] = self.capture_navigation_snapshot();
+    }
+
+    fn push_current_snapshot_to_history(&mut self) {
+        if !Self::is_history_view(self.active_view) {
+            return;
+        }
+
+        self.sync_active_view_state_from_components();
+
+        if self.navigation_index + 1 < self.navigation_history.len() {
+            self.navigation_history.truncate(self.navigation_index + 1);
+        }
+
+        self.navigation_history
+            .push(self.capture_navigation_snapshot());
+        self.navigation_index = self.navigation_history.len().saturating_sub(1);
+    }
+
+    fn set_active_view_with_history(&mut self, view: ActiveView) {
+        if view == self.active_view {
+            return;
+        }
+
+        self.replace_current_history_entry();
+        self.active_view = view;
+        self.push_current_snapshot_to_history();
+    }
+
+    fn restore_navigation_snapshot(&mut self, snapshot: NavigationSnapshot) -> anyhow::Result<()> {
+        let restored_focus = snapshot.focus.clone();
+        let restored_editor_scroll = snapshot.route_editor.scroll_offset;
+        let restored_variable_editing = snapshot.variable_manager.editing_variable.clone();
+
+        self.active_view = snapshot.active_view;
+        self.input_mode = snapshot.input_mode;
+        self.route_list = snapshot.route_list;
+        self.route_editor = snapshot.route_editor;
+        self.request_preview = snapshot.request_preview;
+        self.response_viewer = snapshot.response_viewer;
+        self.variable_manager = snapshot.variable_manager;
+
+        match self.active_view {
+            ActiveView::RouteList => {
+                self.refresh_route_list()?;
+                self.app.active(&Id::RouteList)?;
+            }
+            ActiveView::RouteEditor => {
+                if let Some(route) = self.route_editor.draft.clone() {
+                    self.mount_editor(&route)?;
+                }
+                self.route_editor.scroll_offset = restored_editor_scroll;
+                self.sync_editor_input_mode()?;
+            }
+            ActiveView::RequestPreview => {}
+            ActiveView::ResponseViewer => {
+                self.mount_response_viewer()?;
+            }
+            ActiveView::VariableManager => {
+                self.mount_variable_manager()?;
+                if let Some(key) = restored_variable_editing {
+                    self.load_variable_into_inputs(&key)?;
+                    self.variable_manager.editing_variable = Some(key);
+                }
+                self.sync_variable_input_mode()?;
+            }
+            ActiveView::KeymapHelp => {}
+        }
+
+        if let Some(focus) = restored_focus
+            && self.app.mounted(&focus)
+        {
+            let _ = self.app.active(&focus);
+        }
+
+        Ok(())
+    }
+
+    fn navigate_back_history(&mut self) -> anyhow::Result<()> {
+        if self.navigation_history.is_empty() || self.navigation_index == 0 {
+            return Ok(());
+        }
+
+        self.replace_current_history_entry();
+        self.navigation_index -= 1;
+        let snapshot = self.navigation_history[self.navigation_index].clone();
+        self.restore_navigation_snapshot(snapshot)
+    }
+
+    fn navigate_forward_history(&mut self) -> anyhow::Result<()> {
+        if self.navigation_history.is_empty()
+            || self.navigation_index + 1 >= self.navigation_history.len()
+        {
+            return Ok(());
+        }
+
+        self.replace_current_history_entry();
+        self.navigation_index += 1;
+        let snapshot = self.navigation_history[self.navigation_index].clone();
+        self.restore_navigation_snapshot(snapshot)
     }
 
     fn keymap_help_heading(text: &'static str) -> Line<'static> {
@@ -3038,7 +3226,7 @@ mod tests {
         let (title, entries) = AppModel::view_keymap_entries(ActiveView::KeymapHelp);
 
         assert_eq!(title, "Keymaps");
-        assert!(entries.iter().any(|entry| entry.contains("Esc")));
+        assert!(entries.iter().any(|entry| entry.contains("?")));
     }
 
     #[test]

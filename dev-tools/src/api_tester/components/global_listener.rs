@@ -48,6 +48,14 @@ impl GlobalListener {
         match key.code {
             Key::Char('q') => Some(Msg::App(AppMsg::Close)),
             Key::Char('?') => Some(Msg::App(AppMsg::ToggleKeymapHelp)),
+            Key::Char('H') => Some(Msg::App(AppMsg::NavigateBack)),
+            Key::Char('L') => Some(Msg::App(AppMsg::NavigateForward)),
+            Key::Char('h') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                Some(Msg::App(AppMsg::NavigateBack))
+            }
+            Key::Char('l') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                Some(Msg::App(AppMsg::NavigateForward))
+            }
             Key::Char('v') if key.modifiers.contains(KeyModifiers::SHIFT) => {
                 Some(Msg::App(AppMsg::OpenScopedVariables))
             }
@@ -56,7 +64,6 @@ impl GlobalListener {
             }
             Key::Char('v') => Some(Msg::App(AppMsg::SwitchView(ActiveView::VariableManager))),
             Key::Char('i') => Some(Msg::App(AppMsg::EnterInsertMode)),
-            Key::Esc => Some(Msg::App(AppMsg::Cancel)),
             Key::Char('s') if key.modifiers == KeyModifiers::CONTROL => {
                 Some(Msg::RouteEditor(RouteEditorMsg::Save))
             }
@@ -167,5 +174,44 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_h_to_navigate_back() {
+        let mut listener = GlobalListener::new();
+
+        let msg = listener.map_normal_key(KeyEvent::new(Key::Char('H'), KeyModifiers::SHIFT));
+
+        assert_eq!(msg, Some(Msg::App(AppMsg::NavigateBack)));
+    }
+
+    #[test]
+    fn maps_l_to_navigate_forward() {
+        let mut listener = GlobalListener::new();
+
+        let msg = listener.map_normal_key(KeyEvent::new(Key::Char('L'), KeyModifiers::SHIFT));
+
+        assert_eq!(msg, Some(Msg::App(AppMsg::NavigateForward)));
+    }
+
+    #[test]
+    fn esc_does_not_navigate_in_normal_mode() {
+        let mut listener = GlobalListener::new();
+
+        let msg = listener.map_normal_key(KeyEvent::new(Key::Esc, KeyModifiers::NONE));
+
+        assert_eq!(msg, None);
+    }
+
+    #[test]
+    fn esc_exits_insert_mode() {
+        let msg = GlobalListener::map_insert_key(KeyEvent::new(Key::Esc, KeyModifiers::NONE));
+
+        assert_eq!(msg, Some(Msg::App(AppMsg::EnterNormalMode)));
     }
 }
