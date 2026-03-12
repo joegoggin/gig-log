@@ -5,6 +5,26 @@ use tokio::process::Command;
 
 mod doc_index;
 
+const DOCS_TARGET_DIR: &str = "target/docs";
+const DOCS_SERVE_DIR: &str = "target/docs/doc";
+const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
+const DOCS_ARGS: [&str; 14] = [
+    "doc",
+    "-p",
+    "gig-log-api",
+    "-p",
+    "gig-log-common",
+    "-p",
+    "gig-log-dev-tools",
+    "-p",
+    "gig-log-frontend",
+    "--no-deps",
+    "--document-private-items",
+    "--color",
+    "always",
+    "--locked",
+];
+
 pub async fn run() -> Result<()> {
     check_requirements().await?;
 
@@ -14,20 +34,14 @@ pub async fn run() -> Result<()> {
         .status()
         .await;
 
-    // Ensure target/doc exists
-    tokio::fs::create_dir_all("target/doc").await?;
+    reset_docs_output_dir().await?;
 
     // Initial cargo doc build
     println!("Building workspace documentation...");
     let status = Command::new("cargo")
-        .args([
-            "doc",
-            "--workspace",
-            "--no-deps",
-            "--document-private-items",
-            "--color",
-            "always",
-        ])
+        .args(DOCS_ARGS)
+        .env("CARGO_TARGET_DIR", DOCS_TARGET_DIR)
+        .env("CARGO_HOME", DOCS_CARGO_HOME)
         .status()
         .await
         .context("Failed to run cargo doc")?;
@@ -41,21 +55,21 @@ pub async fn run() -> Result<()> {
 
     // Start miniserve in background
     let mut miniserve = Command::new("miniserve")
-        .args(["--index", "index.html", "-p", "7007", "target/doc"])
+        .args(["--index", "index.html", "-p", "7007", DOCS_SERVE_DIR])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .kill_on_drop(true)
         .spawn()
         .context("Failed to start miniserve")?;
 
-    println!("Docs available at http://localhost:7007");
+    println!("Docs server running at http://localhost:7007 (port 7007)");
 
     // Run cargo watch to rebuild docs on changes
     let mut watch = Command::new("cargo")
         .args([
             "watch",
             "-s",
-            "cargo doc --workspace --no-deps --document-private-items --color always && cargo run -p gig-log-dev-tools -- docs-index",
+            "rm -rf target/docs/doc && mkdir -p target/docs/doc && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home cargo doc -p gig-log-api -p gig-log-common -p gig-log-dev-tools -p gig-log-frontend --no-deps --document-private-items --color always --locked && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home cargo run -p gig-log-dev-tools -- docs-index",
         ])
         .kill_on_drop(true)
         .spawn()
@@ -77,6 +91,14 @@ pub async fn run() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+async fn reset_docs_output_dir() -> Result<()> {
+    if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
+        tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;
+    }
+    tokio::fs::create_dir_all(DOCS_SERVE_DIR).await?;
     Ok(())
 }
 
