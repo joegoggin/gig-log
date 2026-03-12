@@ -2,8 +2,8 @@
 name = "Auth"
 
 [[groups.routes]]
-name = "Sign Up"
 scope_id = "route_auth_signup_1"
+name = "Sign Up"
 method = "POST"
 url = "http://localhost:8000/auth/sign-up"
 headers = ["Content-Type: application/json"]
@@ -17,8 +17,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Confirm Email"
 scope_id = "route_auth_confirm_email_1"
+name = "Confirm Email"
 method = "POST"
 url = "http://localhost:8000/auth/confirm-email"
 headers = ["Content-Type: application/json"]
@@ -28,8 +28,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Log In"
 scope_id = "route_auth_login_1"
+name = "Log In"
 method = "POST"
 url = "http://localhost:8000/auth/log-in"
 headers = ["Content-Type: application/json"]
@@ -40,29 +40,29 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Log Out"
 scope_id = "route_auth_logout_1"
+name = "Log Out"
 method = "POST"
 url = "http://localhost:8000/auth/log-out"
 headers = []
 
 [[groups.routes]]
-name = "Refresh"
 scope_id = "route_auth_refresh_1"
+name = "Refresh"
 method = "POST"
 url = "http://localhost:8000/auth/refresh"
 headers = []
 
 [[groups.routes]]
-name = "Me"
 scope_id = "route_auth_me_1"
+name = "Me"
 method = "GET"
 url = "http://localhost:8000/auth/me"
 headers = []
 
 [[groups.routes]]
-name = "Forgot Password"
 scope_id = "route_auth_forgot_password_1"
+name = "Forgot Password"
 method = "POST"
 url = "http://localhost:8000/auth/forgot-password"
 headers = ["Content-Type: application/json"]
@@ -72,8 +72,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Verify Forgot Password"
 scope_id = "route_auth_verify_forgot_password_1"
+name = "Verify Forgot Password"
 method = "POST"
 url = "http://localhost:8000/auth/verify-forgot-password"
 headers = ["Content-Type: application/json"]
@@ -83,8 +83,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Set Password"
 scope_id = "route_auth_set_password_1"
+name = "Set Password"
 method = "POST"
 url = "http://localhost:8000/auth/set-password"
 headers = ["Content-Type: application/json"]
@@ -96,15 +96,15 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Request Change Password"
 scope_id = "route_auth_request_change_password_1"
+name = "Request Change Password"
 method = "POST"
 url = "http://localhost:8000/auth/request-change-password"
 headers = []
 
 [[groups.routes]]
-name = "Change Password"
 scope_id = "route_auth_change_password_1"
+name = "Change Password"
 method = "POST"
 url = "http://localhost:8000/auth/change-password"
 headers = ["Content-Type: application/json"]
@@ -117,8 +117,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Request Email Change"
 scope_id = "route_auth_request_email_change_1"
+name = "Request Email Change"
 method = "POST"
 url = "http://localhost:8000/auth/request-email-change"
 headers = ["Content-Type: application/json"]
@@ -128,8 +128,8 @@ body = """
 }"""
 
 [[groups.routes]]
-name = "Confirm Email Change"
 scope_id = "route_auth_confirm_email_change_1"
+name = "Confirm Email Change"
 method = "POST"
 url = "http://localhost:8000/auth/confirm-email-change"
 headers = ["Content-Type: application/json"]
@@ -137,3 +137,13 @@ body = """
 {
     "code": "{{EMAIL_CHANGE_CODE}}"
 }"""
+
+[[groups]]
+name = "Health"
+
+[[groups.routes]]
+scope_id = "route_d548d306"
+name = "Health Check"
+method = "GET"
+url = "http://localhost:8000/health"
+headers = []

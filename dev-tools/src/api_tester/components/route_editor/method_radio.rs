@@ -57,7 +57,7 @@ impl Component<Msg, NoUserEvent> for EditorMethodRadio {
     fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
         let bindings = RadioBindings::tab_cycle(
             Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorUrl)),
-            Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorGroup)),
+            Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorNewGroup)),
         );
 
         self.field.on_event(ev, &bindings, |index| {

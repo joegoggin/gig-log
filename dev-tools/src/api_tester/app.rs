@@ -110,6 +110,13 @@ pub enum RequestPreviewMsg {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ResponseViewerMsg {
     RouteExecuted(usize, CurlResponse),
+    RouteExecutionFailed(usize, String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ResponseViewerResult {
+    Success(CurlResponse),
+    Error(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -239,15 +246,21 @@ impl Screen for RequestPreviewScreenState {
 
 #[derive(Debug, Clone)]
 struct ResponseViewerScreenState {
-    response: Option<CurlResponse>,
+    response: Option<ResponseViewerResult>,
 }
 
 impl Screen for ResponseViewerScreenState {
     type Message = ResponseViewerMsg;
 
     fn apply(&mut self, message: &Self::Message) {
-        let ResponseViewerMsg::RouteExecuted(_, response) = message;
-        self.response = Some(response.clone());
+        match message {
+            ResponseViewerMsg::RouteExecuted(_, response) => {
+                self.response = Some(ResponseViewerResult::Success(response.clone()));
+            }
+            ResponseViewerMsg::RouteExecutionFailed(_, error) => {
+                self.response = Some(ResponseViewerResult::Error(error.clone()));
+            }
+        }
     }
 }
 
@@ -441,7 +454,16 @@ impl AppModel {
             }
             Msg::ResponseViewer(ResponseViewerMsg::RouteExecuted(index, response)) => {
                 self.route_list.selected_route = Some(index);
-                self.response_viewer.response = Some(response);
+                self.response_viewer.response = Some(ResponseViewerResult::Success(response));
+                self.request_preview.preview = None;
+                self.input_mode = InputMode::Normal;
+                self.request_preview.scroll_offset = 0;
+                self.active_view = ActiveView::ResponseViewer;
+                self.mount_response_viewer()?;
+            }
+            Msg::ResponseViewer(ResponseViewerMsg::RouteExecutionFailed(index, error)) => {
+                self.route_list.selected_route = Some(index);
+                self.response_viewer.response = Some(ResponseViewerResult::Error(error));
                 self.request_preview.preview = None;
                 self.input_mode = InputMode::Normal;
                 self.request_preview.scroll_offset = 0;
@@ -670,9 +692,18 @@ impl AppModel {
                 }
             }
             Msg::RouteEditor(RouteEditorMsg::FocusField(id)) => {
-                let _ = self.app.active(&id);
+                let focus_target = if id == Id::EditorNewGroup && !self.editor_show_new_group_selected() {
+                    match self.app.focus() {
+                        Some(Id::EditorMethod) => Id::EditorGroup,
+                        _ => Id::EditorMethod,
+                    }
+                } else {
+                    id
+                };
+
+                let _ = self.app.active(&focus_target);
                 if self.input_mode == InputMode::Insert
-                    && let Some(section) = Self::editor_section_for_focus(&id)
+                    && let Some(section) = Self::editor_section_for_focus(&focus_target)
                 {
                     self.ensure_editor_section_visible(section);
                 }
@@ -1272,9 +1303,14 @@ impl AppModel {
         if let Some(response) = &self.response_viewer.response {
             let _ = self.app.umount(&Id::ResponseDetails);
 
+            let details_view = match response {
+                ResponseViewerResult::Success(response) => ResponseDetailsView::new(response),
+                ResponseViewerResult::Error(error) => ResponseDetailsView::new_error(error),
+            };
+
             self.app.mount(
                 Id::ResponseDetails,
-                Box::new(ResponseDetailsView::new(response)),
+                Box::new(details_view),
                 SubUtils::key_subs([
                     Key::Char('j').into(),
                     Key::Char('k').into(),

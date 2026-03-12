@@ -27,21 +27,43 @@ struct StyledChunk {
 
 pub struct ResponseDetailsView {
     component: List,
-    response: CurlResponse,
+    response: ResponseContent,
     wrap_width: usize,
     line_count: usize,
     pending_g: bool,
 }
 
+#[derive(Clone)]
+enum ResponseContent {
+    Success(CurlResponse),
+    Error(String),
+}
+
 impl ResponseDetailsView {
     pub fn new(response: &CurlResponse) -> Self {
-        let rows = Self::build_rows(response, usize::MAX);
+        let response = ResponseContent::Success(response.clone());
+        let rows = Self::build_rows(&response, usize::MAX);
         let line_count = rows.len();
         let component = Self::build_component(rows, 0);
 
         Self {
             component,
-            response: response.clone(),
+            response,
+            wrap_width: usize::MAX,
+            line_count,
+            pending_g: false,
+        }
+    }
+
+    pub fn new_error(error: impl Into<String>) -> Self {
+        let response = ResponseContent::Error(error.into());
+        let rows = Self::build_rows(&response, usize::MAX);
+        let line_count = rows.len();
+        let component = Self::build_component(rows, 0);
+
+        Self {
+            component,
+            response,
             wrap_width: usize::MAX,
             line_count,
             pending_g: false,
@@ -143,6 +165,27 @@ impl ResponseDetailsView {
         rows
     }
 
+    fn build_error_styled_rows(error: &str) -> Vec<Vec<StyledChunk>> {
+        let mut rows = vec![vec![Self::styled_chunk(
+            "Execution Error",
+            Some(Color::Red),
+        )]];
+        rows.push(vec![Self::styled_chunk(String::new(), None)]);
+
+        if error.is_empty() {
+            rows.push(vec![Self::styled_chunk("(empty)", Some(Color::DarkGray))]);
+            return rows;
+        }
+
+        rows.extend(
+            error
+                .lines()
+                .map(|line| vec![Self::styled_chunk(line.to_string(), Some(Color::Red))]),
+        );
+
+        rows
+    }
+
     fn wrap_char_boundary(text: &str, width: usize) -> usize {
         if width == 0 {
             return 0;
@@ -220,9 +263,14 @@ impl ResponseDetailsView {
             .collect()
     }
 
-    fn build_rows(response: &CurlResponse, wrap_width: usize) -> Vec<Vec<TextSpan>> {
+    fn build_rows(response: &ResponseContent, wrap_width: usize) -> Vec<Vec<TextSpan>> {
         let wrap_width = wrap_width.max(1);
-        Self::wrap_styled_rows(Self::build_styled_rows(response), wrap_width)
+        let styled_rows = match response {
+            ResponseContent::Success(response) => Self::build_styled_rows(response),
+            ResponseContent::Error(error) => Self::build_error_styled_rows(error),
+        };
+
+        Self::wrap_styled_rows(styled_rows, wrap_width)
             .into_iter()
             .map(|row| {
                 row.into_iter()
@@ -477,16 +525,12 @@ mod tests {
         assert_eq!(lines.get(2).map(|line| line.as_str()), Some("Headers"));
         assert_eq!(lines.get(5).map(|line| line.as_str()), Some(""));
         assert_eq!(lines.get(6).map(|line| line.as_str()), Some("Body"));
-        assert!(
-            lines
-                .iter()
-                .any(|line| line == "  content-type: application/json")
-        );
-        assert!(
-            lines
-                .iter()
-                .any(|line| line.contains("\"message\": \"not found\""))
-        );
+        assert!(lines
+            .iter()
+            .any(|line| line == "  content-type: application/json"));
+        assert!(lines
+            .iter()
+            .any(|line| line.contains("\"message\": \"not found\"")));
     }
 
     #[test]

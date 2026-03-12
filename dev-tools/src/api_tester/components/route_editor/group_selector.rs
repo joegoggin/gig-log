@@ -48,7 +48,7 @@ impl MockComponent for EditorGroupSelector {
 impl Component<Msg, NoUserEvent> for EditorGroupSelector {
     fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
         let bindings = RadioBindings::tab_cycle(
-            Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorMethod)),
+            Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorNewGroup)),
             Msg::RouteEditor(RouteEditorMsg::FocusField(Id::EditorName)),
         );
 

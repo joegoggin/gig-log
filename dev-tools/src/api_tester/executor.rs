@@ -59,8 +59,17 @@ impl CurlExecutor {
             .context("failed to execute curl command")?;
 
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("curl failed: {}", stderr.trim());
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let status = match output.status.code() {
+                Some(code) => format!("exit code {code}"),
+                None => "terminated by signal".to_string(),
+            };
+
+            if stderr.is_empty() {
+                anyhow::bail!("curl failed ({status}) with no stderr output");
+            }
+
+            anyhow::bail!("curl failed ({status}): {stderr}");
         }
 
         let stdout = String::from_utf8(output.stdout).context("curl output was not valid UTF-8")?;
@@ -72,6 +81,7 @@ impl CurlExecutor {
         let mut config = NamedTempFile::new().context("failed to create curl config file")?;
 
         writeln!(config, "silent")?;
+        writeln!(config, "show-error")?;
         writeln!(config, "request = \"{}\"", self.route.method)?;
 
         for header in &self.route.headers {

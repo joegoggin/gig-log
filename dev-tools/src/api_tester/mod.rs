@@ -103,7 +103,9 @@ pub async fn run() -> anyhow::Result<()> {
                             )))?;
                         }
                         Err(error) => {
-                            eprintln!("Route execution failed: {error}");
+                            model.update(Msg::ResponseViewer(
+                                ResponseViewerMsg::RouteExecutionFailed(index, error.to_string()),
+                            ))?;
                         }
                     }
                 }
