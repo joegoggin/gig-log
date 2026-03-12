@@ -95,8 +95,11 @@ impl ServiceProcess {
 
 impl Drop for ServiceProcess {
     fn drop(&mut self) {
-        self.signal_process_group(libc::SIGTERM);
-        self.signal_process_group(libc::SIGKILL);
+        let is_running = self.child.try_wait().ok().flatten().is_none();
+        if is_running {
+            self.signal_process_group(libc::SIGTERM);
+            self.signal_process_group(libc::SIGKILL);
+        }
     }
 }
 

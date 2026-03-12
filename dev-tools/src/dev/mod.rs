@@ -4,8 +4,6 @@ mod tui;
 mod ui;
 mod watcher;
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -56,10 +54,10 @@ enum TrunkEvent {
     BuildFailed,
 }
 
-#[derive(Default)]
-struct TrunkState {
-    success_count: AtomicU64,
-    fail_count: AtomicU64,
+#[derive(Debug, Clone, Copy, Default)]
+struct DrainedTrunkState {
+    waiting_for_terminal: bool,
+    terminal_after_start: Option<TrunkEvent>,
 }
 
 pub async fn run() -> Result<()> {
@@ -88,8 +86,6 @@ async fn run_orchestrator(
     mut shutdown_rx: watch::Receiver<bool>,
 ) -> Result<()> {
     let (trunk_event_tx, mut trunk_event_rx) = mpsc::unbounded_channel::<TrunkEvent>();
-    let trunk_state = Arc::new(TrunkState::default());
-
     let mut processes = Vec::new();
     let mut log_senders = Vec::new();
 
@@ -133,21 +129,10 @@ async fn run_orchestrator(
         };
 
         let trunk_tx = trunk_event_tx.clone();
-        let trunk_state = trunk_state.clone();
-
         tokio::spawn(async move {
             while let Some(entry) = log_rx.recv().await {
                 if entry.service == Service::Web {
                     if let Some(event) = parse_trunk_event(&entry.line) {
-                        match event {
-                            TrunkEvent::BuildSucceeded => {
-                                trunk_state.success_count.fetch_add(1, Ordering::SeqCst);
-                            }
-                            TrunkEvent::BuildFailed => {
-                                trunk_state.fail_count.fetch_add(1, Ordering::SeqCst);
-                            }
-                            TrunkEvent::BuildStarted => {}
-                        }
                         let _ = trunk_tx.send(event);
                     }
                 }
@@ -173,7 +158,6 @@ async fn run_orchestrator(
         &system_log_tx,
         &log_senders,
         &mut trunk_event_rx,
-        &trunk_state,
     )
     .await;
 
@@ -200,11 +184,6 @@ async fn run_orchestrator(
             break;
         };
 
-        let web_baseline = (
-            trunk_state.success_count.load(Ordering::SeqCst),
-            trunk_state.fail_count.load(Ordering::SeqCst),
-        );
-
         let batch = watch_stream
             .collect_debounced_batch(first_intent, DEBOUNCE_DURATION)
             .await
@@ -227,7 +206,6 @@ async fn run_orchestrator(
             &log_senders,
             &mut processes,
             &mut trunk_event_rx,
-            web_baseline,
         )
         .await;
     }
@@ -244,7 +222,6 @@ async fn run_initial_docs_after_startup(
     system_tx: &mpsc::Sender<LogEntry>,
     log_senders: &[(Service, mpsc::Sender<LogEntry>)],
     trunk_events: &mut mpsc::UnboundedReceiver<TrunkEvent>,
-    trunk_state: &TrunkState,
 ) {
     system_log(
         system_tx,
@@ -252,12 +229,9 @@ async fn run_initial_docs_after_startup(
     )
     .await;
 
-    let baseline = (
-        trunk_state.success_count.load(Ordering::SeqCst),
-        trunk_state.fail_count.load(Ordering::SeqCst),
-    );
+    let drained = drain_trunk_events(trunk_events);
 
-    match wait_for_web_build(trunk_events, baseline).await {
+    match wait_for_web_build(trunk_events, drained).await {
         Ok(()) => {
             system_log(
                 system_tx,
@@ -315,7 +289,6 @@ async fn execute_batch(
     log_senders: &[(Service, mpsc::Sender<LogEntry>)],
     processes: &mut Vec<ServiceProcess>,
     trunk_events: &mut mpsc::UnboundedReceiver<TrunkEvent>,
-    web_baseline: (u64, u64),
 ) {
     let mut docs_needed = false;
     let mut docs_after_api_restart = false;
@@ -347,7 +320,8 @@ async fn execute_batch(
     }
 
     if batch.web {
-        match wait_for_web_build(trunk_events, web_baseline).await {
+        let drained = drain_trunk_events(trunk_events);
+        match wait_for_web_build(trunk_events, drained).await {
             Ok(()) => {
                 system_log(system_tx, "Web build completed via trunk.".to_string()).await;
                 docs_needed = true;
@@ -528,12 +502,15 @@ async fn wait_for_api_ready() -> Result<()> {
 
 async fn wait_for_web_build(
     rx: &mut mpsc::UnboundedReceiver<TrunkEvent>,
-    baseline: (u64, u64),
+    drained: DrainedTrunkState,
 ) -> Result<()> {
-    let (baseline_success, baseline_fail) = baseline;
-    let mut success_count = baseline_success;
-    let mut fail_count = baseline_fail;
-    let mut seen_started = false;
+    match drained.terminal_after_start {
+        Some(TrunkEvent::BuildFailed) => anyhow::bail!("trunk reported build failure"),
+        Some(TrunkEvent::BuildSucceeded) => return Ok(()),
+        _ => {}
+    }
+
+    let mut seen_started = drained.waiting_for_terminal;
 
     let fut = async {
         while let Some(event) = rx.recv().await {
@@ -542,14 +519,12 @@ async fn wait_for_web_build(
                     seen_started = true;
                 }
                 TrunkEvent::BuildSucceeded => {
-                    success_count += 1;
-                    if seen_started && success_count > baseline_success {
+                    if seen_started {
                         return Ok(());
                     }
                 }
                 TrunkEvent::BuildFailed => {
-                    fail_count += 1;
-                    if seen_started && fail_count > baseline_fail {
+                    if seen_started {
                         anyhow::bail!("trunk reported build failure");
                     }
                 }
@@ -563,6 +538,31 @@ async fn wait_for_web_build(
         .map_err(|_| anyhow::anyhow!("timed out waiting for trunk build"))??;
 
     Ok(())
+}
+
+fn drain_trunk_events(rx: &mut mpsc::UnboundedReceiver<TrunkEvent>) -> DrainedTrunkState {
+    let mut state = DrainedTrunkState::default();
+    while let Ok(event) = rx.try_recv() {
+        match event {
+            TrunkEvent::BuildStarted => {
+                state.waiting_for_terminal = true;
+                state.terminal_after_start = None;
+            }
+            TrunkEvent::BuildSucceeded => {
+                if state.waiting_for_terminal {
+                    state.waiting_for_terminal = false;
+                    state.terminal_after_start = Some(TrunkEvent::BuildSucceeded);
+                }
+            }
+            TrunkEvent::BuildFailed => {
+                if state.waiting_for_terminal {
+                    state.waiting_for_terminal = false;
+                    state.terminal_after_start = Some(TrunkEvent::BuildFailed);
+                }
+            }
+        }
+    }
+    state
 }
 
 fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
@@ -580,11 +580,10 @@ fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
         return Some(TrunkEvent::BuildFailed);
     }
 
-    if lower.contains("finished") && (lower.contains("build") || lower.contains("release")) {
-        return Some(TrunkEvent::BuildSucceeded);
-    }
-
-    if lower.contains('✅') || lower.contains("success") {
+    if lower.contains('✅')
+        || lower.contains("build succeeded")
+        || (lower.contains("finished") && (lower.contains("build") || lower.contains("release")))
+    {
         return Some(TrunkEvent::BuildSucceeded);
     }
 
@@ -662,7 +661,9 @@ async fn reset_docs_output_dir() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{TrunkEvent, parse_trunk_event, wait_for_web_build};
+    use super::{
+        TrunkEvent, drain_trunk_events, parse_trunk_event, wait_for_web_build,
+    };
     use tokio::sync::mpsc;
 
     #[test]
@@ -700,6 +701,7 @@ mod tests {
         let _ = tx.send(TrunkEvent::BuildStarted);
         let _ = tx.send(TrunkEvent::BuildSucceeded);
 
-        assert!(wait_for_web_build(&mut rx, (0, 0)).await.is_ok());
+        let drained = drain_trunk_events(&mut rx);
+        assert!(wait_for_web_build(&mut rx, drained).await.is_ok());
     }
 }
