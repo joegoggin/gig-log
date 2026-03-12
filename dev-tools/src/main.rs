@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Dev { services } => dev::run(services).await?,
+        Command::Dev => dev::run().await?,
         Command::Docs => docs::run().await?,
         Command::DocsIndex => docs::generate_index()?,
         Command::Setup {

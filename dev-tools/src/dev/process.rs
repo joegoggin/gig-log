@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -8,7 +9,6 @@ use tokio::sync::mpsc;
 use super::log_store::{LogEntry, Service};
 
 pub struct ServiceProcess {
-    #[allow(dead_code)]
     pub service: Service,
     pub child: Child,
     process_group: u32,
@@ -16,7 +16,7 @@ pub struct ServiceProcess {
 
 impl ServiceProcess {
     pub fn spawn(service: Service) -> Result<(Self, mpsc::Receiver<LogEntry>)> {
-        let (cmd, args, working_dir) = service_command(service);
+        let (cmd, args, working_dir) = service_command(service)?;
         let (tx, rx) = mpsc::channel(256);
 
         let mut command = Command::new(cmd);
@@ -28,12 +28,10 @@ impl ServiceProcess {
 
         command.env("CARGO_TERM_COLOR", "always");
         command.env("CLICOLOR_FORCE", "1");
-
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
         command.kill_on_drop(true);
 
-        // Create a new process group so we can kill all children
         unsafe {
             command.pre_exec(|| {
                 libc::setpgid(0, 0);
@@ -47,13 +45,11 @@ impl ServiceProcess {
 
         let pid = child.id().unwrap_or(0);
 
-        // Spawn stdout reader
         if let Some(stdout) = child.stdout.take() {
             let tx = tx.clone();
             tokio::spawn(read_lines(stdout, service, tx));
         }
 
-        // Spawn stderr reader
         if let Some(stderr) = child.stderr.take() {
             let tx = tx.clone();
             tokio::spawn(read_lines(stderr, service, tx));
@@ -70,42 +66,91 @@ impl ServiceProcess {
     }
 
     pub async fn shutdown(&mut self) {
-        // Send SIGTERM to the entire process group
+        self.shutdown_with_timeout(Duration::from_secs(3)).await;
+    }
+
+    pub async fn shutdown_fast(&mut self) {
+        self.shutdown_with_timeout(Duration::from_millis(200)).await;
+    }
+
+    async fn shutdown_with_timeout(&mut self, timeout: Duration) {
+        self.signal_process_group(libc::SIGTERM);
+
+        let wait_result = tokio::time::timeout(timeout, self.child.wait()).await;
+
+        if wait_result.is_err() {
+            self.signal_process_group(libc::SIGKILL);
+            let _ = self.child.kill().await;
+        }
+    }
+
+    fn signal_process_group(&self, signal: i32) {
         if self.process_group > 0 {
             unsafe {
-                libc::kill(-(self.process_group as i32), libc::SIGTERM);
+                libc::kill(-(self.process_group as i32), signal);
             }
-        }
-
-        // Wait up to 3 seconds for graceful shutdown
-        let timeout =
-            tokio::time::timeout(std::time::Duration::from_secs(3), self.child.wait()).await;
-
-        if timeout.is_err() {
-            // Force kill the process group
-            if self.process_group > 0 {
-                unsafe {
-                    libc::kill(-(self.process_group as i32), libc::SIGKILL);
-                }
-            }
-            let _ = self.child.kill().await;
         }
     }
 }
 
-fn service_command(service: Service) -> (&'static str, Vec<&'static str>, Option<&'static str>) {
+impl Drop for ServiceProcess {
+    fn drop(&mut self) {
+        self.signal_process_group(libc::SIGTERM);
+        self.signal_process_group(libc::SIGKILL);
+    }
+}
+
+pub async fn run_job(
+    service: Service,
+    cmd: &str,
+    args: &[&str],
+    working_dir: Option<&str>,
+    tx: &mpsc::Sender<LogEntry>,
+) -> Result<bool> {
+    let mut command = Command::new(cmd);
+    command.args(args);
+
+    if let Some(dir) = working_dir {
+        command.current_dir(dir);
+    }
+
+    command.env("CARGO_TERM_COLOR", "always");
+    command.env("CLICOLOR_FORCE", "1");
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .with_context(|| format!("Failed to start {} command", service.label()))?;
+
+    let mut tasks = Vec::new();
+
+    if let Some(stdout) = child.stdout.take() {
+        let tx = tx.clone();
+        tasks.push(tokio::spawn(read_lines(stdout, service, tx)));
+    }
+
+    if let Some(stderr) = child.stderr.take() {
+        let tx = tx.clone();
+        tasks.push(tokio::spawn(read_lines(stderr, service, tx)));
+    }
+
+    let status = child.wait().await?;
+
+    for task in tasks {
+        let _ = task.await;
+    }
+
+    Ok(status.success())
+}
+
+fn service_command(
+    service: Service,
+) -> Result<(&'static str, Vec<&'static str>, Option<&'static str>)> {
     match service {
-        Service::Api => ("cargo", vec!["watch", "-x", "run -p gig-log-api"], None),
-        Service::Web => ("trunk", vec!["serve"], Some("web/")),
-        Service::Docs => (
-            "cargo",
-            vec![
-                "watch",
-                "-s",
-                "cargo doc --workspace --no-deps --document-private-items --color always && cargo run -p gig-log-dev-tools -- docs-index",
-            ],
-            None,
-        ),
+        Service::Api => Ok(("cargo", vec!["run", "-p", "gig-log-api"], None)),
+        Service::Web => Ok(("trunk", vec!["serve"], Some("web/"))),
+        _ => anyhow::bail!("{} is not a long-running service", service.label()),
     }
 }
 
@@ -122,62 +167,19 @@ async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
     }
 }
 
-pub fn check_requirements(services: &[Service]) -> Result<()> {
-    for service in services {
-        match service {
-            Service::Api => {
-                if std::process::Command::new("which")
-                    .arg("cargo-watch")
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .map(|s| !s.success())
-                    .unwrap_or(true)
-                {
-                    anyhow::bail!(
-                        "cargo-watch is not installed. Install it with: cargo install cargo-watch"
-                    );
-                }
-            }
-            Service::Web => {
-                if std::process::Command::new("which")
-                    .arg("trunk")
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .map(|s| !s.success())
-                    .unwrap_or(true)
-                {
-                    anyhow::bail!("trunk is not installed. Install it with: cargo install trunk");
-                }
-            }
-            Service::Docs => {
-                if std::process::Command::new("which")
-                    .arg("cargo-watch")
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .map(|s| !s.success())
-                    .unwrap_or(true)
-                {
-                    anyhow::bail!(
-                        "cargo-watch is not installed. Install it with: cargo install cargo-watch"
-                    );
-                }
-                if std::process::Command::new("which")
-                    .arg("miniserve")
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .map(|s| !s.success())
-                    .unwrap_or(true)
-                {
-                    anyhow::bail!(
-                        "miniserve is not installed. Install it with: cargo install miniserve"
-                    );
-                }
-            }
+pub fn check_requirements() -> Result<()> {
+    for binary in ["trunk", "miniserve"] {
+        if std::process::Command::new("which")
+            .arg(binary)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| !s.success())
+            .unwrap_or(true)
+        {
+            anyhow::bail!("{binary} is not installed.");
         }
     }
+
     Ok(())
 }

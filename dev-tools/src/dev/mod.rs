@@ -2,95 +2,506 @@ mod log_store;
 mod process;
 mod tui;
 mod ui;
+mod watcher;
+
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 use anyhow::Result;
-use tokio::sync::mpsc;
+use tokio::process::Command;
+use tokio::sync::{mpsc, watch};
 
-use log_store::Service;
-use process::{ServiceProcess, check_requirements};
+use log_store::{LogEntry, Service};
+use process::{ServiceProcess, check_requirements, run_job};
 use tui::TuiEvent;
+use watcher::IntentBatch;
 
-const ALL_SERVICES: [Service; 3] = [Service::Api, Service::Web, Service::Docs];
+const WATCH_PATHS: [&str; 4] = ["web", "api", "common", "dev-tools"];
+const DEBOUNCE_DURATION: Duration = Duration::from_millis(400);
+const WEB_BUILD_TIMEOUT: Duration = Duration::from_secs(60);
+const ORCHESTRATOR_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(300);
 
-pub async fn run(service_names: Option<Vec<String>>) -> Result<()> {
-    let services = match service_names {
-        Some(names) => {
-            let mut services = Vec::new();
-            for name in &names {
-                match name.to_lowercase().as_str() {
-                    "api" => services.push(Service::Api),
-                    "web" => services.push(Service::Web),
-                    "docs" => services.push(Service::Docs),
-                    other => {
-                        anyhow::bail!("Unknown service: {other}. Valid services: api, web, docs")
-                    }
-                }
-            }
-            services
-        }
-        None => ALL_SERVICES.to_vec(),
-    };
+#[derive(Debug, Clone, Copy)]
+enum TrunkEvent {
+    BuildStarted,
+    BuildSucceeded,
+    BuildFailed,
+}
 
-    check_requirements(&services)?;
+#[derive(Default)]
+struct TrunkState {
+    success_count: AtomicU64,
+    fail_count: AtomicU64,
+}
 
-    let (tui_tx, tui_rx) = mpsc::channel::<TuiEvent>(512);
+pub async fn run() -> Result<()> {
+    check_requirements()?;
 
-    // For the docs service, we need miniserve running
-    // Hold the child handle so kill_on_drop doesn't kill it immediately
-    let _miniserve = if services.contains(&Service::Docs) {
-        Some(start_docs_prerequisites().await?)
-    } else {
-        None
-    };
+    let (tui_tx, tui_rx) = mpsc::channel::<TuiEvent>(1024);
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    // Spawn all service processes
+    let mut orchestrator = tokio::spawn(run_orchestrator(tui_tx, shutdown_rx));
+    let tui_result = tui::run_tui(tui_rx).await;
+
+    let _ = shutdown_tx.send(true);
+    if tokio::time::timeout(ORCHESTRATOR_SHUTDOWN_TIMEOUT, &mut orchestrator)
+        .await
+        .is_err()
+    {
+        orchestrator.abort();
+        let _ = orchestrator.await;
+    }
+
+    tui_result
+}
+
+async fn run_orchestrator(
+    tui_tx: mpsc::Sender<TuiEvent>,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> Result<()> {
+    let (trunk_event_tx, mut trunk_event_rx) = mpsc::unbounded_channel::<TrunkEvent>();
+    let trunk_state = Arc::new(TrunkState::default());
+
     let mut processes = Vec::new();
-    for &service in &services {
+    let mut log_senders = Vec::new();
+
+    for service in [
+        Service::Api,
+        Service::Web,
+        Service::Common,
+        Service::DevTools,
+        Service::Docs,
+        Service::System,
+    ] {
+        log_senders.push((service, spawn_log_forwarder(&tui_tx)));
+    }
+
+    let _miniserve = start_docs_prerequisites().await?;
+
+    for service in [Service::Api, Service::Web] {
         let (proc, mut log_rx) = ServiceProcess::spawn(service)?;
         processes.push(proc);
+        let _ = tui_tx.send(TuiEvent::ServiceStarted(service)).await;
 
-        let tx = tui_tx.clone();
-        let _ = tx.send(TuiEvent::ServiceStarted(service)).await;
+        let tx = match log_senders
+            .iter()
+            .find(|(item_service, _)| *item_service == service)
+            .map(|(_, tx)| tx.clone())
+        {
+            Some(tx) => tx,
+            None => continue,
+        };
 
-        // Forward log entries to TUI
+        let trunk_tx = trunk_event_tx.clone();
+        let trunk_state = trunk_state.clone();
+
         tokio::spawn(async move {
             while let Some(entry) = log_rx.recv().await {
-                if tx.send(TuiEvent::Log(entry)).await.is_err() {
+                if entry.service == Service::Web {
+                    if let Some(event) = parse_trunk_event(&entry.line) {
+                        match event {
+                            TrunkEvent::BuildSucceeded => {
+                                trunk_state.success_count.fetch_add(1, Ordering::SeqCst);
+                            }
+                            TrunkEvent::BuildFailed => {
+                                trunk_state.fail_count.fetch_add(1, Ordering::SeqCst);
+                            }
+                            TrunkEvent::BuildStarted => {}
+                        }
+                        let _ = trunk_tx.send(event);
+                    }
+                }
+
+                if tx.send(entry).await.is_err() {
                     break;
                 }
             }
-            let _ = tx.send(TuiEvent::ServiceExited(service)).await;
         });
     }
 
-    // Drop our copy of the sender so TUI can detect when all senders are gone
-    drop(tui_tx);
+    let system_log_tx = match log_senders
+        .iter()
+        .find(|(service, _)| *service == Service::System)
+        .map(|(_, tx)| tx.clone())
+    {
+        Some(tx) => tx,
+        None => return Ok(()),
+    };
 
-    // Run the TUI (blocks until user quits)
-    let result = tui::run_tui(tui_rx).await;
+    let mut watch_stream = watcher::start(&WATCH_PATHS)?;
 
-    // Shutdown all processes
-    for mut proc in processes {
-        proc.shutdown().await;
+    system_log(
+        &system_log_tx,
+        "Watcher started for web/, api/, common/, dev-tools/".to_string(),
+    )
+    .await;
+
+    loop {
+        let first_intent = tokio::select! {
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    break;
+                }
+                continue;
+            }
+            item = watch_stream.recv() => item,
+        };
+
+        let Some(first_intent) = first_intent else {
+            break;
+        };
+
+        let web_baseline = (
+            trunk_state.success_count.load(Ordering::SeqCst),
+            trunk_state.fail_count.load(Ordering::SeqCst),
+        );
+
+        let batch = watch_stream
+            .collect_debounced_batch(first_intent, DEBOUNCE_DURATION)
+            .await
+            .merged_for_execution();
+
+        if batch.is_empty() {
+            continue;
+        }
+
+        system_log(
+            &system_log_tx,
+            format!("Executing batch: {}", describe_batch(batch)),
+        )
+        .await;
+
+        execute_batch(
+            batch,
+            &tui_tx,
+            &system_log_tx,
+            &log_senders,
+            &mut processes,
+            &mut trunk_event_rx,
+            web_baseline,
+        )
+        .await;
     }
 
-    result
+    for mut proc in processes {
+        proc.shutdown_fast().await;
+    }
+
+    Ok(())
+}
+
+async fn execute_batch(
+    batch: IntentBatch,
+    tui_tx: &mpsc::Sender<TuiEvent>,
+    system_tx: &mpsc::Sender<LogEntry>,
+    log_senders: &[(Service, mpsc::Sender<LogEntry>)],
+    processes: &mut Vec<ServiceProcess>,
+    trunk_events: &mut mpsc::UnboundedReceiver<TrunkEvent>,
+    web_baseline: (u64, u64),
+) {
+    let mut docs_needed = false;
+
+    if batch.common {
+        if run_build_step(
+            Service::Common,
+            "cargo",
+            &["build", "-p", "gig-log-common"],
+            None,
+            tui_tx,
+            log_senders,
+        )
+        .await
+        {
+            if run_build_step(
+                Service::Web,
+                "cargo",
+                &["build", "-p", "gig-log-frontend"],
+                None,
+                tui_tx,
+                log_senders,
+            )
+            .await
+                && run_build_step(
+                    Service::Api,
+                    "cargo",
+                    &["build", "-p", "gig-log-api"],
+                    None,
+                    tui_tx,
+                    log_senders,
+                )
+                .await
+            {
+                restart_api(processes, tui_tx, system_tx, log_senders).await;
+                docs_needed = true;
+            }
+        }
+    }
+
+    if batch.api {
+        if run_build_step(
+            Service::Api,
+            "cargo",
+            &["build", "-p", "gig-log-api"],
+            None,
+            tui_tx,
+            log_senders,
+        )
+        .await
+        {
+            restart_api(processes, tui_tx, system_tx, log_senders).await;
+            docs_needed = true;
+        }
+    }
+
+    if batch.web {
+        match wait_for_web_build(trunk_events, web_baseline).await {
+            Ok(()) => {
+                system_log(system_tx, "Web build completed via trunk.".to_string()).await;
+                docs_needed = true;
+            }
+            Err(error) => {
+                system_log(
+                    system_tx,
+                    format!("Skipping docs after web change: {error}"),
+                )
+                .await;
+            }
+        }
+    }
+
+    if batch.dev_tools
+        && run_build_step(
+            Service::DevTools,
+            "cargo",
+            &["build", "-p", "gig-log-dev-tools"],
+            None,
+            tui_tx,
+            log_senders,
+        )
+        .await
+    {
+        docs_needed = true;
+    }
+
+    if docs_needed {
+        let _ = run_build_step(
+            Service::Docs,
+            "cargo",
+            &[
+                "doc",
+                "--workspace",
+                "--no-deps",
+                "--document-private-items",
+                "--color",
+                "always",
+            ],
+            None,
+            tui_tx,
+            log_senders,
+        )
+        .await;
+
+        let _ = run_build_step(
+            Service::Docs,
+            "cargo",
+            &["run", "-p", "gig-log-dev-tools", "--", "docs-index"],
+            None,
+            tui_tx,
+            log_senders,
+        )
+        .await;
+    }
+}
+
+async fn restart_api(
+    processes: &mut Vec<ServiceProcess>,
+    tui_tx: &mpsc::Sender<TuiEvent>,
+    system_tx: &mpsc::Sender<LogEntry>,
+    log_senders: &[(Service, mpsc::Sender<LogEntry>)],
+) {
+    system_log(system_tx, "Restarting API process...".to_string()).await;
+
+    if let Some(index) = processes
+        .iter()
+        .position(|proc| proc.service == Service::Api)
+    {
+        let mut existing = processes.remove(index);
+        existing.shutdown().await;
+        let _ = tui_tx.send(TuiEvent::ServiceExited(Service::Api)).await;
+    }
+
+    match ServiceProcess::spawn(Service::Api) {
+        Ok((proc, mut log_rx)) => {
+            let _ = tui_tx.send(TuiEvent::ServiceStarted(Service::Api)).await;
+            processes.push(proc);
+
+            let tx = tui_tx.clone();
+            let log_tx = log_senders
+                .iter()
+                .find(|(service, _)| *service == Service::Api)
+                .map(|(_, sender)| sender.clone());
+
+            tokio::spawn(async move {
+                while let Some(entry) = log_rx.recv().await {
+                    if let Some(log_tx) = &log_tx {
+                        let _ = log_tx.send(entry).await;
+                    } else if tx.send(TuiEvent::Log(entry)).await.is_err() {
+                        break;
+                    }
+                }
+                let _ = tx.send(TuiEvent::ServiceExited(Service::Api)).await;
+            });
+        }
+        Err(error) => {
+            system_log(system_tx, format!("Failed to restart API process: {error}")).await;
+        }
+    }
+}
+
+async fn run_build_step(
+    service: Service,
+    cmd: &str,
+    args: &[&str],
+    working_dir: Option<&str>,
+    tui_tx: &mpsc::Sender<TuiEvent>,
+    log_senders: &[(Service, mpsc::Sender<LogEntry>)],
+) -> bool {
+    let log_tx = match log_senders
+        .iter()
+        .find(|(item_service, _)| *item_service == service)
+    {
+        Some((_, tx)) => tx,
+        None => return false,
+    };
+
+    let _ = tui_tx.send(TuiEvent::ServiceStarted(service)).await;
+    let result = run_job(service, cmd, args, working_dir, log_tx).await;
+    let _ = tui_tx.send(TuiEvent::ServiceExited(service)).await;
+
+    match result {
+        Ok(success) => success,
+        Err(error) => {
+            let _ = log_tx
+                .send(LogEntry {
+                    service,
+                    line: format!("Command failed: {error}"),
+                })
+                .await;
+            false
+        }
+    }
+}
+
+async fn wait_for_web_build(
+    rx: &mut mpsc::UnboundedReceiver<TrunkEvent>,
+    baseline: (u64, u64),
+) -> Result<()> {
+    let (baseline_success, baseline_fail) = baseline;
+    let mut success_count = baseline_success;
+    let mut fail_count = baseline_fail;
+
+    let fut = async {
+        while let Some(event) = rx.recv().await {
+            match event {
+                TrunkEvent::BuildSucceeded => {
+                    success_count += 1;
+                    if success_count > baseline_success {
+                        return Ok(());
+                    }
+                }
+                TrunkEvent::BuildFailed => {
+                    fail_count += 1;
+                    if fail_count > baseline_fail {
+                        anyhow::bail!("trunk reported build failure");
+                    }
+                }
+                TrunkEvent::BuildStarted => {}
+            }
+        }
+        anyhow::bail!("trunk event stream ended")
+    };
+
+    tokio::time::timeout(WEB_BUILD_TIMEOUT, fut)
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out waiting for trunk build"))??;
+
+    Ok(())
+}
+
+fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
+    let lower = line.to_lowercase();
+
+    if lower.contains("building") {
+        return Some(TrunkEvent::BuildStarted);
+    }
+
+    if lower.contains("error") && lower.contains("build") {
+        return Some(TrunkEvent::BuildFailed);
+    }
+
+    if lower.contains("finished") && (lower.contains("build") || lower.contains("release")) {
+        return Some(TrunkEvent::BuildSucceeded);
+    }
+
+    if lower.contains("success") && lower.contains("build") {
+        return Some(TrunkEvent::BuildSucceeded);
+    }
+
+    None
+}
+
+fn spawn_log_forwarder(tui_tx: &mpsc::Sender<TuiEvent>) -> mpsc::Sender<LogEntry> {
+    let (log_tx, mut log_rx) = mpsc::channel::<LogEntry>(256);
+    let tx = tui_tx.clone();
+
+    tokio::spawn(async move {
+        while let Some(entry) = log_rx.recv().await {
+            if tx.send(TuiEvent::Log(entry)).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    log_tx
+}
+
+async fn system_log(tx: &mpsc::Sender<LogEntry>, message: String) {
+    let _ = tx
+        .send(LogEntry {
+            service: Service::System,
+            line: message,
+        })
+        .await;
+}
+
+fn describe_batch(batch: IntentBatch) -> String {
+    let mut labels = Vec::new();
+    if batch.common {
+        labels.push("common");
+    }
+    if batch.api {
+        labels.push("api");
+    }
+    if batch.web {
+        labels.push("web");
+    }
+    if batch.dev_tools {
+        labels.push("dev-tools");
+    }
+    labels.join(", ")
 }
 
 async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
     use std::process::Stdio;
-    use tokio::process::Command;
 
-    // Kill any leftover doc server on port 7007
     let _ = Command::new("sh")
         .args(["-c", "lsof -ti :7007 | xargs -r kill 2>/dev/null"])
         .status()
         .await;
 
-    // Ensure target/doc exists so miniserve can start serving immediately
     tokio::fs::create_dir_all("target/doc").await?;
 
-    // Start miniserve in background (kill_on_drop handles cleanup)
     let child = Command::new("miniserve")
         .args(["--index", "index.html", "-p", "7007", "target/doc"])
         .stdout(Stdio::null())
@@ -99,4 +510,27 @@ async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
         .spawn()?;
 
     Ok(child)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{TrunkEvent, parse_trunk_event};
+
+    #[test]
+    fn parses_trunk_success_line() {
+        let line = "Finished build in 123ms";
+        assert!(matches!(
+            parse_trunk_event(line),
+            Some(TrunkEvent::BuildSucceeded)
+        ));
+    }
+
+    #[test]
+    fn parses_trunk_failure_line() {
+        let line = "error during build";
+        assert!(matches!(
+            parse_trunk_event(line),
+            Some(TrunkEvent::BuildFailed)
+        ));
+    }
 }

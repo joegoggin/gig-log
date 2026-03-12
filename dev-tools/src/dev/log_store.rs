@@ -2,7 +2,10 @@
 pub enum Service {
     Api,
     Web,
+    Common,
+    DevTools,
     Docs,
+    System,
 }
 
 impl Service {
@@ -10,7 +13,10 @@ impl Service {
         match self {
             Service::Api => "API",
             Service::Web => "WEB",
+            Service::Common => "COMMON",
+            Service::DevTools => "DEV-TOOLS",
             Service::Docs => "DOCS",
+            Service::System => "SYSTEM",
         }
     }
 }

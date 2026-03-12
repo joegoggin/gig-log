@@ -18,7 +18,7 @@ pub struct AppState {
     pub scroll_offset: usize,
     pub follow: bool,
     pub pending_g: bool,
-    pub services_running: [bool; 3], // [api, web, docs]
+    pub services_running: [bool; 6], // [api, web, common, dev-tools, docs, system]
 }
 
 impl AppState {
@@ -28,7 +28,7 @@ impl AppState {
             scroll_offset: 0,
             follow: true,
             pending_g: false,
-            services_running: [false; 3],
+            services_running: [false; 6],
         }
     }
 }
@@ -52,7 +52,10 @@ fn service_color(service: Service) -> Color {
     match service {
         Service::Api => Color::Blue,
         Service::Web => Color::Green,
+        Service::Common => Color::Cyan,
+        Service::DevTools => Color::Magenta,
         Service::Docs => Color::Yellow,
+        Service::System => Color::Red,
     }
 }
 
@@ -60,7 +63,10 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
     let services = [
         (Service::Api, state.services_running[0]),
         (Service::Web, state.services_running[1]),
-        (Service::Docs, state.services_running[2]),
+        (Service::Common, state.services_running[2]),
+        (Service::DevTools, state.services_running[3]),
+        (Service::Docs, state.services_running[4]),
+        (Service::System, state.services_running[5]),
     ];
 
     let mut spans = vec![Span::styled(
@@ -69,15 +75,12 @@ fn render_header(frame: &mut Frame, area: Rect, state: &AppState) {
     )];
 
     for (service, running) in services {
-        let color = if running {
-            service_color(service)
-        } else {
-            Color::DarkGray
-        };
-        spans.push(Span::styled(
-            format!(" [{}] ", service.label()),
-            Style::default().fg(color).add_modifier(Modifier::BOLD),
-        ));
+        let color = service_color(service);
+        let mut style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+        if !running {
+            style = style.add_modifier(Modifier::DIM);
+        }
+        spans.push(Span::styled(format!(" [{}] ", service.label()), style));
     }
 
     // Right-align quit hint
@@ -187,7 +190,10 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
         None => "all",
         Some(Service::Api) => "api",
         Some(Service::Web) => "web",
+        Some(Service::Common) => "common",
+        Some(Service::DevTools) => "dev-tools",
         Some(Service::Docs) => "docs",
+        Some(Service::System) => "system",
     };
 
     let line = Line::from(vec![
@@ -199,7 +205,7 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            "  |  c:clear  1:api  2:web  3:docs  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
+            "  |  c:clear  1:api  2:web  3:common  4:dev-tools  5:docs  6:system  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
             Style::default().fg(Color::DarkGray),
         ),
     ]);
