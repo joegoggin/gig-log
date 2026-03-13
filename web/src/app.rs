@@ -1,4 +1,4 @@
-use gig_log_frontend::pages::*;
+use gig_log_frontend::{contexts::provide_auth_context, pages::*};
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -7,6 +7,8 @@ use leptos_router::{
 
 #[component]
 pub fn App() -> impl IntoView {
+    provide_auth_context();
+
     view! {
         <Router>
             <main>

@@ -9,11 +9,18 @@ use gig_log_common::models::{
 
 use crate::api_client::{client::ApiClient, error::ClientError};
 
+#[derive(Clone, Debug)]
 pub struct AuthRequestRunner {
     client: ApiClient,
 }
 
 impl AuthRequestRunner {
+    pub fn new() -> Self {
+        Self {
+            client: ApiClient::new(),
+        }
+    }
+
     pub async fn sign_up(&self, request: &SignUpRequest) -> Result<User, ClientError> {
         self.client.post("/auth/sign-up", Some(request)).await
     }
