@@ -25,3 +25,6 @@ tui-realm-stdlib = "3.1.0"
 tempfile = "3.26.0"
 http = "1"
 notify = "6.1.1"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+dotenvy = "0.15.7"
+chrono = "0.4"
