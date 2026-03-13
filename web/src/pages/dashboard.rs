@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::{components::core::notifications, contexts::use_notifications};
+use crate::contexts::use_notifications;
 
 #[component]
 pub fn DashboardPage() -> impl IntoView {

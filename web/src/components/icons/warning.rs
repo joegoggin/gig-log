@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+#[component]
 pub fn WarningIcon() -> impl IntoView {
     view! {
         <svg
