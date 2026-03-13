@@ -1,4 +1,8 @@
-use gig_log_frontend::{contexts::provide_auth_context, pages::*};
+use gig_log_frontend::{
+    components::core::notifications::Notifications,
+    contexts::{provide_auth_context, provide_notification_context},
+    pages::*,
+};
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -8,10 +12,12 @@ use leptos_router::{
 #[component]
 pub fn App() -> impl IntoView {
     provide_auth_context();
+    provide_notification_context();
 
     view! {
         <Router>
             <main>
+                <Notifications />
                 <Routes fallback=|| view! { <NotFoundPage /> }>
                     // Auth routes
                     <Route path=path!("/login") view=LoginPage />
