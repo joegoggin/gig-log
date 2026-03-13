@@ -1,10 +1,9 @@
+use gig_log_frontend::pages::*;
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
     path,
 };
-
-use crate::pages::*;
 
 #[component]
 pub fn App() -> impl IntoView {
