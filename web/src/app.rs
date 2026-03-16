@@ -1,6 +1,7 @@
 use gig_log_frontend::{
-    components::{core::notifications::Notifications, protected_route::ProtectedRoute},
+    components::private_route::PrivateRoute,
     contexts::{provide_auth_context, provide_notification_context},
+    layouts::root::RootLayout,
     pages::*,
 };
 use leptos::prelude::*;
@@ -16,8 +17,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Router>
-            <main>
-                <Notifications />
+            <RootLayout>
                 <Routes fallback=|| view! { <NotFoundPage /> }>
                     // Auth routes
                     <Route path=path!("/login") view=LoginPage />
@@ -28,156 +28,30 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/confirm-email") view=ConfirmEmailPage />
 
                     // Dashboard
-                    <Route
-                        path=path!("/")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <DashboardPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
+                    <PrivateRoute path=path!("/") view=DashboardPage />
 
                     // Companies
-                    <Route
-                        path=path!("/companies")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <CompanyListPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/companies/new")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <CompanyCreatePage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/companies/:id")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <CompanyDetailPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/companies/:id/edit")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <CompanyEditPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
+                    <PrivateRoute path=path!("/companies") view=CompanyListPage />
+                    <PrivateRoute path=path!("/companies/new") view=CompanyCreatePage />
+                    <PrivateRoute path=path!("/companies/:id") view=CompanyDetailPage />
+                    <PrivateRoute path=path!("/companies/:id/edit") view=CompanyEditPage />
 
                     // Jobs
-                    <Route
-                        path=path!("/jobs")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <JobListPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/jobs/new")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <JobCreatePage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/jobs/:id")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <JobDetailPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/jobs/:id/edit")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <JobEditPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
+                    <PrivateRoute path=path!("/jobs") view=JobListPage />
+                    <PrivateRoute path=path!("/jobs/new") view=JobCreatePage />
+                    <Route path=path!("/jobs/:id") view=JobDetailPage />
+                    <PrivateRoute path=path!("/jobs/:id/edit") view=JobEditPage />
 
                     // Payments
-                    <Route
-                        path=path!("/payments")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <PaymentListPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/payments/new")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <PaymentCreatePage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/payments/:id")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <PaymentDetailPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
-                    <Route
-                        path=path!("/payments/:id/edit")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <PaymentEditPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
+                    <PrivateRoute path=path!("/payments") view=PaymentListPage />
+                    <PrivateRoute path=path!("/payments/new") view=PaymentCreatePage />
+                    <PrivateRoute path=path!("/payments/:id") view=PaymentDetailPage />
+                    <PrivateRoute path=path!("/payments/:id/edit") view=PaymentEditPage />
 
                     // Settings
-                    <Route
-                        path=path!("/settings")
-                        view=|| {
-                            view! {
-                                <ProtectedRoute>
-                                    <SettingsPage />
-                                </ProtectedRoute>
-                            }
-                        }
-                    />
+                    <PrivateRoute path=path!("/settings") view=SettingsPage />
                 </Routes>
-            </main>
+            </RootLayout>
         </Router>
     }
 }
