@@ -19,6 +19,9 @@ pub fn App() -> impl IntoView {
         <Router>
             <RootLayout>
                 <Routes fallback=|| view! { <NotFoundPage /> }>
+                    // Home
+                    <Route path=path!("/") view=HomePage />
+
                     // Auth routes
                     <Route path=path!("/login") view=LoginPage />
                     <Route path=path!("/signup") view=SignupPage />
@@ -28,7 +31,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/confirm-email") view=ConfirmEmailPage />
 
                     // Dashboard
-                    <PrivateRoute path=path!("/") view=DashboardPage />
+                    <PrivateRoute path=path!("/dashboard") view=DashboardPage />
 
                     // Companies
                     <PrivateRoute path=path!("/companies") view=CompanyListPage />
