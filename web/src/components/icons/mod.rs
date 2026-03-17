@@ -15,6 +15,7 @@ pub mod warning;
 pub use close::CloseIcon;
 pub use company::CompanyIcon;
 pub use error::ErrorIcon;
+pub use hamburger::HamburgerIcon;
 pub use home::HomeIcon;
 pub use info::InfoIcon;
 pub use job::JobIcon;

@@ -174,7 +174,7 @@
         }
     }
 
-    > :not(.root-layout__ambient) {
+    > :not(.root-layout__ambient):not(.notifications) {
         position: relative;
         z-index: 1;
     }

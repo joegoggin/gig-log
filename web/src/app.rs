@@ -1,6 +1,6 @@
 use gig_log_frontend::{
     components::private_route::PrivateRoute,
-    contexts::{provide_auth_context, provide_notification_context},
+    contexts::{provide_auth_context, provide_mobile_context, provide_notification_context},
     layouts::root::RootLayout,
     pages::*,
 };
@@ -13,6 +13,7 @@ use leptos_router::{
 #[component]
 pub fn App() -> impl IntoView {
     provide_auth_context();
+    provide_mobile_context();
     provide_notification_context();
 
     view! {
@@ -31,7 +32,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/confirm-email") view=ConfirmEmailPage />
 
                     // Dashboard
-                    <PrivateRoute path=path!("/dashboard") view=DashboardPage />
+                    <Route path=path!("/dashboard") view=DashboardPage />
 
                     // Companies
                     <PrivateRoute path=path!("/companies") view=CompanyListPage />

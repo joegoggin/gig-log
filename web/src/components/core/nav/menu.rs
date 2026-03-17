@@ -21,7 +21,13 @@ impl NavItem {
 }
 
 #[component]
-pub fn NavMenu(items: Vec<NavItem>, is_active: RwSignal<bool>) -> impl IntoView {
+pub fn NavMenu(
+    items: Vec<NavItem>,
+    is_active: RwSignal<bool>,
+    is_mobile_menu_open: RwSignal<bool>,
+) -> impl IntoView {
+    let when_show_text = move || is_active.get() || is_mobile_menu_open.get();
+
     view! {
         <div class="nav-menu">
             <>
@@ -29,10 +35,10 @@ pub fn NavMenu(items: Vec<NavItem>, is_active: RwSignal<bool>) -> impl IntoView 
                     .into_iter()
                     .map(|item| {
                         view! {
-                            <A href=item.path>
+                            <A href=item.path on:click=move |_| is_mobile_menu_open.set(false)>
                                 <div class="nav-menu__item">
                                     <span class="nav-menu__icon">{item.icon.run()}</span>
-                                    <Show when=move || is_active.get()>
+                                    <Show when=when_show_text>
                                         <p class="nav-menu__label">{item.label.clone()}</p>
                                     </Show>
                                 </div>
@@ -45,7 +51,7 @@ pub fn NavMenu(items: Vec<NavItem>, is_active: RwSignal<bool>) -> impl IntoView 
                 <span class="nav-menu__icon">
                     <LogOutIcon />
                 </span>
-                <Show when=move || is_active.get()>
+                <Show when=when_show_text>
                     <p class="nav-menu__label">"Log Out"</p>
                 </Show>
 

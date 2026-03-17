@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::contexts::use_notifications;
+use crate::{contexts::use_notifications, layouts::main::MainLayout};
 
 #[component]
 pub fn DashboardPage() -> impl IntoView {
@@ -16,8 +16,8 @@ pub fn DashboardPage() -> impl IntoView {
     });
 
     view! {
-        <div>
+        <MainLayout>
             <h1>"Dashboard"</h1>
-        </div>
+        </MainLayout>
     }
 }

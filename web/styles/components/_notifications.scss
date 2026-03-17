@@ -1,15 +1,35 @@
 @use "sass:color";
+@use "../mixins/media" as media;
 @use "../variables/colors" as colors;
 
 .notifications {
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
     z-index: 9999;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 480px;
+    width: min(
+        480px,
+        calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+    );
+    pointer-events: none;
+
+    @include media.tablet {
+        top: calc(92px + env(safe-area-inset-top, 0px));
+        right: calc(12px + env(safe-area-inset-right, 0px));
+        width: min(
+            480px,
+            calc(
+                100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)
+            )
+        );
+    }
+
+    @include media.phone {
+        top: calc(108px + env(safe-area-inset-top, 0px));
+    }
 }
 
 .notification {
@@ -23,6 +43,7 @@
     box-shadow: 0 4px 12px color.change(colors.$black, $alpha: 0.25);
     animation: notification-slide-in 0.3s ease-out;
     transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    pointer-events: auto;
 
     &--closing {
         opacity: 0;
