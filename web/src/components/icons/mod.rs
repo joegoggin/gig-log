@@ -1,11 +1,25 @@
 pub mod close;
+pub mod company;
 pub mod error;
+pub mod hamburger;
+pub mod home;
 pub mod info;
+pub mod job;
+pub mod log_out;
+pub mod logo;
+pub mod payment;
+pub mod settings;
 pub mod success;
 pub mod warning;
 
 pub use close::CloseIcon;
+pub use company::CompanyIcon;
 pub use error::ErrorIcon;
+pub use home::HomeIcon;
 pub use info::InfoIcon;
+pub use job::JobIcon;
+pub use log_out::LogOutIcon;
+pub use logo::LogoIcon;
+pub use payment::PaymentIcon;
 pub use success::SuccessIcon;
 pub use warning::WarningIcon;

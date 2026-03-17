@@ -153,13 +153,8 @@ async fn run_orchestrator(
         None => return Ok(()),
     };
 
-    run_initial_docs_after_startup(
-        &tui_tx,
-        &system_log_tx,
-        &log_senders,
-        &mut trunk_event_rx,
-    )
-    .await;
+    run_initial_docs_after_startup(&tui_tx, &system_log_tx, &log_senders, &mut trunk_event_rx)
+        .await;
 
     let mut watch_stream = watcher::start(&WATCH_PATHS)?;
 
@@ -355,8 +350,11 @@ async fn execute_batch(
         if docs_after_api_restart {
             match wait_for_api_ready().await {
                 Ok(()) => {
-                    system_log(system_tx, "API is ready. Running docs generation...".to_string())
-                        .await;
+                    system_log(
+                        system_tx,
+                        "API is ready. Running docs generation...".to_string(),
+                    )
+                    .await;
                 }
                 Err(error) => {
                     system_log(
@@ -661,9 +659,7 @@ async fn reset_docs_output_dir() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        TrunkEvent, drain_trunk_events, parse_trunk_event, wait_for_web_build,
-    };
+    use super::{TrunkEvent, drain_trunk_events, parse_trunk_event, wait_for_web_build};
     use tokio::sync::mpsc;
 
     #[test]

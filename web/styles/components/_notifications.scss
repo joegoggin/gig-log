@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "../variables/colors" as colors;
 
 .notifications {
@@ -19,7 +20,7 @@
     height: max-content;
     padding: 12px 16px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(colors.$black-rgb, 0.25);
+    box-shadow: 0 4px 12px color.change(colors.$black, $alpha: 0.25);
     animation: notification-slide-in 0.3s ease-out;
     transition: opacity 0.25s ease-out, transform 0.25s ease-out;
 

@@ -1,0 +1,77 @@
+@use "../../variables/colors" as colors;
+
+.nav-menu {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 30px;
+    gap: 14px;
+
+    &__item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        cursor: pointer;
+        overflow: hidden;
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        &:hover {
+            background: colors.$overlay;
+            transform: scale(1.05);
+        }
+
+        p {
+            margin-left: 10px;
+        }
+
+        &--log-out {
+            margin-top: auto;
+        }
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+
+        svg {
+            width: 28px;
+            height: 28px;
+            color: var(--text-color);
+            fill: var(--text-color);
+            flex-shrink: 0;
+        }
+    }
+
+    &__label {
+        margin-left: 12px;
+        width: 150px;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        animation: nav-label-reveal 0.2s ease-out;
+    }
+}
+
+@keyframes nav-label-reveal {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

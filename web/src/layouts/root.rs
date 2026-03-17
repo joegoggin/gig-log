@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 use crate::components::notifications::Notifications;
 
-const NUMBER_OF_ORBS: u8 = 10;
+const NUMBER_OF_ORBS: u8 = 20;
 
 #[component]
 pub fn RootLayout(children: Children) -> impl IntoView {

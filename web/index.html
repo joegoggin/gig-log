@@ -14,13 +14,15 @@
                 applyTheme(media.matches);
 
                 if (media.addEventListener) {
-                    media.addEventListener("change", (event) => applyTheme(event.matches));
+                    media.addEventListener("change", (event) =>
+                        applyTheme(event.matches),
+                    );
                 } else {
                     media.addListener((event) => applyTheme(event.matches));
                 }
             })();
         </script>
-        <title>Leptos Todo List</title>
+        <title>GigLog</title>
         <link data-trunk rel="rust" data-wasm-opt="z" />
         <link data-trunk rel="sass" href="styles/main.scss" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

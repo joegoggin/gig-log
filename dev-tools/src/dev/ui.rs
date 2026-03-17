@@ -1,9 +1,9 @@
 use ansi_to_tui::IntoText as _;
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
-use ratatui::Frame;
 
 use super::log_store::{LogEntry, Service};
 

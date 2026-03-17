@@ -1,31 +1,10 @@
+@use "sass:color";
 @use "../variables/colors" as colors;
-
-[data-theme="light"] .root-layout {
-    --root-ambient-surface: linear-gradient(
-        180deg,
-        rgba(var(--auth-surface-rgb), 0.98),
-        rgba(var(--auth-surface-rgb), 0.92)
-    );
-    --root-ambient-border: rgba(var(--auth-border-rgb), 0.14);
-    --root-orb-intensity: 1.2;
-    --root-orb-blur: 12px;
-}
-
-[data-theme="dark"] .root-layout {
-    --root-ambient-surface: linear-gradient(
-        180deg,
-        rgba(var(--auth-surface-rgb), 0.96),
-        rgba(var(--auth-surface-rgb), 0.93)
-    );
-    --root-ambient-border: rgba(var(--auth-border-rgb), 0.24);
-    --root-orb-intensity: 1;
-    --root-orb-blur: 14px;
-}
 
 .root-layout {
     position: relative;
     min-height: 100dvh;
-    background: var(--root-ambient-surface);
+    background: var(--background-color);
 
     &__ambient {
         position: absolute;
@@ -37,18 +16,18 @@
 
     &__orb {
         position: absolute;
-        width: var(--orb-size, clamp(160px, 24vw, 340px));
+        width: clamp(160px, 24vw, 340px);
         aspect-ratio: 1;
         border-radius: 50%;
-        filter: blur(var(--root-orb-blur, 14px));
+        filter: blur(14px);
 
         &:nth-child(1) {
             top: 8%;
             left: 4%;
             background: radial-gradient(
                 circle at 30% 35%,
-                rgba(colors.$green-100-rgb, calc(0.42 * var(--root-orb-intensity, 1))),
-                rgba(colors.$green-100-rgb, 0)
+                color.change(colors.$green-100, $alpha: 0.42),
+                color.change(colors.$green-100, $alpha: 0)
             );
             animation: root-orb-drift-a 28s ease-in-out infinite;
         }
@@ -58,8 +37,8 @@
             right: 10%;
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$cyan-100-rgb, calc(0.4 * var(--root-orb-intensity, 1))),
-                rgba(colors.$cyan-100-rgb, 0)
+                color.change(colors.$cyan-100, $alpha: 0.4),
+                color.change(colors.$cyan-100, $alpha: 0)
             );
             animation: root-orb-drift-b 32s ease-in-out infinite;
             animation-delay: -6s;
@@ -70,8 +49,8 @@
             left: 36%;
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$yellow-100-rgb, calc(0.38 * var(--root-orb-intensity, 1))),
-                rgba(colors.$yellow-100-rgb, 0)
+                color.change(colors.$yellow-100, $alpha: 0.38),
+                color.change(colors.$yellow-100, $alpha: 0)
             );
             animation: root-orb-drift-c 30s ease-in-out infinite;
             animation-delay: -12s;
@@ -80,11 +59,11 @@
         &:nth-child(4) {
             top: 6%;
             right: 30%;
-            --orb-size: clamp(130px, 20vw, 250px);
+            width: clamp(130px, 20vw, 250px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$blue-100-rgb, calc(0.36 * var(--root-orb-intensity, 1))),
-                rgba(colors.$blue-100-rgb, 0)
+                color.change(colors.$blue-100, $alpha: 0.36),
+                color.change(colors.$blue-100, $alpha: 0)
             );
             animation: root-orb-drift-c 34s ease-in-out infinite;
             animation-delay: -18s;
@@ -93,11 +72,11 @@
         &:nth-child(5) {
             bottom: 18%;
             left: 8%;
-            --orb-size: clamp(120px, 18vw, 230px);
+            width: clamp(120px, 18vw, 230px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$magenta-100-rgb, calc(0.34 * var(--root-orb-intensity, 1))),
-                rgba(colors.$magenta-100-rgb, 0)
+                color.change(colors.$magenta-100, $alpha: 0.34),
+                color.change(colors.$magenta-100, $alpha: 0)
             );
             animation: root-orb-drift-b 36s ease-in-out infinite;
             animation-delay: -9s;
@@ -106,11 +85,11 @@
         &:nth-child(6) {
             bottom: 5%;
             right: 6%;
-            --orb-size: clamp(115px, 16vw, 210px);
+            width: clamp(115px, 16vw, 210px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$red-100-rgb, calc(0.33 * var(--root-orb-intensity, 1))),
-                rgba(colors.$red-100-rgb, 0)
+                color.change(colors.$red-100, $alpha: 0.33),
+                color.change(colors.$red-100, $alpha: 0)
             );
             animation: root-orb-drift-a 33s ease-in-out infinite;
             animation-delay: -15s;
@@ -119,11 +98,11 @@
         &:nth-child(7) {
             top: 38%;
             left: 2%;
-            --orb-size: clamp(105px, 15vw, 200px);
+            width: clamp(105px, 15vw, 200px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$green-80-rgb, calc(0.3 * var(--root-orb-intensity, 1))),
-                rgba(colors.$green-80-rgb, 0)
+                color.change(colors.$green-80, $alpha: 0.3),
+                color.change(colors.$green-80, $alpha: 0)
             );
             animation: root-orb-drift-b 29s ease-in-out infinite;
             animation-delay: -20s;
@@ -132,11 +111,11 @@
         &:nth-child(8) {
             top: 12%;
             right: 2%;
-            --orb-size: clamp(100px, 14vw, 190px);
+            width: clamp(100px, 14vw, 190px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$cyan-80-rgb, calc(0.29 * var(--root-orb-intensity, 1))),
-                rgba(colors.$cyan-80-rgb, 0)
+                color.change(colors.$cyan-80, $alpha: 0.29),
+                color.change(colors.$cyan-80, $alpha: 0)
             );
             animation: root-orb-drift-c 31s ease-in-out infinite;
             animation-delay: -24s;
@@ -145,11 +124,11 @@
         &:nth-child(9) {
             bottom: 34%;
             left: 26%;
-            --orb-size: clamp(108px, 16vw, 205px);
+            width: clamp(108px, 16vw, 205px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$yellow-80-rgb, calc(0.29 * var(--root-orb-intensity, 1))),
-                rgba(colors.$yellow-80-rgb, 0)
+                color.change(colors.$yellow-80, $alpha: 0.29),
+                color.change(colors.$yellow-80, $alpha: 0)
             );
             animation: root-orb-drift-a 35s ease-in-out infinite;
             animation-delay: -28s;
@@ -158,11 +137,11 @@
         &:nth-child(10) {
             top: 46%;
             right: 28%;
-            --orb-size: clamp(95px, 13vw, 180px);
+            width: clamp(95px, 13vw, 180px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$blue-80-rgb, calc(0.28 * var(--root-orb-intensity, 1))),
-                rgba(colors.$blue-80-rgb, 0)
+                color.change(colors.$blue-80, $alpha: 0.28),
+                color.change(colors.$blue-80, $alpha: 0)
             );
             animation: root-orb-drift-b 30s ease-in-out infinite;
             animation-delay: -11s;
@@ -171,11 +150,11 @@
         &:nth-child(11) {
             bottom: 2%;
             left: 52%;
-            --orb-size: clamp(90px, 12vw, 170px);
+            width: clamp(90px, 12vw, 170px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$magenta-80-rgb, calc(0.28 * var(--root-orb-intensity, 1))),
-                rgba(colors.$magenta-80-rgb, 0)
+                color.change(colors.$magenta-80, $alpha: 0.28),
+                color.change(colors.$magenta-80, $alpha: 0)
             );
             animation: root-orb-drift-c 37s ease-in-out infinite;
             animation-delay: -17s;
@@ -184,11 +163,11 @@
         &:nth-child(12) {
             top: 58%;
             right: 12%;
-            --orb-size: clamp(86px, 11vw, 160px);
+            width: clamp(86px, 11vw, 160px);
             background: radial-gradient(
                 circle at 35% 35%,
-                rgba(colors.$red-80-rgb, calc(0.27 * var(--root-orb-intensity, 1))),
-                rgba(colors.$red-80-rgb, 0)
+                color.change(colors.$red-80, $alpha: 0.27),
+                color.change(colors.$red-80, $alpha: 0)
             );
             animation: root-orb-drift-a 34s ease-in-out infinite;
             animation-delay: -26s;
@@ -205,6 +184,10 @@
             animation: none;
         }
     }
+}
+
+[data-theme="light"] .root-layout__orb {
+    filter: blur(12px);
 }
 
 @keyframes root-orb-drift-a {

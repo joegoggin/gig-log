@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use leptos_router::{components::Redirect, MatchNestedRoutes, NestedRoute, PossibleRouteMatch};
+use leptos_router::{MatchNestedRoutes, NestedRoute, PossibleRouteMatch, components::Redirect};
 
 use crate::contexts::use_auth;
 
