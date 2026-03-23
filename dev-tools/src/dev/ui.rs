@@ -21,6 +21,7 @@ pub struct AppState {
     pub follow: bool,
     pub pending_g: bool,
     pub services_running: [bool; 6], // [api, web, common, dev-tools, docs, system]
+    pub auto_clear: bool,
 }
 
 impl AppState {
@@ -31,6 +32,7 @@ impl AppState {
             follow: true,
             pending_g: false,
             services_running: [false; 6],
+            auto_clear: true,
         }
     }
 }
@@ -253,6 +255,8 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
         Some(Service::System) => "system",
     };
 
+    let auto_clear_label = if state.auto_clear { "on" } else { "off" };
+
     let line = Line::from(vec![
         Span::styled("  Filter: ", Style::default().fg(Color::DarkGray)),
         Span::styled(
@@ -261,8 +265,15 @@ fn render_footer(frame: &mut Frame, area: Rect, state: &AppState) {
                 .fg(Color::White)
                 .add_modifier(Modifier::BOLD),
         ),
+        Span::styled("  Auto-clear: ", Style::default().fg(Color::DarkGray)),
         Span::styled(
-            "  |  c:clear  1:api  2:web  3:common  4:dev-tools  5:docs  6:system  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
+            auto_clear_label,
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "  |  c:clear  x:auto-clear  1:api  2:web  3:common  4:dev-tools  5:docs  6:system  a:all  j/k:scroll  gg:top  G:bottom  ^u/^d:page",
             Style::default().fg(Color::DarkGray),
         ),
     ]);

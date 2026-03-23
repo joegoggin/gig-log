@@ -16,6 +16,7 @@ use super::ui::{self, AppState};
 
 pub enum TuiEvent {
     Log(LogEntry),
+    ClearLogs,
     ServiceStarted(Service),
     ServiceExited(Service),
 }
@@ -156,6 +157,10 @@ fn handle_key_event(
             state.follow = true;
             false
         }
+        (KeyCode::Char('x'), _) => {
+            state.auto_clear = !state.auto_clear;
+            false
+        }
         (KeyCode::Char('a'), _) => {
             state.filter = None;
             state.scroll_offset = 0;
@@ -214,6 +219,13 @@ fn apply_tui_event(log_store: &mut LogStore, state: &mut AppState, event: TuiEve
         TuiEvent::Log(entry) => {
             log_store.push(entry);
         }
+        TuiEvent::ClearLogs => {
+            if state.auto_clear {
+                log_store.clear();
+                state.scroll_offset = 0;
+                state.follow = true;
+            }
+        }
         TuiEvent::ServiceStarted(service) => match service {
             Service::Api => state.services_running[0] = true,
             Service::Web => state.services_running[1] = true,
@@ -230,5 +242,73 @@ fn apply_tui_event(log_store: &mut LogStore, state: &mut AppState, event: TuiEve
             Service::Docs => state.services_running[4] = false,
             Service::System => state.services_running[5] = false,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{TuiEvent, apply_tui_event, handle_key_event};
+    use crate::dev::log_store::{LogEntry, LogStore, Service};
+    use crate::dev::ui::AppState;
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    fn sample_entry() -> LogEntry {
+        LogEntry {
+            service: Service::Api,
+            line: "sample".to_string(),
+        }
+    }
+
+    #[test]
+    fn clear_logs_clears_store_when_auto_clear_enabled() {
+        let mut log_store = LogStore::new();
+        log_store.push(sample_entry());
+
+        let mut state = AppState::new();
+        state.follow = false;
+        state.scroll_offset = 7;
+        state.auto_clear = true;
+
+        apply_tui_event(&mut log_store, &mut state, TuiEvent::ClearLogs);
+
+        assert!(log_store.filtered(None).is_empty());
+        assert_eq!(state.scroll_offset, 0);
+        assert!(state.follow);
+    }
+
+    #[test]
+    fn clear_logs_is_noop_when_auto_clear_disabled() {
+        let mut log_store = LogStore::new();
+        log_store.push(sample_entry());
+
+        let mut state = AppState::new();
+        state.follow = false;
+        state.scroll_offset = 7;
+        state.auto_clear = false;
+
+        apply_tui_event(&mut log_store, &mut state, TuiEvent::ClearLogs);
+
+        assert_eq!(log_store.filtered(None).len(), 1);
+        assert_eq!(state.scroll_offset, 7);
+        assert!(!state.follow);
+    }
+
+    #[test]
+    fn x_key_toggles_auto_clear() {
+        let mut log_store = LogStore::new();
+        let mut state = AppState::new();
+        assert!(state.auto_clear);
+
+        let should_quit = handle_key_event(
+            &mut log_store,
+            &mut state,
+            KeyCode::Char('x'),
+            KeyModifiers::NONE,
+            0,
+            1,
+        );
+
+        assert!(!should_quit);
+        assert!(!state.auto_clear);
     }
 }
