@@ -188,6 +188,8 @@ async fn run_orchestrator(
             continue;
         }
 
+        let _ = tui_tx.send(TuiEvent::ClearLogs).await;
+
         system_log(
             &system_log_tx,
             format!("Executing batch: {}", describe_batch(batch)),
