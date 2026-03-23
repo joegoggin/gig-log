@@ -1,21 +1,18 @@
 use leptos::prelude::*;
 
-use crate::components::nav::bar::NavBar;
+use crate::{components::nav::bar::NavBar, utils::class_name::ClassNameUtil};
 
 #[component]
 pub fn MainLayout(
     #[prop(optional, into)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let get_content_class = move || match &class {
-        Some(class) => format!("main-layout__content {}", class),
-        None => "main-layout__content".to_string(),
-    };
+    let content_class = ClassNameUtil::add_optional_class("main-layout__content", class);
 
     view! {
         <div class="main-layout">
             <NavBar />
-            <div class=get_content_class>{children()}</div>
+            <div class=content_class>{children()}</div>
         </div>
     }
 }
