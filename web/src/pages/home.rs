@@ -1,11 +1,12 @@
 use gig_log_common::models::error::ValidationError;
-use leptos::{logging::log, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
     components::{
         check_box::CheckBox,
         password_input::PasswordInput,
         select_input::{SelectInput, SelectOption},
+        text_area::TextArea,
         text_input::TextInput,
     },
     layouts::auth::AuthLayout,
@@ -17,6 +18,7 @@ pub fn HomePage() -> impl IntoView {
         ValidationError::new(Some("test".to_string()), "This is is a test!");
     let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![error]);
     let test = RwSignal::new(String::new());
+    let description = RwSignal::new(String::new());
     let checked = RwSignal::new(false);
 
     let options: Vec<SelectOption<i8>> = vec![
@@ -37,6 +39,13 @@ pub fn HomePage() -> impl IntoView {
                 label="Password Input"
             />
             <TextInput name="test" placeholder="Test" value=test errors=errors label="Text Input" />
+            <TextArea
+                name="description"
+                placeholder="Description"
+                value=description
+                errors=errors
+                label="Text Area"
+            />
             <SelectInput
                 options=options
                 selected_option=selected_option
