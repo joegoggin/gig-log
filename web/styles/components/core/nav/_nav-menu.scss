@@ -1,5 +1,5 @@
-@use "../../variables/colors" as colors;
-@use "../../mixins/media" as media;
+@use "variables/colors" as colors;
+@use "mixins/media" as media;
 
 .nav-menu {
     display: flex;

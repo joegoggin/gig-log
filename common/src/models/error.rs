@@ -6,6 +6,24 @@ pub struct ValidationError {
     pub message: String,
 }
 
+impl Default for ValidationError {
+    fn default() -> Self {
+        Self {
+            field: None,
+            message: "".to_string(),
+        }
+    }
+}
+
+impl ValidationError {
+    pub fn new(field: Option<String>, message: impl Into<String>) -> Self {
+        Self {
+            field: field,
+            message: message.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiError {
     pub status_code: u16,

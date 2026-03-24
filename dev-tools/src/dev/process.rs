@@ -26,6 +26,10 @@ impl ServiceProcess {
             command.current_dir(dir);
         }
 
+        if matches!(service, Service::Web) {
+            command.env("SASS_PATH", "styles");
+        }
+
         command.env("CARGO_TERM_COLOR", "always");
         command.env("CLICOLOR_FORCE", "1");
         command.stdout(Stdio::piped());
