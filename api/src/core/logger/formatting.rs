@@ -238,35 +238,35 @@ pub(super) fn extract_after_src(path: Option<&str>) -> String {
 
 pub(super) fn log_error(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
-    let error_header = format!("\n{} Error {}\n", hashtags, hashtags);
+    let error_header = format!("{} Error {}", hashtags, hashtags);
     let file_path = extract_after_src(record.file());
     let line_number = record
         .line()
         .map(|line| line.to_string())
         .unwrap_or_default();
 
+    println!();
     colorize_println(error_header, Colors::RedFg);
-    colorize_println(
-        format!("File: {}\nLine Number: {}\n", file_path, line_number),
-        Colors::RedFg,
-    );
+    colorize_println(format!("File: {}", file_path), Colors::RedFg);
+    colorize_println(format!("Line Number: {}", line_number), Colors::RedFg);
+    println!();
     colorize_println(format!("{}", record.args()), Colors::RedFg);
 }
 
 pub(super) fn log_debug(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
-    let debug_header = format!("\n{} Debug {}\n", hashtags, hashtags);
+    let debug_header = format!("{} Debug {}", hashtags, hashtags);
     let file_path = extract_after_src(record.file());
     let line_number = record
         .line()
         .map(|line| line.to_string())
         .unwrap_or_default();
 
+    println!();
     colorize_println(debug_header, Colors::YellowFg);
-    colorize_println(
-        format!("File: {}\nLine Number: {}\n", file_path, line_number),
-        Colors::YellowFg,
-    );
+    colorize_println(format!("File: {}", file_path), Colors::YellowFg);
+    colorize_println(format!("Line Number: {}", line_number), Colors::YellowFg);
+    println!();
     colorize_println(format!("{}", record.args()), Colors::YellowFg);
 }
 
