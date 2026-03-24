@@ -21,15 +21,25 @@ pub enum ApiErrorResponse {
 impl IntoResponse for ApiErrorResponse {
     fn into_response(self) -> Response {
         let (status, message, errors) = match self {
-            ApiErrorResponse::NotFound(msg) => (StatusCode::NOT_FOUND, msg, None),
-            ApiErrorResponse::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg, None),
-            ApiErrorResponse::Validation(errs) => (
-                StatusCode::BAD_REQUEST,
-                "Validation Error".to_string(),
-                Some(errs),
-            ),
+            ApiErrorResponse::NotFound(msg) => {
+                error!("NotFound: {}", msg);
+                (StatusCode::NOT_FOUND, msg, None)
+            }
+            ApiErrorResponse::BadRequest(msg) => {
+                error!("BadRequest: {}", msg);
+                (StatusCode::BAD_REQUEST, msg, None)
+            }
+            ApiErrorResponse::Validation(errs) => {
+                error!("Validation error: {:?}", errs);
+
+                (
+                    StatusCode::BAD_REQUEST,
+                    "Validation Error".to_string(),
+                    Some(errs),
+                )
+            }
             ApiErrorResponse::InternalServerError(msg) => {
-                error!("Error: {:#}", msg);
+                error!("InternalServerError: {}", msg);
 
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -37,7 +47,10 @@ impl IntoResponse for ApiErrorResponse {
                     None,
                 )
             }
-            ApiErrorResponse::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg, None),
+            ApiErrorResponse::Unauthorized(msg) => {
+                error!("Unauthorized: {}", msg);
+                (StatusCode::UNAUTHORIZED, msg, None)
+            }
         };
 
         let body = ApiError {

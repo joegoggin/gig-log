@@ -72,7 +72,7 @@ impl Logger {
                     (logged_body, Body::from(bytes))
                 }
                 Err(error) => {
-                    log::debug!(
+                    log::error!(
                         "Skipping request body logging for request {} (failed to buffer request body: {})",
                         request_id,
                         error
@@ -124,7 +124,7 @@ impl Logger {
                 (logged_body, Body::from(bytes))
             }
             Err(error) => {
-                log::debug!(
+                log::error!(
                     "Skipping response body logging for request {} (failed to buffer response body: {})",
                     request_id,
                     error
@@ -176,9 +176,9 @@ fn should_attempt_response_body_logging(
         return false;
     }
 
-    match content_length(headers).or_else(|| {
-        body_size_hint_upper.and_then(|upper_bound| usize::try_from(upper_bound).ok())
-    }) {
+    match content_length(headers)
+        .or_else(|| body_size_hint_upper.and_then(|upper_bound| usize::try_from(upper_bound).ok()))
+    {
         Some(length) => length <= config.max_body_bytes,
         None => false,
     }
@@ -273,17 +273,25 @@ mod tests {
             verbose: true,
         };
 
-        assert!(should_attempt_response_body_logging(&headers, None, &config));
+        assert!(should_attempt_response_body_logging(
+            &headers, None, &config
+        ));
 
         headers.remove(header::CONTENT_LENGTH);
 
-        assert!(should_attempt_response_body_logging(&headers, Some(48), &config));
+        assert!(should_attempt_response_body_logging(
+            &headers,
+            Some(48),
+            &config
+        ));
         assert!(!should_attempt_response_body_logging(
             &headers,
             Some(256),
             &config
         ));
-        assert!(!should_attempt_response_body_logging(&headers, None, &config));
+        assert!(!should_attempt_response_body_logging(
+            &headers, None, &config
+        ));
     }
 
     #[test]

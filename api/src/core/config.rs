@@ -2,6 +2,7 @@ use std::env;
 
 use anyhow::Error;
 use dotenvy::dotenv;
+use log::error;
 
 use crate::core::app::AppResult;
 
@@ -97,7 +98,13 @@ impl Config {
                 match value.trim().to_ascii_lowercase().as_str() {
                     "true" => true,
                     "false" => false,
-                    _ => default,
+                    _ => {
+                        error!(
+                            "Invalid boolean value for {}='{}'; using default {}",
+                            var, value, default
+                        );
+                        default
+                    }
                 }
             }
             _ => default,
@@ -108,7 +115,13 @@ impl Config {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => match value.parse::<usize>() {
                 Ok(value) => value,
-                Err(_) => default,
+                Err(error) => {
+                    error!(
+                        "Invalid usize value for {}='{}': {}; using default {}",
+                        var, value, error, default
+                    );
+                    default
+                }
             },
             _ => default,
         }
@@ -118,7 +131,13 @@ impl Config {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => match value.parse::<u64>() {
                 Ok(value) => value,
-                Err(_) => default,
+                Err(error) => {
+                    error!(
+                        "Invalid number value for {}='{}': {}; using default {}",
+                        var, value, error, default
+                    );
+                    default
+                }
             },
             _ => default,
         }

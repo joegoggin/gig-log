@@ -3,6 +3,7 @@ use axum::{
     http::{HeaderName, Method},
     middleware,
 };
+use log::error;
 use sqlx::{Pool, Postgres};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -32,7 +33,12 @@ impl AppRouter {
             state.config.log_verbose,
         );
 
-        let web_origin = state.config.web_origin.parse().unwrap_or_else(|_| {
+        let web_origin = state.config.web_origin.parse().unwrap_or_else(|error| {
+            error!(
+                "Failed to parse WEB_ORIGIN '{}': {}; using http://localhost:3000 instead",
+                state.config.web_origin, error
+            );
+
             "http://localhost:3000"
                 .parse()
                 .expect("default localhost origin should always be valid")

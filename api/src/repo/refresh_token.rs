@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log::warn;
+use log::error;
 use sqlx::{FromRow, Pool, Postgres};
 use uuid::Uuid;
 
@@ -71,9 +71,7 @@ impl RefreshTokenRepo {
         .await?;
 
         if result.rows_affected() == 0 {
-            warn!(
-                "Warning: no active refresh token record matched the provided hash during logout"
-            );
+            error!("No active refresh token record matched provided hash during logout");
 
             return Ok(false);
         }

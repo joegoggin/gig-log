@@ -7,7 +7,7 @@ use gig_log_common::models::user::{
     RequestEmailChangeRequest, SetPasswordRequest, SignUpRequest, User,
     VerifyForgotPasswordRequest,
 };
-use log::warn;
+use log::error;
 use sha2::{Digest, Sha256};
 
 use crate::auth::AuthUser;
@@ -31,14 +31,24 @@ impl AuthController {
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<SignUpRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
-        let existing = UserRepo::find_user_by_email(&state.db_pool, &body.email).await;
-        if existing.is_ok() {
-            return Err(ApiErrorResponse::BadRequest(
-                "Email already in use".to_string(),
-            ));
+        match UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
+            Ok(_) => {
+                return Err(ApiErrorResponse::BadRequest(
+                    "Email already in use".to_string(),
+                ));
+            }
+            Err(ApiErrorResponse::NotFound(_)) => {}
+            Err(error) => {
+                error!(
+                    "Failed to check for existing user during sign-up: {:?}",
+                    error
+                );
+                return Err(error);
+            }
         }
 
-        let password_hash = PasswordUtil::hash_password(&body.password).map_err(|_| {
+        let password_hash = PasswordUtil::hash_password(&body.password).map_err(|error| {
+            error!("Failed to hash password during sign-up: {:?}", error);
             ApiErrorResponse::InternalServerError("Failed to hash password".to_string())
         })?;
 
@@ -87,7 +97,10 @@ impl AuthController {
             AuthCodeType::EmailVerification,
         )
         .await
-        .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired code".to_string()))?;
+        .map_err(|error| {
+            error!("Failed to validate email confirmation code: {:?}", error);
+            ApiErrorResponse::BadRequest("Invalid or expired code".to_string())
+        })?;
 
         AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
         UserRepo::confirm_email(&state.db_pool, auth_code.user_id).await?;
@@ -106,7 +119,10 @@ impl AuthController {
     ) -> ApiResult<(CookieJar, Json<User>)> {
         let user = UserRepo::find_user_by_email(&state.db_pool, &body.email)
             .await
-            .map_err(|_| ApiErrorResponse::BadRequest("Invalid credentials".to_string()))?;
+            .map_err(|error| {
+                error!("Failed to find user during log-in: {:?}", error);
+                ApiErrorResponse::BadRequest("Invalid credentials".to_string())
+            })?;
 
         if !user.email_confirmed {
             return Err(ApiErrorResponse::BadRequest(
@@ -149,13 +165,13 @@ impl AuthController {
                 RefreshTokenRepo::revoke_token(&state.db_pool, &token_hash).await?;
 
             if !revoked_by_refresh_cookie {
-                warn!(
-                    "Warning: refresh token cookie was present but no active row was revoked; falling back to user-wide revocation"
+                error!(
+                    "Refresh token cookie was present but no active row was revoked; falling back to user-wide revocation"
                 );
             }
         } else {
-            warn!(
-                "Warning: logout request did not include a refresh_token cookie; falling back to user-wide revocation"
+            error!(
+                "Logout request did not include a refresh_token cookie; falling back to user-wide revocation"
             );
         }
 
@@ -169,15 +185,16 @@ impl AuthController {
                         )
                         .await?;
                     }
-                    Err(_) => {
-                        warn!(
-                            "Warning: could not validate access token for fallback logout revocation"
+                    Err(error) => {
+                        error!(
+                            "Could not validate access token for fallback logout revocation: {:?}",
+                            error
                         );
                     }
                 }
             } else {
-                warn!(
-                    "Warning: logout request did not include an access_token cookie for fallback revocation"
+                error!(
+                    "Logout request did not include an access_token cookie for fallback revocation"
                 );
             }
         }
@@ -198,13 +215,24 @@ impl AuthController {
             .ok_or_else(|| ApiErrorResponse::BadRequest("Missing refresh token".to_string()))?;
 
         let old_token = refresh_cookie.value();
-        let token_data = JwtUtil::validate_token(old_token, &state.config)
-            .map_err(|_| ApiErrorResponse::BadRequest("Invalid refresh token".to_string()))?;
+        let token_data = JwtUtil::validate_token(old_token, &state.config).map_err(|error| {
+            error!(
+                "Failed to validate refresh token during token refresh: {:?}",
+                error
+            );
+            ApiErrorResponse::BadRequest("Invalid refresh token".to_string())
+        })?;
         let old_hash = Self::sha256_hash(old_token);
 
         let token_record = RefreshTokenRepo::find_by_hash(&state.db_pool, &old_hash)
             .await
-            .map_err(|_| ApiErrorResponse::BadRequest("Invalid refresh token".to_string()))?;
+            .map_err(|error| {
+                error!(
+                    "Failed to find refresh token record for refresh flow: {:?}",
+                    error
+                );
+                ApiErrorResponse::BadRequest("Invalid refresh token".to_string())
+            })?;
 
         if token_data.claims.sub != token_record.user_id {
             return Err(ApiErrorResponse::BadRequest(
@@ -247,7 +275,19 @@ impl AuthController {
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<ForgotPasswordRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
-        if let Ok(user) = UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
+        let user = match UserRepo::find_user_by_email(&state.db_pool, &body.email).await {
+            Ok(user) => Some(user),
+            Err(ApiErrorResponse::NotFound(_)) => None,
+            Err(error) => {
+                error!(
+                    "Failed to look up user during forgot-password flow: {:?}",
+                    error
+                );
+                return Err(error);
+            }
+        };
+
+        if let Some(user) = user {
             let reset_code = code::generate();
             let expires_at = Utc::now() + Duration::minutes(15);
 
@@ -267,13 +307,12 @@ impl AuthController {
                 reset_code.clone(),
             );
 
-            let result = sender.send_reset_password().await;
-
-            if let Err(_) = result {
+            if let Err(error) = sender.send_reset_password().await {
+                error!("Failed to send forgot-password email: {:?}", error);
                 return Err(ApiErrorResponse::InternalServerError(
                     "Failed to send email".to_string(),
                 ));
-            };
+            }
         }
 
         let response = MessageResponse {
@@ -289,7 +328,8 @@ impl AuthController {
     ) -> ApiResult<Json<MessageResponse>> {
         AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordReset)
             .await
-            .map_err(|_| {
+            .map_err(|error| {
+                error!("Failed to verify forgot-password code: {:?}", error);
                 ApiErrorResponse::BadRequest("Invalid or expired reset code".to_string())
             })?;
 
@@ -305,11 +345,16 @@ impl AuthController {
         let auth_code =
             AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordReset)
                 .await
-                .map_err(|_| {
+                .map_err(|error| {
+                    error!(
+                        "Failed to validate reset code during set-password: {:?}",
+                        error
+                    );
                     ApiErrorResponse::BadRequest("Invalid or expired reset code".to_string())
                 })?;
 
-        let password_hash = PasswordUtil::hash_password(&body.new_password).map_err(|_| {
+        let password_hash = PasswordUtil::hash_password(&body.new_password).map_err(|error| {
+            error!("Failed to hash password during set-password: {:?}", error);
             ApiErrorResponse::InternalServerError("Failed to hash password".to_string())
         })?;
 
@@ -369,7 +414,10 @@ impl AuthController {
         let auth_code =
             AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::PasswordChange)
                 .await
-                .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired code".to_string()))?;
+                .map_err(|error| {
+                    error!("Failed to validate password change code: {:?}", error);
+                    ApiErrorResponse::BadRequest("Invalid or expired code".to_string())
+                })?;
 
         if auth_code.user_id != auth.user_id {
             return Err(ApiErrorResponse::BadRequest(
@@ -379,7 +427,11 @@ impl AuthController {
 
         AuthCodeRepo::mark_used(&state.db_pool, auth_code.id).await?;
 
-        let new_hash = PasswordUtil::hash_password(&body.new_password).map_err(|_| {
+        let new_hash = PasswordUtil::hash_password(&body.new_password).map_err(|error| {
+            error!(
+                "Failed to hash password during password change: {:?}",
+                error
+            );
             ApiErrorResponse::InternalServerError("Failed to hash password".to_string())
         })?;
 
@@ -396,12 +448,20 @@ impl AuthController {
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<RequestEmailChangeRequest>,
     ) -> ApiResult<Json<MessageResponse>> {
-        let existing = UserRepo::find_user_by_email(&state.db_pool, &body.new_email).await;
-
-        if existing.is_ok() {
-            return Err(ApiErrorResponse::BadRequest(
-                "Email already in use".to_string(),
-            ));
+        match UserRepo::find_user_by_email(&state.db_pool, &body.new_email).await {
+            Ok(_) => {
+                return Err(ApiErrorResponse::BadRequest(
+                    "Email already in use".to_string(),
+                ));
+            }
+            Err(ApiErrorResponse::NotFound(_)) => {}
+            Err(error) => {
+                error!(
+                    "Failed to check existing email during request-email-change: {:?}",
+                    error
+                );
+                return Err(error);
+            }
         }
 
         let change_code = code::generate();
@@ -437,7 +497,10 @@ impl AuthController {
         let auth_code =
             AuthCodeRepo::find_valid_code(&state.db_pool, &body.code, AuthCodeType::EmailChange)
                 .await
-                .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired code".to_string()))?;
+                .map_err(|error| {
+                    error!("Failed to validate email change code: {:?}", error);
+                    ApiErrorResponse::BadRequest("Invalid or expired code".to_string())
+                })?;
 
         let new_email = auth_code.new_email.as_ref().ok_or_else(|| {
             ApiErrorResponse::InternalServerError("Email change code missing new email".to_string())
