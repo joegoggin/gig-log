@@ -1,6 +1,8 @@
 pub mod close;
 pub mod company;
 pub mod error;
+pub mod eye_closed;
+pub mod eye_open;
 pub mod hamburger;
 pub mod home;
 pub mod info;
@@ -15,6 +17,8 @@ pub mod warning;
 pub use close::CloseIcon;
 pub use company::CompanyIcon;
 pub use error::ErrorIcon;
+pub use eye_closed::EyeClosedIcon;
+pub use eye_open::EyeOpenIcon;
 pub use hamburger::HamburgerIcon;
 pub use home::HomeIcon;
 pub use info::InfoIcon;

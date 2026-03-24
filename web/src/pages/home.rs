@@ -1,7 +1,10 @@
 use gig_log_common::models::error::ValidationError;
 use leptos::prelude::*;
 
-use crate::{components::text_input::TextInput, layouts::auth::AuthLayout};
+use crate::{
+    components::{password_input::PasswordInput, text_input::TextInput},
+    layouts::auth::AuthLayout,
+};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -13,6 +16,7 @@ pub fn HomePage() -> impl IntoView {
     view! {
         <AuthLayout>
             <h1>Hello</h1>
+            <PasswordInput name="test" placeholder="Test" value=test errors=errors />
             <TextInput name="test" placeholder="Test" value=test errors=errors />
         </AuthLayout>
     }
