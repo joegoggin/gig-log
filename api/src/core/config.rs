@@ -96,8 +96,8 @@ impl Config {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => {
                 match value.trim().to_ascii_lowercase().as_str() {
-                    "true" => true,
-                    "false" => false,
+                    "true" | "1" | "yes" | "on" => true,
+                    "false" | "0" | "no" | "off" => false,
                     _ => {
                         error!(
                             "Invalid boolean value for {}='{}'; using default {}",

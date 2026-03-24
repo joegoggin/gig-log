@@ -8,6 +8,7 @@ use serde::Serialize;
 use wasm_bindgen_futures::spawn_local;
 
 const WEB_LOG_RELAY_ENDPOINT: &str = "/_giglog/web-log";
+const MAX_RELAY_QUEUE_LEN: usize = 1024;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WebLoggerConfig {
@@ -80,7 +81,11 @@ impl Log for WebRelayLogger {
 
 fn enqueue_payload(payload: RelayLogPayload) {
     RELAY_QUEUE.with(|queue| {
-        queue.borrow_mut().push_back(payload);
+        let mut queue = queue.borrow_mut();
+        if queue.len() >= MAX_RELAY_QUEUE_LEN {
+            let _ = queue.pop_front();
+        }
+        queue.push_back(payload);
     });
 
     start_sender_if_needed();

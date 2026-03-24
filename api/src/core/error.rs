@@ -1,11 +1,11 @@
 use axum::{
-    Json,
     extract::rejection::JsonRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use gig_log_common::models::error::{ApiError, ValidationError};
-use log::error;
+use log::{error, warn};
 
 pub type ApiResult<T> = Result<T, ApiErrorResponse>;
 
@@ -22,15 +22,15 @@ impl IntoResponse for ApiErrorResponse {
     fn into_response(self) -> Response {
         let (status, message, errors) = match self {
             ApiErrorResponse::NotFound(msg) => {
-                error!("NotFound: {}", msg);
+                warn!("NotFound: {}", msg);
                 (StatusCode::NOT_FOUND, msg, None)
             }
             ApiErrorResponse::BadRequest(msg) => {
-                error!("BadRequest: {}", msg);
+                warn!("BadRequest: {}", msg);
                 (StatusCode::BAD_REQUEST, msg, None)
             }
             ApiErrorResponse::Validation(errs) => {
-                error!("Validation error: {:?}", errs);
+                warn!("Validation error: {:?}", errs);
 
                 (
                     StatusCode::BAD_REQUEST,
@@ -48,7 +48,7 @@ impl IntoResponse for ApiErrorResponse {
                 )
             }
             ApiErrorResponse::Unauthorized(msg) => {
-                error!("Unauthorized: {}", msg);
+                warn!("Unauthorized: {}", msg);
                 (StatusCode::UNAUTHORIZED, msg, None)
             }
         };

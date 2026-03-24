@@ -66,7 +66,7 @@ impl Logger {
         let (logged_request_body, request_body_for_next) = if should_attempt_request_body_logging(
             &method, &headers, &config,
         ) {
-            match to_bytes(request_body, usize::MAX).await {
+            match to_bytes(request_body, config.max_body_bytes).await {
                 Ok(bytes) => {
                     let logged_body = parse_redacted_json(&bytes);
                     (logged_body, Body::from(bytes))
@@ -115,7 +115,7 @@ impl Logger {
 
         let (logged_response_body, response_body_for_client) = match to_bytes(
             response_body,
-            usize::MAX,
+            config.max_body_bytes,
         )
         .await
         {

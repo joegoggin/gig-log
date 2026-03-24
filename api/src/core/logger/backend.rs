@@ -3,9 +3,9 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use colorized::{Colors, colorize_println};
+use colorized::{colorize_println, Colors};
 use gig_log_common::logging::parse_level_filter;
-use log::{Level, Log, Metadata, Record, set_logger, set_max_level};
+use log::{set_logger, set_max_level, Level, Log, Metadata, Record};
 
 use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 
@@ -28,11 +28,10 @@ impl Logger {
         let level = env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
         let verbose = env::var("LOG_VERBOSE")
             .ok()
-            .map(|value| {
-                matches!(
-                    value.trim().to_ascii_lowercase().as_str(),
-                    "true" | "1" | "yes" | "on"
-                )
+            .map(|value| match value.trim().to_ascii_lowercase().as_str() {
+                "true" | "1" | "yes" | "on" => true,
+                "false" | "0" | "no" | "off" => false,
+                _ => true,
             })
             .unwrap_or(true);
 
@@ -44,6 +43,10 @@ impl Logger {
     }
 
     pub fn log_success(message: &str) {
+        if !log::log_enabled!(Level::Info) {
+            return;
+        }
+
         if Self::is_verbose() {
             let hashtags = get_hashtags(6);
             let message = format!("\n{} {} {}\n", hashtags, message, hashtags);
@@ -55,6 +58,10 @@ impl Logger {
     }
 
     pub fn log_message(message: &str) {
+        if !log::log_enabled!(Level::Info) {
+            return;
+        }
+
         if Self::is_verbose() {
             let hashtags = get_hashtags(6);
             let message = format!("\n{} {} {}\n", hashtags, message, hashtags);

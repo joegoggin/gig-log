@@ -2,12 +2,11 @@ mod logging;
 
 use gig_log_common::logging::{debug, info, is_off};
 use leptos::prelude::*;
-use log::error;
 
 const DEFAULT_WEB_LOG_LEVEL: &str = if cfg!(debug_assertions) {
     "debug"
 } else {
-    "info"
+    "off"
 };
 
 fn init_web_logging() {
@@ -29,10 +28,6 @@ fn init_web_logging() {
 
 fn main() {
     init_web_logging();
-
-    info!("This is an info message");
-    debug!("This is a debug message");
-    error!("this is an error message");
 
     leptos::mount::mount_to_body(|| view! { <h1>"Hello World!"</h1> });
 

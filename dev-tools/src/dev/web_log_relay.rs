@@ -140,11 +140,10 @@ async fn relay_log(
 fn read_verbose_from_env() -> bool {
     std::env::var("LOG_VERBOSE")
         .ok()
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "true" | "1" | "yes" | "on"
-            )
+        .map(|value| match value.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => true,
+            "false" | "0" | "no" | "off" => false,
+            _ => true,
         })
         .unwrap_or(true)
 }
