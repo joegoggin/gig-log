@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use axum::{
-    body::{Body, to_bytes},
+    body::{Body, HttpBody, to_bytes},
     extract::{Request, State},
     http::{
         Method,
@@ -101,14 +101,18 @@ impl Logger {
             return response;
         }
 
-        let response_headers = response.headers().clone();
+        let (response_parts, response_body) = response.into_parts();
+        let response_body_size_hint_upper = response_body.size_hint().upper();
 
-        if !should_attempt_response_body_logging(&response_headers, &config) {
+        if !should_attempt_response_body_logging(
+            &response_parts.headers,
+            response_body_size_hint_upper,
+            &config,
+        ) {
             log_response(request_id, status, duration_ms, None);
-            return response;
+            return Response::from_parts(response_parts, response_body);
         }
 
-        let (response_parts, response_body) = response.into_parts();
         let (logged_response_body, response_body_for_client) = match to_bytes(
             response_body,
             usize::MAX,
@@ -159,7 +163,11 @@ fn should_attempt_request_body_logging(
     }
 }
 
-fn should_attempt_response_body_logging(headers: &HeaderMap, config: &HttpLoggingConfig) -> bool {
+fn should_attempt_response_body_logging(
+    headers: &HeaderMap,
+    body_size_hint_upper: Option<u64>,
+    config: &HttpLoggingConfig,
+) -> bool {
     if !config.body_enabled {
         return false;
     }
@@ -168,7 +176,9 @@ fn should_attempt_response_body_logging(headers: &HeaderMap, config: &HttpLoggin
         return false;
     }
 
-    match content_length(headers) {
+    match content_length(headers).or_else(|| {
+        body_size_hint_upper.and_then(|upper_bound| usize::try_from(upper_bound).ok())
+    }) {
         Some(length) => length <= config.max_body_bytes,
         None => false,
     }
@@ -246,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn response_body_logging_requires_known_size_within_limit() {
+    fn response_body_logging_uses_content_length_or_size_hint() {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::CONTENT_TYPE,
@@ -263,10 +273,17 @@ mod tests {
             verbose: true,
         };
 
-        assert!(should_attempt_response_body_logging(&headers, &config));
+        assert!(should_attempt_response_body_logging(&headers, None, &config));
 
         headers.remove(header::CONTENT_LENGTH);
-        assert!(!should_attempt_response_body_logging(&headers, &config));
+
+        assert!(should_attempt_response_body_logging(&headers, Some(48), &config));
+        assert!(!should_attempt_response_body_logging(
+            &headers,
+            Some(256),
+            &config
+        ));
+        assert!(!should_attempt_response_body_logging(&headers, None, &config));
     }
 
     #[test]
