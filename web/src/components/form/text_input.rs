@@ -74,6 +74,7 @@ pub fn TextInput(
                 <label>{label.clone().unwrap_or_default()}</label>
             </Show>
             <input
+                name=name.clone()
                 type=input_type
                 placeholder=placeholder.unwrap_or_default()
                 prop:value=value

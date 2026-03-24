@@ -14,8 +14,7 @@ use crate::{
 
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let error: ValidationError =
-        ValidationError::new(Some("test".to_string()), "This is is a test!");
+    let error: ValidationError = ValidationError::new(Some("test".to_string()), "This is a test!");
     let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![error]);
     let test = RwSignal::new(String::new());
     let description = RwSignal::new(String::new());

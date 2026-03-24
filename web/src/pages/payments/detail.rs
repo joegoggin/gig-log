@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::main::MainLayout;
+
 #[component]
 pub fn PaymentDetailPage() -> impl IntoView {
     view! {
-        <div>
+        <MainLayout>
             <h1>"Payment Detail"</h1>
-        </div>
+        </MainLayout>
     }
 }

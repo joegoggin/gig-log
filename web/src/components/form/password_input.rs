@@ -88,6 +88,7 @@ pub fn PasswordInput(
             </Show>
             <div class="password-input__field">
                 <input
+                    name=name.clone()
                     type=input_type
                     placeholder=placeholder.unwrap_or_default()
                     prop:value=value

@@ -83,7 +83,7 @@ where
                     on:change=on_change
                 >
                     <Show when=move || has_placeholder>
-                        <option value=PLACEHOLDER_VALUE disabled=true>
+                        <option value=PLACEHOLDER_VALUE>
                             {placeholder_label.clone()}
                         </option>
                     </Show>

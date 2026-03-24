@@ -21,7 +21,7 @@ impl AuthRequestRunner {
         }
     }
 
-    pub async fn sign_up(&self, request: &SignUpRequest) -> Result<User, ClientError> {
+    pub async fn sign_up(&self, request: &SignUpRequest) -> Result<MessageResponse, ClientError> {
         self.client.post("/auth/sign-up", Some(request)).await
     }
 
@@ -36,16 +36,12 @@ impl AuthRequestRunner {
         self.client.post("/auth/log-in", Some(request)).await
     }
 
-    pub async fn log_out(&self) -> Result<MessageResponse, ClientError> {
-        self.client
-            .post::<(), MessageResponse>("/auth/log-out", None)
-            .await
+    pub async fn log_out(&self) -> Result<(), ClientError> {
+        self.client.post_no_content::<()>("/auth/log-out", None).await
     }
 
-    pub async fn refresh(&self) -> Result<MessageResponse, ClientError> {
-        self.client
-            .post::<(), MessageResponse>("/auth/refresh", None)
-            .await
+    pub async fn refresh(&self) -> Result<User, ClientError> {
+        self.client.post::<(), User>("/auth/refresh", None).await
     }
 
     pub async fn get_me(&self) -> Result<User, ClientError> {

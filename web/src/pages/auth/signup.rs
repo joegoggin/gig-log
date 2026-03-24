@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::auth::AuthLayout;
+
 #[component]
 pub fn SignupPage() -> impl IntoView {
     view! {
-        <div>
+        <AuthLayout>
             <h1>"Sign Up"</h1>
-        </div>
+        </AuthLayout>
     }
 }

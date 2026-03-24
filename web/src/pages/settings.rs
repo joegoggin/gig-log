@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::main::MainLayout;
+
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     view! {
-        <div>
+        <MainLayout>
             <h1>"Settings"</h1>
-        </div>
+        </MainLayout>
     }
 }

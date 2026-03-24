@@ -48,6 +48,31 @@ impl ApiClient {
         }
     }
 
+    pub async fn post_no_content<T: Serialize>(
+        &self,
+        path: &str,
+        body: Option<&T>,
+    ) -> Result<(), ClientError> {
+        let request = self.client.post(format!("{}{}", BASE_URL, path));
+        let request = Self::with_credentials(request);
+
+        let response = match body {
+            Some(b) => request.json(b).send().await,
+            None => request.send().await,
+        }
+        .map_err(|e| ClientError::Network(e.to_string()))?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let api_error = response
+                .json::<ApiError>()
+                .await
+                .map_err(|e| ClientError::Network(e.to_string()))?;
+            Err(ClientError::Api(api_error))
+        }
+    }
+
     pub async fn get<R: DeserializeOwned>(&self, path: &str) -> Result<R, ClientError> {
         let response = self.client.get(format!("{}{}", BASE_URL, path));
 

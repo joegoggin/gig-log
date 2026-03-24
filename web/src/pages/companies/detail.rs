@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::main::MainLayout;
+
 #[component]
 pub fn CompanyDetailPage() -> impl IntoView {
     view! {
-        <div>
+        <MainLayout>
             <h1>"Company Detail"</h1>
-        </div>
+        </MainLayout>
     }
 }

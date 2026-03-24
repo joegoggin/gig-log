@@ -70,6 +70,7 @@ pub fn TextArea(
                 <label>{label.clone().unwrap_or_default()}</label>
             </Show>
             <textarea
+                name=name.clone()
                 rows=rows
                 placeholder=placeholder.unwrap_or_default()
                 prop:value=value

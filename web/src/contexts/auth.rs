@@ -1,4 +1,7 @@
-use gig_log_common::models::user::{LogInRequest, SignUpRequest, User};
+use gig_log_common::models::{
+    generic::MessageResponse,
+    user::{LogInRequest, SignUpRequest, User},
+};
 use leptos::{prelude::*, reactive::spawn_local};
 
 use crate::api_client::{AuthRequestRunner, ClientError};
@@ -44,10 +47,8 @@ impl AuthContext {
         Ok(user)
     }
 
-    pub async fn signup(&self, request: &SignUpRequest) -> Result<User, ClientError> {
-        let user = self.auth_requests.sign_up(request).await?;
-        self.user.set(Some(user.clone()));
-        Ok(user)
+    pub async fn signup(&self, request: &SignUpRequest) -> Result<MessageResponse, ClientError> {
+        self.auth_requests.sign_up(request).await
     }
 
     pub async fn logout(&self) -> Result<(), ClientError> {
@@ -57,7 +58,8 @@ impl AuthContext {
     }
 
     pub async fn refresh(&self) -> Result<(), ClientError> {
-        self.auth_requests.refresh().await?;
+        let user = self.auth_requests.refresh().await?;
+        self.user.set(Some(user));
         Ok(())
     }
 

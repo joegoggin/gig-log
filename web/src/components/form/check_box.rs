@@ -16,8 +16,10 @@ pub fn CheckBox(
 
     view! {
         <div class=class>
-            <input type="checkbox" checked=move || checked.get() on:change=toggle_checked />
-            <label>{label}</label>
+            <label>
+                <input type="checkbox" checked=move || checked.get() on:change=toggle_checked />
+                {label}
+            </label>
         </div>
     }
 }

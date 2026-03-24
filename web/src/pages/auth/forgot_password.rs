@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::auth::AuthLayout;
+
 #[component]
 pub fn ForgotPasswordPage() -> impl IntoView {
     view! {
-        <div>
+        <AuthLayout>
             <h1>"Forgot Password"</h1>
-        </div>
+        </AuthLayout>
     }
 }

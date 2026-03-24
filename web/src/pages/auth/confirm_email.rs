@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
+use crate::layouts::auth::AuthLayout;
+
 #[component]
 pub fn ConfirmEmailPage() -> impl IntoView {
     view! {
-        <div>
+        <AuthLayout>
             <h1>"Confirm Email"</h1>
-        </div>
+        </AuthLayout>
     }
 }

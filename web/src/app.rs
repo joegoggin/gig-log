@@ -32,7 +32,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/confirm-email") view=ConfirmEmailPage />
 
                     // Dashboard
-                    <Route path=path!("/dashboard") view=DashboardPage />
+                    <PrivateRoute path=path!("/dashboard") view=DashboardPage />
 
                     // Companies
                     <PrivateRoute path=path!("/companies") view=CompanyListPage />
@@ -43,7 +43,7 @@ pub fn App() -> impl IntoView {
                     // Jobs
                     <PrivateRoute path=path!("/jobs") view=JobListPage />
                     <PrivateRoute path=path!("/jobs/new") view=JobCreatePage />
-                    <Route path=path!("/jobs/:id") view=JobDetailPage />
+                    <PrivateRoute path=path!("/jobs/:id") view=JobDetailPage />
                     <PrivateRoute path=path!("/jobs/:id/edit") view=JobEditPage />
 
                     // Payments
