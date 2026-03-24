@@ -7,6 +7,7 @@ use gig_log_common::models::user::{
     RequestEmailChangeRequest, SetPasswordRequest, SignUpRequest, User,
     VerifyForgotPasswordRequest,
 };
+use log::warn;
 use sha2::{Digest, Sha256};
 
 use crate::auth::AuthUser;
@@ -148,12 +149,12 @@ impl AuthController {
                 RefreshTokenRepo::revoke_token(&state.db_pool, &token_hash).await?;
 
             if !revoked_by_refresh_cookie {
-                println!(
+                warn!(
                     "Warning: refresh token cookie was present but no active row was revoked; falling back to user-wide revocation"
                 );
             }
         } else {
-            println!(
+            warn!(
                 "Warning: logout request did not include a refresh_token cookie; falling back to user-wide revocation"
             );
         }
@@ -169,13 +170,13 @@ impl AuthController {
                         .await?;
                     }
                     Err(_) => {
-                        println!(
+                        warn!(
                             "Warning: could not validate access token for fallback logout revocation"
                         );
                     }
                 }
             } else {
-                println!(
+                warn!(
                     "Warning: logout request did not include an access_token cookie for fallback revocation"
                 );
             }

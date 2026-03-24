@@ -170,11 +170,71 @@ async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
     tx: mpsc::Sender<LogEntry>,
 ) {
     let mut lines = BufReader::new(reader).lines();
+    let mut pending_ansi_prefix = String::new();
+
     while let Ok(Some(line)) = lines.next_line().await {
+        let Some(line) = normalize_ansi_for_tui(line, &mut pending_ansi_prefix) else {
+            continue;
+        };
+
         if tx.send(LogEntry { service, line }).await.is_err() {
             break;
         }
     }
+}
+
+fn normalize_ansi_for_tui(line: String, pending_ansi_prefix: &mut String) -> Option<String> {
+    if is_ansi_control_only_line(&line) {
+        if line_contains_ansi_reset(&line) {
+            pending_ansi_prefix.clear();
+        } else {
+            pending_ansi_prefix.push_str(&line);
+        }
+
+        return Some(String::new());
+    }
+
+    if pending_ansi_prefix.is_empty() {
+        return Some(line);
+    }
+
+    let mut normalized = String::with_capacity(pending_ansi_prefix.len() + line.len());
+    normalized.push_str(pending_ansi_prefix);
+    normalized.push_str(&line);
+    pending_ansi_prefix.clear();
+
+    Some(normalized)
+}
+
+fn is_ansi_control_only_line(line: &str) -> bool {
+    line.contains('\u{1b}') && strip_ansi_sequences(line).trim().is_empty()
+}
+
+fn strip_ansi_sequences(line: &str) -> String {
+    let mut output = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' && matches!(chars.peek(), Some('[')) {
+            let _ = chars.next();
+
+            for seq_char in chars.by_ref() {
+                if ('@'..='~').contains(&seq_char) {
+                    break;
+                }
+            }
+
+            continue;
+        }
+
+        output.push(ch);
+    }
+
+    output
+}
+
+fn line_contains_ansi_reset(line: &str) -> bool {
+    line.contains("\u{1b}[0m") || line.contains("\u{1b}[m")
 }
 
 pub fn check_requirements() -> Result<()> {
@@ -192,4 +252,38 @@ pub fn check_requirements() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_ansi_for_tui;
+
+    #[test]
+    fn ansi_control_prefix_is_applied_to_next_log_line() {
+        let mut pending_ansi_prefix = String::new();
+
+        let first = normalize_ansi_for_tui("\u{1b}[34m".to_string(), &mut pending_ansi_prefix);
+        assert_eq!(first, Some(String::new()));
+        assert_eq!(pending_ansi_prefix, "\u{1b}[34m");
+
+        let second = normalize_ansi_for_tui("hello world".to_string(), &mut pending_ansi_prefix);
+        assert_eq!(second, Some("\u{1b}[34mhello world".to_string()));
+        assert!(pending_ansi_prefix.is_empty());
+    }
+
+    #[test]
+    fn ansi_reset_line_clears_pending_prefix() {
+        let mut pending_ansi_prefix = "\u{1b}[34m".to_string();
+
+        let normalized = normalize_ansi_for_tui("\u{1b}[0m".to_string(), &mut pending_ansi_prefix);
+        assert_eq!(normalized, Some(String::new()));
+        assert!(pending_ansi_prefix.is_empty());
+    }
+
+    #[test]
+    fn plain_empty_line_is_preserved() {
+        let mut pending_ansi_prefix = String::new();
+        let normalized = normalize_ansi_for_tui(String::new(), &mut pending_ansi_prefix);
+        assert_eq!(normalized, Some(String::new()));
+    }
 }

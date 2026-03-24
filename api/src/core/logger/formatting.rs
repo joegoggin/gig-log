@@ -1,0 +1,315 @@
+use axum::http::{HeaderMap, Method, StatusCode};
+use colorized::{Colors, colorize_print, colorize_println};
+use log::Record;
+use serde_json::Value;
+use uuid::Uuid;
+
+use super::redaction::sanitize_header_value;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum StatusClass {
+    Success,
+    ClientError,
+    ServerError,
+    Other,
+}
+
+pub(super) fn classify_status(status_code: StatusCode) -> StatusClass {
+    if status_code.is_success() {
+        StatusClass::Success
+    } else if status_code.is_client_error() {
+        StatusClass::ClientError
+    } else if status_code.is_server_error() {
+        StatusClass::ServerError
+    } else {
+        StatusClass::Other
+    }
+}
+
+pub(super) fn get_hashtags(level: i8) -> String {
+    let mut hashtags = String::new();
+
+    for _ in 0..level {
+        hashtags.push('#');
+    }
+
+    hashtags
+}
+
+pub(super) fn get_spaces(level: i8) -> String {
+    let mut spaces = String::new();
+
+    for _ in 0..level {
+        spaces.push_str("  ");
+    }
+
+    spaces
+}
+
+fn log_header(header: &str, hashtags: &str) {
+    let header_string = format!("\n{} {} {}\n", hashtags, header, hashtags);
+    colorize_println(header_string, Colors::MagentaFg);
+}
+
+fn log_h1(header: &str) {
+    log_header(header, &get_hashtags(6));
+}
+
+fn log_h2(header: &str) {
+    log_header(header, &get_hashtags(5));
+}
+
+pub(super) fn log_json(json: Value, level: i8) {
+    match json {
+        Value::Array(values) => {
+            log_array(values, level);
+        }
+        json => {
+            if let Some(json_object) = json.as_object() {
+                if level == 0 {
+                    println!("{{");
+                }
+
+                for (key, value) in json_object {
+                    print!("{}", get_spaces(level + 1));
+                    colorize_print(key, Colors::CyanFg);
+                    print!(": ");
+
+                    match value {
+                        Value::Array(values) => log_array(values.clone(), level + 1),
+                        Value::String(value) => {
+                            colorize_print(format!("\"{}\"", value), Colors::GreenFg);
+                            println!(",");
+                        }
+                        Value::Object(value) => {
+                            println!("{{");
+                            log_json(Value::Object(value.clone()), level + 2);
+                            print!("{}", get_spaces(level + 1));
+                            println!("}},");
+                        }
+                        value => {
+                            colorize_print(value.to_string(), Colors::MagentaFg);
+                            println!(",");
+                        }
+                    }
+                }
+
+                if level == 0 {
+                    println!("}}");
+                }
+            }
+        }
+    }
+}
+
+fn log_array(values: Vec<Value>, level: i8) {
+    if values.is_empty() {
+        println!("[],");
+        return;
+    }
+
+    if level > 0 {
+        print!("\n{}", get_spaces(level));
+    }
+
+    println!("[");
+
+    for (index, value) in values.iter().enumerate() {
+        print!("{}", get_spaces(level + 1));
+        println!("{{");
+        log_json(value.to_owned(), level + 2);
+        print!("{}", get_spaces(level + 1));
+
+        if index == values.len() - 1 {
+            println!("}}");
+        } else {
+            println!("}},");
+        }
+    }
+
+    if level > 0 {
+        print!("{}", get_spaces(level));
+    }
+
+    if level == 0 {
+        println!("]");
+    } else {
+        println!("],");
+    }
+}
+
+pub(super) fn log_headers(headers: &HeaderMap) {
+    for (key, value) in headers {
+        colorize_print(format!("{}: ", key), Colors::CyanFg);
+        let value = value.to_str().unwrap_or("<non-utf8>");
+        let sanitized = sanitize_header_value(key.as_str(), value);
+        println!("{}", sanitized);
+    }
+}
+
+pub(super) fn log_request(
+    id: Uuid,
+    method: &Method,
+    route: &str,
+    headers: &HeaderMap,
+    req_body: Option<Value>,
+) {
+    log_h1("Request");
+
+    colorize_print("Request ID: ", Colors::CyanFg);
+    println!("{}\n", id);
+
+    colorize_print(format!("{} ", method), Colors::CyanFg);
+    println!("{}", route);
+
+    log_h2("Headers");
+    log_headers(headers);
+
+    if let Some(req_body) = req_body {
+        log_h2("Body");
+        log_json(req_body, 0);
+    }
+}
+
+pub(super) fn log_response(
+    id: Uuid,
+    status_code: StatusCode,
+    duration_ms: u128,
+    res_body: Option<Value>,
+) {
+    log_h1("Response");
+
+    colorize_print("Request ID: ", Colors::CyanFg);
+    println!("{}\n", id);
+
+    colorize_print("Status Code: ", Colors::CyanFg);
+
+    match classify_status(status_code) {
+        StatusClass::Success => colorize_println(status_code.to_string(), Colors::GreenFg),
+        StatusClass::ClientError => colorize_println(status_code.to_string(), Colors::YellowFg),
+        StatusClass::ServerError => colorize_println(status_code.to_string(), Colors::RedFg),
+        StatusClass::Other => colorize_println(status_code.to_string(), Colors::MagentaFg),
+    }
+
+    colorize_print("Duration: ", Colors::CyanFg);
+    colorize_println(format!("{} ms", duration_ms), Colors::BlueFg);
+
+    if let Some(res_body) = res_body {
+        log_h2("Body");
+        log_json(res_body, 0);
+    }
+}
+
+pub(super) fn log_compact_http(
+    id: Uuid,
+    method: &Method,
+    route: &str,
+    status_code: StatusCode,
+    duration_ms: u128,
+) {
+    colorize_print(format!("[{}] ", id), Colors::CyanFg);
+    colorize_print(format!("{} {} -> ", method, route), Colors::BlueFg);
+
+    match classify_status(status_code) {
+        StatusClass::Success => colorize_print(status_code.to_string(), Colors::GreenFg),
+        StatusClass::ClientError => colorize_print(status_code.to_string(), Colors::YellowFg),
+        StatusClass::ServerError => colorize_print(status_code.to_string(), Colors::RedFg),
+        StatusClass::Other => colorize_print(status_code.to_string(), Colors::MagentaFg),
+    }
+
+    colorize_println(format!(" ({} ms)", duration_ms), Colors::BlueFg);
+}
+
+pub(super) fn extract_after_src(path: Option<&str>) -> String {
+    match path {
+        Some(path) => {
+            let src_prefix = "src/";
+
+            if let Some(start_index) = path.find(src_prefix) {
+                let start_index = start_index + src_prefix.len();
+                path[start_index..].to_string()
+            } else {
+                String::new()
+            }
+        }
+        None => String::new(),
+    }
+}
+
+pub(super) fn log_error(record: &Record<'_>) {
+    let hashtags = get_hashtags(6);
+    let error_header = format!("\n{} Error {}\n", hashtags, hashtags);
+    let file_path = extract_after_src(record.file());
+    let line_number = record
+        .line()
+        .map(|line| line.to_string())
+        .unwrap_or_default();
+
+    colorize_println(error_header, Colors::RedFg);
+    colorize_println(
+        format!("File: {}\nLine Number: {}\n", file_path, line_number),
+        Colors::RedFg,
+    );
+    colorize_println(format!("{}", record.args()), Colors::RedFg);
+}
+
+pub(super) fn log_debug(record: &Record<'_>) {
+    let hashtags = get_hashtags(6);
+    let debug_header = format!("\n{} Debug {}\n", hashtags, hashtags);
+    let file_path = extract_after_src(record.file());
+    let line_number = record
+        .line()
+        .map(|line| line.to_string())
+        .unwrap_or_default();
+
+    colorize_println(debug_header, Colors::YellowFg);
+    colorize_println(
+        format!("File: {}\nLine Number: {}\n", file_path, line_number),
+        Colors::YellowFg,
+    );
+    colorize_println(format!("{}", record.args()), Colors::YellowFg);
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::http::StatusCode;
+
+    use super::{StatusClass, classify_status, extract_after_src, get_hashtags, get_spaces};
+
+    #[test]
+    fn classify_status_maps_expected_classes() {
+        assert_eq!(classify_status(StatusCode::OK), StatusClass::Success);
+        assert_eq!(
+            classify_status(StatusCode::BAD_REQUEST),
+            StatusClass::ClientError
+        );
+        assert_eq!(
+            classify_status(StatusCode::INTERNAL_SERVER_ERROR),
+            StatusClass::ServerError
+        );
+        assert_eq!(
+            classify_status(StatusCode::SWITCHING_PROTOCOLS),
+            StatusClass::Other
+        );
+    }
+
+    #[test]
+    fn extract_after_src_returns_relative_suffix() {
+        let extracted = extract_after_src(Some("/tmp/project/src/core/logger/mod.rs"));
+        assert_eq!(extracted, "core/logger/mod.rs");
+    }
+
+    #[test]
+    fn extract_after_src_returns_empty_when_src_not_found() {
+        let extracted = extract_after_src(Some("/tmp/project/core/logger/mod.rs"));
+        assert!(extracted.is_empty());
+    }
+
+    #[test]
+    fn banner_and_indent_helpers_are_deterministic() {
+        assert_eq!(get_hashtags(0), "");
+        assert_eq!(get_hashtags(3), "###");
+        assert_eq!(get_spaces(0), "");
+        assert_eq!(get_spaces(2), "    ");
+    }
+}

@@ -19,7 +19,7 @@ pub struct Config {
     pub auth_code_expiry_seconds: u64,
     pub log_level: String,
     pub log_verbose: bool,
-    pub log_http_max_body: u64,
+    pub log_http_max_body: usize,
 }
 
 impl Config {
@@ -39,8 +39,9 @@ impl Config {
         let resend_from_email = Self::get_var_from_env("RESEND_FROM_EMAIL")?;
         let auth_code_expiry_seconds = Self::get_optional_number("AUTH_CODE_EXPIRY_SECONDS", 600);
         let log_level = Self::get_optional_string("LOG_LEVEL", "debug");
-        let log_verbose = Self::get_optional_bool("LOG_VERBOSE", true);
-        let log_http_max_body = Self::get_optional_number("LOG_HTTP_MAX_BODY_BYTES", 16384);
+        let log_verbose =
+            Self::get_optional_bool("LOG_VERBOSE", Self::is_development_env(&app_env));
+        let log_http_max_body = Self::get_optional_usize("LOG_HTTP_MAX_BODY_BYTES", 16384);
 
         Ok(Self {
             app_env,
@@ -61,6 +62,10 @@ impl Config {
 
     pub fn is_development(&self) -> bool {
         Self::is_development_env(&self.app_env)
+    }
+
+    pub fn is_http_body_logging_enabled(&self) -> bool {
+        self.is_development()
     }
 
     pub fn is_development_env(app_env: &str) -> bool {
@@ -88,10 +93,22 @@ impl Config {
 
     fn get_optional_bool(var: &str, default: bool) -> bool {
         match env::var(var) {
-            Ok(value) if !value.trim().is_empty() => match value.as_str() {
-                "true" => true,
-                "false" => false,
-                _ => default,
+            Ok(value) if !value.trim().is_empty() => {
+                match value.trim().to_ascii_lowercase().as_str() {
+                    "true" => true,
+                    "false" => false,
+                    _ => default,
+                }
+            }
+            _ => default,
+        }
+    }
+
+    fn get_optional_usize(var: &str, default: usize) -> usize {
+        match env::var(var) {
+            Ok(value) if !value.trim().is_empty() => match value.parse::<usize>() {
+                Ok(value) => value,
+                Err(_) => default,
             },
             _ => default,
         }

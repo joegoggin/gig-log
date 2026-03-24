@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use gig_log_common::models::error::{ApiError, ValidationError};
+use log::error;
 
 pub type ApiResult<T> = Result<T, ApiErrorResponse>;
 
@@ -28,7 +29,7 @@ impl IntoResponse for ApiErrorResponse {
                 Some(errs),
             ),
             ApiErrorResponse::InternalServerError(msg) => {
-                println!("Error: {:#?}", msg);
+                error!("Error: {:#}", msg);
 
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
