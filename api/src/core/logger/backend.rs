@@ -4,7 +4,8 @@ use std::{
 };
 
 use colorized::{Colors, colorize_println};
-use log::{Level, LevelFilter, Log, Metadata, Record, set_logger, set_max_level};
+use gig_log_common::logging::parse_level_filter;
+use log::{Level, Log, Metadata, Record, set_logger, set_max_level};
 
 use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 
@@ -18,7 +19,7 @@ impl Logger {
         LOG_VERBOSE.store(verbose, Ordering::Relaxed);
 
         let _ = set_logger(&LOGGER);
-        set_max_level(Self::parse_level_filter(log_level));
+        set_max_level(parse_level_filter(log_level));
     }
 
     pub fn setup_logging_from_env() {
@@ -62,18 +63,6 @@ impl Logger {
         }
 
         colorize_println(message, Colors::BlueFg);
-    }
-
-    fn parse_level_filter(log_level: &str) -> LevelFilter {
-        match log_level.trim().to_ascii_lowercase().as_str() {
-            "off" => LevelFilter::Off,
-            "error" => LevelFilter::Error,
-            "warn" => LevelFilter::Warn,
-            "info" => LevelFilter::Info,
-            "debug" => LevelFilter::Debug,
-            "trace" => LevelFilter::Trace,
-            _ => LevelFilter::Info,
-        }
     }
 }
 

@@ -6,7 +6,10 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 
-use super::log_store::{LogEntry, Service};
+use super::{
+    log_store::{LogEntry, Service},
+    web_log_relay::{WEB_LOG_RELAY_BACKEND_URL, WEB_LOG_RELAY_PROXY_PATH},
+};
 
 pub struct ServiceProcess {
     pub service: Service,
@@ -159,7 +162,17 @@ fn service_command(
 ) -> Result<(&'static str, Vec<&'static str>, Option<&'static str>)> {
     match service {
         Service::Api => Ok(("cargo", vec!["run", "-p", "gig-log-api"], None)),
-        Service::Web => Ok(("trunk", vec!["serve"], Some("web/"))),
+        Service::Web => Ok((
+            "trunk",
+            vec![
+                "serve",
+                "--proxy-rewrite",
+                WEB_LOG_RELAY_PROXY_PATH,
+                "--proxy-backend",
+                WEB_LOG_RELAY_BACKEND_URL,
+            ],
+            Some("web/"),
+        )),
         _ => anyhow::bail!("{} is not a long-running service", service.label()),
     }
 }
@@ -309,7 +322,9 @@ pub fn check_requirements() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_ansi_for_tui;
+    use super::{normalize_ansi_for_tui, service_command};
+    use crate::dev::log_store::Service;
+    use crate::dev::web_log_relay::{WEB_LOG_RELAY_BACKEND_URL, WEB_LOG_RELAY_PROXY_PATH};
 
     #[test]
     fn ansi_control_prefix_is_applied_until_reset() {
@@ -365,5 +380,21 @@ mod tests {
         let mut active_ansi_prefix = String::new();
         let normalized = normalize_ansi_for_tui(String::new(), &mut active_ansi_prefix);
         assert_eq!(normalized, Some(String::new()));
+    }
+
+    #[test]
+    fn web_service_uses_relay_proxy() {
+        let (cmd, args, working_dir) = service_command(Service::Web).expect("web command");
+
+        assert_eq!(cmd, "trunk");
+        assert_eq!(working_dir, Some("web/"));
+        assert!(
+            args.windows(2)
+                .any(|window| { window == ["--proxy-rewrite", WEB_LOG_RELAY_PROXY_PATH] })
+        );
+        assert!(
+            args.windows(2)
+                .any(|window| { window == ["--proxy-backend", WEB_LOG_RELAY_BACKEND_URL] })
+        );
     }
 }

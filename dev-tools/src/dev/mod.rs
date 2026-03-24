@@ -3,6 +3,7 @@ mod process;
 mod tui;
 mod ui;
 mod watcher;
+mod web_log_relay;
 
 use std::time::Duration;
 
@@ -100,6 +101,45 @@ async fn run_orchestrator(
         log_senders.push((service, spawn_log_forwarder(&tui_tx)));
     }
 
+    let system_log_tx = match log_senders
+        .iter()
+        .find(|(service, _)| *service == Service::System)
+        .map(|(_, tx)| tx.clone())
+    {
+        Some(tx) => tx,
+        None => return Ok(()),
+    };
+
+    let mut web_log_relay = match log_senders
+        .iter()
+        .find(|(service, _)| *service == Service::Web)
+        .map(|(_, tx)| tx.clone())
+    {
+        Some(web_log_tx) => match web_log_relay::start(web_log_tx).await {
+            Ok(relay) => {
+                system_log(
+                    &system_log_tx,
+                    format!(
+                        "Web log relay active at {} (proxy path {})",
+                        web_log_relay::WEB_LOG_RELAY_ADDR,
+                        web_log_relay::WEB_LOG_RELAY_PROXY_PATH
+                    ),
+                )
+                .await;
+                Some(relay)
+            }
+            Err(error) => {
+                system_log(
+                    &system_log_tx,
+                    format!("Failed to start web log relay: {error}"),
+                )
+                .await;
+                None
+            }
+        },
+        None => None,
+    };
+
     let _miniserve = start_docs_prerequisites().await?;
     if let Some(docs_tx) = log_senders
         .iter()
@@ -143,15 +183,6 @@ async fn run_orchestrator(
             }
         });
     }
-
-    let system_log_tx = match log_senders
-        .iter()
-        .find(|(service, _)| *service == Service::System)
-        .map(|(_, tx)| tx.clone())
-    {
-        Some(tx) => tx,
-        None => return Ok(()),
-    };
 
     run_initial_docs_after_startup(&tui_tx, &system_log_tx, &log_senders, &mut trunk_event_rx)
         .await;
@@ -209,6 +240,10 @@ async fn run_orchestrator(
 
     for mut proc in processes {
         proc.shutdown_fast().await;
+    }
+
+    if let Some(relay) = web_log_relay.take() {
+        relay.shutdown().await;
     }
 
     Ok(())

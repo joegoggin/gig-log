@@ -1473,6 +1473,7 @@ name = "gig-log-common"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "serde",
  "serde_json",
  "uuid",
@@ -1485,6 +1486,7 @@ version = "0.1.0"
 dependencies = [
  "ansi-to-tui",
  "anyhow",
+ "axum",
  "clap",
  "crossterm 0.28.1",
  "dialoguer",
@@ -1507,7 +1509,11 @@ name = "gig-log-frontend"
 version = "0.1.0"
 dependencies = [
  "gig-log-common",
+ "gloo-net",
  "leptos",
+ "log",
+ "serde",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+gloo-net = "0.6.0"
 gig-log-common = { path = "../common" }
 leptos = { version = "0.8.16", features = ["csr"] }
+log = "0.4.28"
+serde = { version = "1.0.228", features = ["derive"] }
+wasm-bindgen-futures = "0.4"
