@@ -3,6 +3,7 @@ use leptos::{logging::log, prelude::*};
 
 use crate::{
     components::{
+        check_box::CheckBox,
         password_input::PasswordInput,
         select_input::{SelectInput, SelectOption},
         text_input::TextInput,
@@ -16,6 +17,7 @@ pub fn HomePage() -> impl IntoView {
         ValidationError::new(Some("test".to_string()), "This is is a test!");
     let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![error]);
     let test = RwSignal::new(String::new());
+    let checked = RwSignal::new(false);
 
     let options: Vec<SelectOption<i8>> = vec![
         SelectOption::new(1, "One"),
@@ -41,6 +43,7 @@ pub fn HomePage() -> impl IntoView {
                 label="Select Input"
                 placeholder="Select an option"
             />
+            <CheckBox label="This is checkbox" checked=checked />
         </AuthLayout>
     }
 }

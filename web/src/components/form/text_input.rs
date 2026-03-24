@@ -1,5 +1,5 @@
 use gig_log_common::models::error::ValidationError;
-use leptos::{logging::log, prelude::*};
+use leptos::prelude::*;
 
 use crate::utils::class_name::ClassNameUtil;
 
