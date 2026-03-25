@@ -6,7 +6,10 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 
-use super::log_store::{LogEntry, Service};
+use super::{
+    log_store::{LogEntry, Service},
+    web_log_relay::{WEB_LOG_RELAY_BACKEND_URL, WEB_LOG_RELAY_PROXY_PATH},
+};
 
 pub struct ServiceProcess {
     pub service: Service,
@@ -163,7 +166,17 @@ fn service_command(
 ) -> Result<(&'static str, Vec<&'static str>, Option<&'static str>)> {
     match service {
         Service::Api => Ok(("cargo", vec!["run", "-p", "gig-log-api"], None)),
-        Service::Web => Ok(("trunk", vec!["serve"], Some("web/"))),
+        Service::Web => Ok((
+            "trunk",
+            vec![
+                "serve",
+                "--proxy-rewrite",
+                WEB_LOG_RELAY_PROXY_PATH,
+                "--proxy-backend",
+                WEB_LOG_RELAY_BACKEND_URL,
+            ],
+            Some("web/"),
+        )),
         _ => anyhow::bail!("{} is not a long-running service", service.label()),
     }
 }
@@ -174,11 +187,124 @@ async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
     tx: mpsc::Sender<LogEntry>,
 ) {
     let mut lines = BufReader::new(reader).lines();
+    let mut active_ansi_prefix = String::new();
+
     while let Ok(Some(line)) = lines.next_line().await {
+        let Some(line) = normalize_ansi_for_tui(line, &mut active_ansi_prefix) else {
+            continue;
+        };
+
         if tx.send(LogEntry { service, line }).await.is_err() {
             break;
         }
     }
+}
+
+fn normalize_ansi_for_tui(line: String, active_ansi_prefix: &mut String) -> Option<String> {
+    if is_ansi_control_only_line(&line) {
+        update_active_ansi_prefix(&line, active_ansi_prefix);
+
+        return Some(String::new());
+    }
+
+    if line.is_empty() {
+        return Some(line);
+    }
+
+    let should_prepend_active_prefix =
+        !active_ansi_prefix.is_empty() && !starts_with_ansi_sequence(&line);
+    let prefix_for_line = if should_prepend_active_prefix {
+        Some(active_ansi_prefix.clone())
+    } else {
+        None
+    };
+
+    update_active_ansi_prefix(&line, active_ansi_prefix);
+
+    let Some(prefix_for_line) = prefix_for_line else {
+        return Some(line);
+    };
+
+    let mut normalized = String::with_capacity(prefix_for_line.len() + line.len());
+    normalized.push_str(&prefix_for_line);
+    normalized.push_str(&line);
+
+    Some(normalized)
+}
+
+fn starts_with_ansi_sequence(line: &str) -> bool {
+    line.as_bytes().starts_with(b"\x1b[")
+}
+
+fn update_active_ansi_prefix(line: &str, active_ansi_prefix: &mut String) {
+    if starts_with_ansi_sequence(line) {
+        active_ansi_prefix.clear();
+    }
+
+    let bytes = line.as_bytes();
+    let mut index = 0;
+
+    while index + 1 < bytes.len() {
+        if bytes[index] != b'\x1b' || bytes[index + 1] != b'[' {
+            index += 1;
+            continue;
+        }
+
+        let sequence_start = index;
+        index += 2;
+
+        while index < bytes.len() {
+            let byte = bytes[index];
+            index += 1;
+
+            if (b'@'..=b'~').contains(&byte) {
+                let sequence = &line[sequence_start..index];
+
+                if ansi_sequence_is_reset(sequence) {
+                    active_ansi_prefix.clear();
+                } else if ansi_sequence_is_sgr(sequence) {
+                    active_ansi_prefix.push_str(sequence);
+                }
+
+                break;
+            }
+        }
+    }
+}
+
+fn ansi_sequence_is_reset(sequence: &str) -> bool {
+    sequence == "\u{1b}[0m" || sequence == "\u{1b}[m"
+}
+
+fn ansi_sequence_is_sgr(sequence: &str) -> bool {
+    sequence.ends_with('m')
+}
+
+fn is_ansi_control_only_line(line: &str) -> bool {
+    line.contains('\u{1b}') && strip_ansi_sequences(line).trim().is_empty()
+}
+
+fn strip_ansi_sequences(line: &str) -> String {
+    let mut output = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' && matches!(chars.peek(), Some('[')) {
+            let _ = chars.next();
+
+            for seq_char in chars.by_ref() {
+                if ('@'..='~').contains(&seq_char) {
+                    break;
+                }
+            }
+
+            continue;
+        }
+
+        output.push(ch);
+    }
+
+    output
 }
 
 pub fn check_requirements() -> Result<()> {
@@ -196,4 +322,83 @@ pub fn check_requirements() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_ansi_for_tui, service_command};
+    use crate::dev::log_store::Service;
+    use crate::dev::web_log_relay::{WEB_LOG_RELAY_BACKEND_URL, WEB_LOG_RELAY_PROXY_PATH};
+
+    #[test]
+    fn ansi_control_prefix_is_applied_until_reset() {
+        let mut active_ansi_prefix = String::new();
+
+        let first = normalize_ansi_for_tui("\u{1b}[34m".to_string(), &mut active_ansi_prefix);
+        assert_eq!(first, Some(String::new()));
+        assert_eq!(active_ansi_prefix, "\u{1b}[34m");
+
+        let second = normalize_ansi_for_tui("hello".to_string(), &mut active_ansi_prefix);
+        assert_eq!(second, Some("\u{1b}[34mhello".to_string()));
+        assert_eq!(active_ansi_prefix, "\u{1b}[34m");
+
+        let third = normalize_ansi_for_tui("world".to_string(), &mut active_ansi_prefix);
+        assert_eq!(third, Some("\u{1b}[34mworld".to_string()));
+        assert_eq!(active_ansi_prefix, "\u{1b}[34m");
+
+        let reset = normalize_ansi_for_tui("\u{1b}[0m".to_string(), &mut active_ansi_prefix);
+        assert_eq!(reset, Some(String::new()));
+        assert!(active_ansi_prefix.is_empty());
+
+        let after_reset =
+            normalize_ansi_for_tui("after reset".to_string(), &mut active_ansi_prefix);
+        assert_eq!(after_reset, Some("after reset".to_string()));
+    }
+
+    #[test]
+    fn ansi_reset_line_clears_pending_prefix() {
+        let mut active_ansi_prefix = "\u{1b}[34m".to_string();
+
+        let normalized = normalize_ansi_for_tui("\u{1b}[0m".to_string(), &mut active_ansi_prefix);
+        assert_eq!(normalized, Some(String::new()));
+        assert!(active_ansi_prefix.is_empty());
+    }
+
+    #[test]
+    fn inline_reset_clears_active_prefix_for_following_lines() {
+        let mut active_ansi_prefix = "\u{1b}[31m".to_string();
+
+        let first = normalize_ansi_for_tui(
+            "line one\u{1b}[0m plain".to_string(),
+            &mut active_ansi_prefix,
+        );
+        assert_eq!(first, Some("\u{1b}[31mline one\u{1b}[0m plain".to_string()));
+        assert!(active_ansi_prefix.is_empty());
+
+        let second = normalize_ansi_for_tui("line two".to_string(), &mut active_ansi_prefix);
+        assert_eq!(second, Some("line two".to_string()));
+    }
+
+    #[test]
+    fn plain_empty_line_is_preserved() {
+        let mut active_ansi_prefix = String::new();
+        let normalized = normalize_ansi_for_tui(String::new(), &mut active_ansi_prefix);
+        assert_eq!(normalized, Some(String::new()));
+    }
+
+    #[test]
+    fn web_service_uses_relay_proxy() {
+        let (cmd, args, working_dir) = service_command(Service::Web).expect("web command");
+
+        assert_eq!(cmd, "trunk");
+        assert_eq!(working_dir, Some("web/"));
+        assert!(
+            args.windows(2)
+                .any(|window| { window == ["--proxy-rewrite", WEB_LOG_RELAY_PROXY_PATH] })
+        );
+        assert!(
+            args.windows(2)
+                .any(|window| { window == ["--proxy-backend", WEB_LOG_RELAY_BACKEND_URL] })
+        );
+    }
 }

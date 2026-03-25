@@ -517,6 +517,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
+name = "colorized"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739281952453521b532f476b5f8b77c4b16d5ab2a248466c8dc153b3f85d6564"
+
+[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1444,9 +1450,11 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
+ "colorized",
  "dotenvy",
  "gig-log-common",
  "jsonwebtoken",
+ "log",
  "rand 0.10.0",
  "reqwest",
  "serde",
@@ -1465,6 +1473,7 @@ name = "gig-log-common"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "serde",
  "serde_json",
  "uuid",
@@ -1477,6 +1486,7 @@ version = "0.1.0"
 dependencies = [
  "ansi-to-tui",
  "anyhow",
+ "axum",
  "clap",
  "crossterm 0.28.1",
  "dialoguer",
@@ -1499,12 +1509,13 @@ name = "gig-log-frontend"
 version = "0.1.0"
 dependencies = [
  "gig-log-common",
+ "gloo-net",
  "gloo-timers",
  "leptos",
  "leptos_router",
+ "log",
  "reqwest",
  "serde",
- "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

@@ -1,4 +1,5 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
+use log::error;
 use uuid::Uuid;
 
 use crate::auth::jwt::JwtUtil;
@@ -28,8 +29,10 @@ impl FromRequestParts<AppState> for AuthUser {
 
         let token = cookies.strip_prefix("access_token=").unwrap_or("");
 
-        let token_data = JwtUtil::validate_token(token, &state.config)
-            .map_err(|_| ApiErrorResponse::Unauthorized("Invalid or expired token".to_string()))?;
+        let token_data = JwtUtil::validate_token(token, &state.config).map_err(|error| {
+            error!("Failed to validate access token from cookies: {:?}", error);
+            ApiErrorResponse::Unauthorized("Invalid or expired token".to_string())
+        })?;
 
         let user_id = token_data.claims.sub;
 
