@@ -1,5 +1,6 @@
 use chrono::Utc;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode};
+use log::error;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -31,7 +32,8 @@ impl JwtUtil {
             &claims,
             &EncodingKey::from_secret(config.jwt_secret.as_bytes()),
         )
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("Failed to generate access token: {}", error);
             ApiErrorResponse::InternalServerError("Failed to generate access token".to_string())
         })
     }
@@ -51,7 +53,8 @@ impl JwtUtil {
             &claims,
             &EncodingKey::from_secret(config.jwt_secret.as_bytes()),
         )
-        .map_err(|_| {
+        .map_err(|error| {
+            error!("Failed to generate refresh token: {}", error);
             ApiErrorResponse::InternalServerError("Failed to generate refresh token".to_string())
         })
     }
@@ -65,6 +68,9 @@ impl JwtUtil {
             &DecodingKey::from_secret(config.jwt_secret.as_bytes()),
             &Validation::default(),
         )
-        .map_err(|_| ApiErrorResponse::BadRequest("Invalid or expired token".to_string()))
+        .map_err(|error| {
+            error!("Failed to validate token: {}", error);
+            ApiErrorResponse::BadRequest("Invalid or expired token".to_string())
+        })
     }
 }
