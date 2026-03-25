@@ -25,97 +25,6 @@
         z-index: 1;
     }
 
-    &__hero {
-        grid-column: 1 / -1;
-        padding: clamp(28px, 5vw, 64px);
-        overflow: hidden;
-
-        &::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        h1 {
-            font-size: clamp(36px, 5.4vw, 64px);
-            line-height: 1.02;
-            letter-spacing: -0.03em;
-            max-width: 13ch;
-            margin-top: clamp(18px, 2.4vw, 26px);
-            text-wrap: balance;
-        }
-    }
-
-    &__logo {
-        display: flex;
-        align-items: center;
-        gap: clamp(12px, 2vw, 18px);
-
-        svg {
-            width: clamp(78px, 8vw, 104px);
-            height: clamp(78px, 8vw, 104px);
-        }
-    }
-
-    &__brand-copy {
-        width: max-content;
-    }
-
-    &__brand-name {
-        width: 100%;
-        font-family: Rubik;
-        font-size: clamp(34px, 4vw, 48px);
-        font-weight: 800;
-        line-height: 1;
-        margin-bottom: 6px;
-    }
-
-    &__eyebrow {
-        width: 100%;
-        font-size: clamp(13px, 1.3vw, 15px);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.09em;
-        white-space: nowrap;
-    }
-
-    &__hero-copy {
-        font-size: clamp(16px, 1.8vw, 20px);
-        line-height: 1.55;
-        margin-top: clamp(14px, 1.7vw, 18px);
-        max-width: 60ch;
-    }
-
-    &__cta-row {
-        margin-top: clamp(22px, 3vw, 34px);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    &__proof-grid {
-        margin-top: clamp(22px, 3.2vw, 38px);
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    &__proof-card {
-        border-radius: 14px;
-        padding: 14px;
-
-        h2 {
-            font-size: clamp(18px, 1.8vw, 22px);
-            margin-bottom: 4px;
-        }
-
-        p {
-            font-size: clamp(13px, 1.3vw, 15px);
-            line-height: 1.5;
-        }
-    }
-
     &__benefits,
     &__workflow {
         padding: clamp(20px, 2.7vw, 30px);
@@ -232,10 +141,6 @@
     }
 
     @include media.tablet {
-        &__proof-grid {
-            grid-template-columns: 1fr;
-        }
-
         &__benefits,
         &__workflow {
             grid-column: 1 / -1;
@@ -316,21 +221,18 @@
 
         &__eyebrow,
         &__hero-copy,
-        &__proof-card p,
         &__benefit-list p,
         &__workflow-list p,
         &__final-cta p {
             color: color.change(colors.$text, $alpha: 0.8);
         }
 
-        &__proof-card,
         &__benefit-list li,
         &__workflow-list li {
             background: color.change(colors.$background, $alpha: 0.42);
             border: 1px solid color.change(colors.$primary-100, $alpha: 0.4);
         }
 
-        &__proof-card h2,
         &__benefits h3,
         &__workflow h3,
         &__benefit-list span,
@@ -377,21 +279,18 @@
 
         &__eyebrow,
         &__hero-copy,
-        &__proof-card p,
         &__benefit-list p,
         &__workflow-list p,
         &__final-cta p {
             color: color.change(colors.$background, $alpha: 0.82);
         }
 
-        &__proof-card,
         &__benefit-list li,
         &__workflow-list li {
             background: color.change(colors.$background, $alpha: 0.08);
             border: 1px solid color.change(colors.$cyan-100, $alpha: 0.36);
         }
 
-        &__proof-card h2,
         &__benefits h3,
         &__workflow h3,
         &__benefit-list span,

@@ -2,11 +2,12 @@ use leptos::prelude::*;
 
 use crate::{
     components::{
-        button::{Button, ButtonVariant},
         Card, LogoIcon,
+        button::{Button, ButtonVariant},
     },
     contexts::use_auth,
     layouts::auth::AuthLayout,
+    pages::home::components::hero::HomePageHero,
 };
 
 #[component]
@@ -16,45 +17,7 @@ pub fn HomePage() -> impl IntoView {
 
     view! {
         <AuthLayout class="home-page">
-            <Card class="home-page__hero">
-                <div class="home-page__logo">
-                    <LogoIcon />
-                    <div class="home-page__brand-copy">
-                        <p class="home-page__brand-name">"GigLog"</p>
-                        <p class="home-page__eyebrow">"Freelance work tracking, made practical"</p>
-                    </div>
-                </div>
-                <h1>"Track work. Stay paid. Keep every client organized."</h1>
-                <p class="home-page__hero-copy">
-                    "GigLog helps you capture sessions, monitor unpaid work, and maintain clear records without bloated admin tools."
-                </p>
-                <div class="home-page__cta-row">
-                    <Show when=move || user.get().is_none()>
-                        <Button href="/auth/sign-up">"Create Free Account"</Button>
-                        <Button href="/auth/log-in" variant=ButtonVariant::Secondary>
-                            "Log In"
-                        </Button>
-                    </Show>
-                    <Show when=move || user.get().is_some()>
-                        <Button href="/dashboard">"Go to Dashboard"</Button>
-                    </Show>
-                </div>
-                <div class="home-page__proof-grid">
-                    <div class="home-page__proof-card">
-                        <h2>"Fast daily logging"</h2>
-                        <p>"Add jobs and sessions in minutes, right after each shift."</p>
-                    </div>
-                    <div class="home-page__proof-card">
-                        <h2>"Payment clarity"</h2>
-                        <p>"See what is paid, what is pending, and what needs follow-up."</p>
-                    </div>
-                    <div class="home-page__proof-card">
-                        <h2>"Tax-ready history"</h2>
-                        <p>"Keep clean records for reconciliation, reporting, and tax season."</p>
-                    </div>
-                </div>
-            </Card>
-
+            <HomePageHero />
             <Card class="home-page__benefits">
                 <h3>"Why freelancers choose GigLog"</h3>
                 <ul class="home-page__benefit-list">
