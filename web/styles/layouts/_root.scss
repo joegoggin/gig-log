@@ -1,4 +1,5 @@
 @use "sass:color";
+@use "mixins/theme" as theme;
 @use "variables/colors" as colors;
 
 .root-layout {
@@ -19,7 +20,14 @@
         width: clamp(160px, 24vw, 340px);
         aspect-ratio: 1;
         border-radius: 50%;
-        filter: blur(14px);
+
+        @include theme.light {
+            filter: blur(12px);
+        }
+
+        @include theme.dark {
+            filter: blur(14px);
+        }
 
         &:nth-child(1) {
             top: 8%;
@@ -184,10 +192,6 @@
             animation: none;
         }
     }
-}
-
-[data-theme="light"] .root-layout__orb {
-    filter: blur(12px);
 }
 
 @keyframes root-orb-drift-a {

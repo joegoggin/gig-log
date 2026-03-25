@@ -24,12 +24,15 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/") view=HomePage />
 
                     // Auth routes
-                    <Route path=path!("/login") view=LoginPage />
-                    <Route path=path!("/signup") view=SignupPage />
-                    <Route path=path!("/forgot-password") view=ForgotPasswordPage />
-                    <Route path=path!("/verify-forgot-password") view=VerifyForgotPasswordPage />
-                    <Route path=path!("/set-password") view=SetPasswordPage />
-                    <Route path=path!("/confirm-email") view=ConfirmEmailPage />
+                    <Route path=path!("auth/log-in") view=LoginPage />
+                    <Route path=path!("auth/sign-up") view=SignupPage />
+                    <Route path=path!("auth/forgot-password") view=ForgotPasswordPage />
+                    <Route
+                        path=path!("auth/verify-forgot-password")
+                        view=VerifyForgotPasswordPage
+                    />
+                    <Route path=path!("auth/set-password") view=SetPasswordPage />
+                    <Route path=path!("auth/confirm-email") view=ConfirmEmailPage />
 
                     // Dashboard
                     <PrivateRoute path=path!("/dashboard") view=DashboardPage />

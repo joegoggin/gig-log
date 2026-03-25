@@ -1,0 +1,34 @@
+@use "sass:color";
+@use "variables/colors" as colors;
+
+.button {
+    padding: 10px 20px;
+    font-family: Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    color: var(--text-color);
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 3px color.change(colors.$black, $alpha: 0.3);
+    transition: all ease-in-out 0.3s;
+    cursor: pointer;
+
+    &--primary {
+        background: colors.$primary-100;
+
+        &:hover {
+            background: colors.$primary-80;
+            box-shadow: 0 2px 8px color.change(colors.$primary-100, $alpha: 0.35);
+        }
+    }
+
+    &--secondary {
+        background: colors.$secondary-100;
+
+        &:hover {
+            background: colors.$secondary-80;
+            box-shadow: 0 2px 8px color.change(colors.$secondary-100, $alpha: 0.35);
+        }
+    }
+}

@@ -37,7 +37,9 @@ impl AuthRequestRunner {
     }
 
     pub async fn log_out(&self) -> Result<(), ClientError> {
-        self.client.post_no_content::<()>("/auth/log-out", None).await
+        self.client
+            .post_no_content::<()>("/auth/log-out", None)
+            .await
     }
 
     pub async fn refresh(&self) -> Result<User, ClientError> {
