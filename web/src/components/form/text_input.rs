@@ -13,13 +13,15 @@ pub fn TextInput(
     errors: RwSignal<Vec<ValidationError>>,
     value: RwSignal<String>,
 ) -> impl IntoView {
+    // Classes
+    let class_name = ClassNameUtil::new("text-input", class);
+    let text_input_normal = class_name.get_root_class();
+    let text_input_error = class_name.get_root_variation("error");
+
     // State
     let error: RwSignal<Option<ValidationError>> = RwSignal::new(None);
+    let text_input = RwSignal::new(text_input_normal.clone());
     let has_error = RwSignal::new(false);
-    let current_class = RwSignal::new(ClassNameUtil::add_optional_class(
-        "text-input",
-        class.as_deref(),
-    ));
 
     // Variables
     let has_label = label.is_some().clone();
@@ -38,11 +40,9 @@ pub fn TextInput(
             .into_iter()
             .find(|validation_error| validation_error.field.as_deref() == Some(field.as_str()));
 
-        let base_class = ClassNameUtil::add_optional_class("text-input", class.as_deref());
-
         match &new_error {
-            Some(_) => current_class.set(ClassNameUtil::add_class(base_class, "text-input--error")),
-            None => current_class.set(base_class),
+            Some(_) => text_input.set(text_input_error.clone()),
+            None => text_input.set(text_input_normal.clone()),
         }
 
         has_error.set(new_error.is_some());
@@ -69,7 +69,7 @@ pub fn TextInput(
 
     // View
     view! {
-        <div class=move || current_class.get()>
+        <div class=text_input>
             <Show when=move || has_label>
                 <label>{label.clone().unwrap_or_default()}</label>
             </Show>

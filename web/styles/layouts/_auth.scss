@@ -9,10 +9,8 @@
     &__content {
         width: min(560px, 100%);
         animation: centered-layout-reveal 0.5s ease-out;
-    }
 
-    @media (prefers-reduced-motion: reduce) {
-        &__content {
+        @media (prefers-reduced-motion: reduce) {
             animation: none;
         }
     }

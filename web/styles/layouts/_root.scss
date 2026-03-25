@@ -180,17 +180,15 @@
             animation: root-orb-drift-a 34s ease-in-out infinite;
             animation-delay: -26s;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+        }
     }
 
     > :not(.root-layout__ambient):not(.notifications) {
         position: relative;
         z-index: 1;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        &__orb {
-            animation: none;
-        }
     }
 }
 

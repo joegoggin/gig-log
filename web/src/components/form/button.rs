@@ -26,14 +26,12 @@ pub enum ButtonVariant {
 }
 
 impl ButtonVariant {
-    pub fn get_class(&self, optional_class: Option<&str>) -> String {
+    pub fn get_class(&self, class: Option<String>) -> String {
+        let class_name = ClassNameUtil::new("button", class);
+
         match self {
-            Self::Primary => {
-                ClassNameUtil::add_optional_class("button button--primary", optional_class)
-            }
-            Self::Secondary => {
-                ClassNameUtil::add_optional_class("button button--secondary", optional_class)
-            }
+            Self::Primary => class_name.get_root_variation("primary"),
+            Self::Secondary => class_name.get_root_variation("secondary"),
         }
     }
 }
@@ -51,7 +49,7 @@ pub fn Button(
     let navigate = use_navigate();
 
     // Variables
-    let class = variant.get_class(class.as_deref());
+    let button = variant.get_class(class);
 
     // Event Handlers
     let handle_click = move |ev: MouseEvent| {
@@ -69,7 +67,7 @@ pub fn Button(
     };
 
     view! {
-        <button class=class type=move || button_type.to_string() on:click=handle_click>
+        <button class=button type=move || button_type.to_string() on:click=handle_click>
             {children()}
         </button>
     }

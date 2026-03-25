@@ -14,7 +14,7 @@ pub fn HomePageHero(#[prop(optional, into)] class: Option<String>) -> impl IntoV
     // Classes
     let class_name = ClassNameUtil::new("home-page-hero", class);
 
-    let root = class_name.get_root_class();
+    let home_page_hero = class_name.get_root_class();
     let logo = class_name.get_sub_class("logo");
     let buttons = class_name.get_sub_class("buttons");
     let grid = class_name.get_sub_class("grid");
@@ -27,7 +27,7 @@ pub fn HomePageHero(#[prop(optional, into)] class: Option<String>) -> impl IntoV
     let is_authenticated = auth.is_authenticated();
 
     view! {
-        <Card class=root>
+        <Card class=home_page_hero>
             <div class=logo>
                 <LogoIcon />
                 <div>
