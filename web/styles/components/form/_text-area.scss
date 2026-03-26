@@ -1,0 +1,49 @@
+@use "variables/colors" as colors;
+
+.text-area {
+    textarea {
+        display: block;
+        width: 100%;
+        font-family: Roboto;
+        font-size: 16px;
+        padding: 8px 8px;
+        background: none;
+        border: 1px solid var(--text-color);
+        border-radius: 5px;
+        outline: none;
+        color: var(--text-color);
+        resize: vertical;
+        min-height: 96px;
+        transition: all ease-in-out 0.3s;
+
+        &::placeholder {
+            font-family: inherit;
+            color: var(--text-color);
+            opacity: 0.5;
+        }
+
+        &:focus {
+            border: 1px solid colors.$primary-100;
+            box-shadow: 0 1px 0 0 colors.$primary-100;
+            color: colors.$primary-100;
+            caret-color: colors.$primary-100;
+        }
+
+        &:focus::placeholder {
+            color: colors.$primary-100;
+            opacity: 1;
+        }
+    }
+
+    &.text-input--error {
+        textarea {
+            border: 1px solid colors.$red-100;
+            color: colors.$red-100;
+
+            &::placeholder {
+                color: colors.$red-100;
+                opacity: 1;
+            }
+        }
+    }
+}

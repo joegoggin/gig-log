@@ -48,13 +48,13 @@ api-remove *args:
 
 # Web
 web:
-    cd web && trunk serve
+    cd web && SASS_PATH=styles trunk serve
 
 web-build:
-    cd web && trunk build 
+    cd web && SASS_PATH=styles trunk build
 
 web-release:
-	cd web && trunk build --release
+	cd web && SASS_PATH=styles trunk build --release
 
 web-add *args:
     cd web && cargo add {{args}}

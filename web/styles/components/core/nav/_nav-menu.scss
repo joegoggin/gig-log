@@ -1,0 +1,130 @@
+@use "variables/colors" as colors;
+@use "mixins/media" as media;
+
+.nav-menu {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 30px;
+    gap: 14px;
+
+    @include media.tablet {
+        flex: initial;
+        margin-top: 0;
+        gap: 6px;
+        max-height: 0;
+        padding: 0;
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        border-radius: 12px;
+        transition:
+            max-height 0.22s ease-out,
+            opacity 0.2s ease-out,
+            transform 0.2s ease-out,
+            padding 0.2s ease-out,
+            margin-top 0.2s ease-out;
+    }
+
+    &__item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        cursor: pointer;
+        overflow: hidden;
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+        &:hover {
+            background: colors.$overlay;
+            transform: scale(1.05);
+        }
+
+        p {
+            margin-left: 10px;
+        }
+
+        &--log-out {
+            margin-top: auto;
+
+            @include media.tablet {
+                margin-top: 0;
+            }
+        }
+
+        @include media.tablet {
+            justify-content: flex-start;
+            min-height: 46px;
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+    }
+
+    a[aria-current="page"] .nav-menu__item,
+    a[aria-current="true"] .nav-menu__item {
+        background: colors.$overlay;
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+
+        svg {
+            width: 28px;
+            height: 28px;
+            color: var(--text-color);
+            fill: var(--text-color);
+            flex-shrink: 0;
+        }
+    }
+
+    &__label {
+        margin-left: 12px;
+        width: 150px;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        animation: nav-label-reveal 0.2s ease-out;
+
+        @include media.tablet {
+            width: auto;
+            max-width: none;
+            margin-left: 10px;
+            animation: none;
+        }
+    }
+}
+
+.nav-bar--menu-open .nav-menu {
+    @include media.tablet {
+        margin-top: 2px;
+        max-height: 420px;
+        padding: 8px;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+
+@keyframes nav-label-reveal {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
