@@ -6,4 +6,6 @@ issues
 .api-tester/variables.toml
 .api-tester/cookies.txt
 .api-tester/route-list-state.toml
+.db-viewer/state.toml
+.db-viewer/query.sql
 .claude

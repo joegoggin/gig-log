@@ -1,5 +1,6 @@
 mod api_tester;
 mod cli;
+mod db_viewer;
 mod dev;
 mod docs;
 mod setup;
@@ -11,6 +12,8 @@ use cli::{Cli, Command};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    utils::env::load_workspace_env()?;
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -36,6 +39,7 @@ async fn main() -> anyhow::Result<()> {
             .await?
         }
         Command::ApiTester => api_tester::run().await?,
+        Command::DbViewer => db_viewer::run().await?,
     }
 
     Ok(())
