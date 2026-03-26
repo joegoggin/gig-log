@@ -313,7 +313,8 @@ pub async fn delete_rows(
 fn query_returns_rows(sql: &str) -> bool {
     let trimmed = sql.trim_start().to_ascii_lowercase();
     trimmed.starts_with("select")
-        || trimmed.starts_with("with")
+        || trimmed.starts_with("values")
+        || trimmed.starts_with("table")
         || trimmed.starts_with("show")
         || trimmed.starts_with("explain")
 }

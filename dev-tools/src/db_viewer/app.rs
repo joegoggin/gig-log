@@ -1141,7 +1141,7 @@ impl AppModel {
     fn is_datetime_column(column: &ColumnInfo) -> bool {
         let data_type = column.data_type.to_ascii_lowercase();
         let udt_name = column.udt_name.to_ascii_lowercase();
-        data_type.contains("timestamp") || udt_name == "timestamp" || udt_name == "timestamptz"
+        data_type == "timestamp without time zone" || udt_name == "timestamp"
     }
 
     fn is_date_column(column: &ColumnInfo) -> bool {
@@ -1153,7 +1153,7 @@ impl AppModel {
     fn is_time_column(column: &ColumnInfo) -> bool {
         let data_type = column.data_type.to_ascii_lowercase();
         let udt_name = column.udt_name.to_ascii_lowercase();
-        (data_type.starts_with("time") || udt_name == "time" || udt_name == "timetz")
+        (data_type == "time without time zone" || udt_name == "time")
             && !Self::is_datetime_column(column)
     }
 
