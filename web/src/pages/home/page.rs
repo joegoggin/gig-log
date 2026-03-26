@@ -1,8 +1,6 @@
 use leptos::prelude::*;
 
 use crate::{
-    components::{Card, button::Button},
-    contexts::use_auth,
     layouts::auth::AuthLayout,
     pages::home::components::{
         HomePageCta, HomePageWorkflow, benefits::HomePageBenefits, hero::HomePageHero,

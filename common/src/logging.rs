@@ -2,6 +2,9 @@ use log::{Level, LevelFilter};
 
 pub use log::{debug, error, info, trace, warn};
 
+const MESSAGE_TARGET: &str = "gig_log::message";
+const SUCCESS_TARGET: &str = "gig_log::success";
+
 pub fn parse_level_filter(log_level: &str) -> LevelFilter {
     match log_level.trim().to_ascii_lowercase().as_str() {
         "off" => LevelFilter::Off,
@@ -26,6 +29,14 @@ pub fn level_for_logger(level_filter: LevelFilter) -> Level {
 
 pub fn is_off(level_filter: LevelFilter) -> bool {
     matches!(level_filter, LevelFilter::Off)
+}
+
+pub fn log_message(message: &str) {
+    log::info!(target: MESSAGE_TARGET, "{}", message);
+}
+
+pub fn log_success(message: &str) {
+    log::info!(target: SUCCESS_TARGET, "{}", message);
 }
 
 #[cfg(test)]

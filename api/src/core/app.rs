@@ -1,6 +1,8 @@
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
+use gig_log_common::logging::{log_message, log_success};
+
 use crate::{
     core::{config::Config, logger::Logger},
     email::client::EmailClient,
@@ -18,19 +20,19 @@ impl App {
         let config = Config::new()?;
         Logger::setup_logging(&config.log_level, config.log_verbose);
 
-        Logger::log_message("Connecting to database");
+        log_message("Connecting to database");
 
         let db_pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(&config.database_url)
             .await?;
 
-        Logger::log_success("Database connection established");
+        log_success("Database connection established");
 
         if config.auto_apply_migrations {
-            Logger::log_message("Checking for pending database migrations");
+            log_message("Checking for pending database migrations");
             sqlx::migrate!().run(&db_pool).await?;
-            Logger::log_success("Database migrations are up to date");
+            log_success("Database migrations are up to date");
         }
 
         let email_client = EmailClient::new(&config);
@@ -44,7 +46,7 @@ impl App {
 
         let listener = TcpListener::bind("0.0.0.0:8000").await?;
 
-        Logger::log_success("Server running on port 8000");
+        log_success("Server running on port 8000");
         axum::serve(listener, app).await?;
 
         Ok(())

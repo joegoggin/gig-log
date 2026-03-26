@@ -16,11 +16,21 @@ pub const WEB_LOG_RELAY_BACKEND_URL: &str = "http://127.0.0.1:9777";
 pub const WEB_LOG_RELAY_PROXY_PATH: &str = "/_giglog/web-log";
 
 const ANSI_BLUE: &str = "\x1b[34m";
+const ANSI_GREEN: &str = "\x1b[32m";
 const ANSI_RED: &str = "\x1b[31m";
 const ANSI_YELLOW: &str = "\x1b[33m";
 const ANSI_MAGENTA: &str = "\x1b[35m";
 const ANSI_PURPLE: &str = "\x1b[35m";
 const ANSI_CLEAR: &str = "\x1b[0m";
+
+const MESSAGE_TARGET: &str = "gig_log::message";
+const SUCCESS_TARGET: &str = "gig_log::success";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SemanticLogKind {
+    Message,
+    Success,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WebLogLevel {
@@ -151,6 +161,12 @@ fn read_verbose_from_env() -> bool {
 fn format_relay_line(payload: &RelayLogPayload, verbose: bool) -> String {
     let level = WebLogLevel::parse(&payload.level);
     let message = payload.message.trim_end().to_string();
+    let semantic_kind = parse_semantic_log_kind(payload.target.as_deref());
+
+    if let Some(semantic_kind) = semantic_kind {
+        return format_semantic_line(semantic_kind, &message, verbose);
+    }
+
     let file = payload
         .file
         .as_deref()
@@ -177,6 +193,27 @@ fn format_relay_line(payload: &RelayLogPayload, verbose: bool) -> String {
             "\n{ANSI_PURPLE}File: {file}{ANSI_CLEAR}\n{ANSI_PURPLE}Line Number: {line_number}{ANSI_CLEAR}\n{message}"
         ),
     }
+}
+
+fn parse_semantic_log_kind(target: Option<&str>) -> Option<SemanticLogKind> {
+    match target {
+        Some(MESSAGE_TARGET) => Some(SemanticLogKind::Message),
+        Some(SUCCESS_TARGET) => Some(SemanticLogKind::Success),
+        _ => None,
+    }
+}
+
+fn format_semantic_line(kind: SemanticLogKind, message: &str, verbose: bool) -> String {
+    let (color, hashtags) = match kind {
+        SemanticLogKind::Message => (ANSI_BLUE, "######"),
+        SemanticLogKind::Success => (ANSI_GREEN, "######"),
+    };
+
+    if verbose {
+        return format!("\n{color}{hashtags} {message} {hashtags}\n{ANSI_CLEAR}");
+    }
+
+    format!("{color}{message}{ANSI_CLEAR}")
 }
 
 fn format_non_verbose(level: WebLogLevel, message: &str) -> String {
@@ -271,5 +308,24 @@ mod tests {
         assert_eq!(lines[2], "");
         assert!(lines[3].contains("boom"));
         assert_eq!(lines[4], "");
+    }
+
+    #[test]
+    fn semantic_success_uses_api_style_formatting() {
+        let payload = RelayLogPayload {
+            level: "info".to_string(),
+            message: "Database connection established".to_string(),
+            target: Some("gig_log::success".to_string()),
+            file: Some("/tmp/project/src/app/mod.rs".to_string()),
+            line: Some(42),
+        };
+
+        let verbose = format_relay_line(&payload, true);
+        assert!(verbose.contains("###### Database connection established ######"));
+        assert!(verbose.contains("\u{1b}[32m"));
+
+        let non_verbose = format_relay_line(&payload, false);
+        assert!(non_verbose.contains("Database connection established"));
+        assert!(non_verbose.contains("\u{1b}[32m"));
     }
 }

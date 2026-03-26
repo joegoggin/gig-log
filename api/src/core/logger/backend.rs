@@ -9,6 +9,9 @@ use log::{set_logger, set_max_level, Level, Log, Metadata, Record};
 
 use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 
+const MESSAGE_TARGET: &str = "gig_log::message";
+const SUCCESS_TARGET: &str = "gig_log::success";
+
 pub struct Logger;
 
 static LOGGER: Logger = Logger;
@@ -41,36 +44,6 @@ impl Logger {
     pub fn is_verbose() -> bool {
         LOG_VERBOSE.load(Ordering::Relaxed)
     }
-
-    pub fn log_success(message: &str) {
-        if !log::log_enabled!(Level::Info) {
-            return;
-        }
-
-        if Self::is_verbose() {
-            let hashtags = get_hashtags(6);
-            let message = format!("\n{} {} {}\n", hashtags, message, hashtags);
-            colorize_println(message, Colors::GreenFg);
-            return;
-        }
-
-        colorize_println(message, Colors::GreenFg);
-    }
-
-    pub fn log_message(message: &str) {
-        if !log::log_enabled!(Level::Info) {
-            return;
-        }
-
-        if Self::is_verbose() {
-            let hashtags = get_hashtags(6);
-            let message = format!("\n{} {} {}\n", hashtags, message, hashtags);
-            colorize_println(message, Colors::BlueFg);
-            return;
-        }
-
-        colorize_println(message, Colors::BlueFg);
-    }
 }
 
 impl Log for Logger {
@@ -97,7 +70,11 @@ impl Log for Logger {
                 Level::Warn => {
                     colorize_println(format!("[WARN] {}", record.args()), Colors::YellowFg)
                 }
-                Level::Info => println!("{}", record.args()),
+                Level::Info => match record.target() {
+                    SUCCESS_TARGET => colorize_println(record.args().to_string(), Colors::GreenFg),
+                    MESSAGE_TARGET => colorize_println(record.args().to_string(), Colors::BlueFg),
+                    _ => println!("{}", record.args()),
+                },
                 Level::Debug => {
                     colorize_println(format!("[DEBUG] {}", record.args()), Colors::BlueFg)
                 }
@@ -118,7 +95,19 @@ impl Log for Logger {
             .unwrap_or_default();
 
         match record.level() {
-            Level::Info => println!("\n{}{}{}", blue, record.args(), clear),
+            Level::Info => match record.target() {
+                SUCCESS_TARGET => {
+                    let hashtags = get_hashtags(6);
+                    let message = format!("\n{} {} {}\n", hashtags, record.args(), hashtags);
+                    colorize_println(message, Colors::GreenFg);
+                }
+                MESSAGE_TARGET => {
+                    let hashtags = get_hashtags(6);
+                    let message = format!("\n{} {} {}\n", hashtags, record.args(), hashtags);
+                    colorize_println(message, Colors::BlueFg);
+                }
+                _ => println!("\n{}{}{}", blue, record.args(), clear),
+            },
             Level::Error => log_error(record),
             Level::Debug => log_debug(record),
             _ => println!(

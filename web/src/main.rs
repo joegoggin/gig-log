@@ -2,7 +2,7 @@ mod app;
 use app::App;
 mod logging;
 
-use gig_log_common::logging::{debug, info, is_off};
+use gig_log_common::logging::{is_off, log_message, log_success};
 
 const DEFAULT_WEB_LOG_LEVEL: &str = if cfg!(debug_assertions) {
     "debug"
@@ -20,11 +20,11 @@ fn init_web_logging() {
         return;
     }
 
-    info!(
+    log_message(&format!(
         "Web logger initialized with WEB_LOG_LEVEL='{}' ({:?})",
         logger_config.configured_level, logger_config.level_filter
-    );
-    debug!("Mounting GigLog web app");
+    ));
+    log_message("Mounting GigLog web app");
 }
 
 fn main() {
@@ -32,5 +32,5 @@ fn main() {
 
     leptos::mount::mount_to_body(App);
 
-    info!("GigLog web app mounted");
+    log_success("GigLog web app mounted");
 }
