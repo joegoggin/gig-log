@@ -4,29 +4,25 @@ use crate::{
     components::{Card, button::Button},
     contexts::use_auth,
     layouts::auth::AuthLayout,
-    pages::home::components::{HomePageWorkflow, benefits::HomePageBenefits, hero::HomePageHero},
+    pages::home::components::{
+        HomePageCta, HomePageWorkflow, benefits::HomePageBenefits, hero::HomePageHero,
+    },
+    utils::class_name::ClassNameUtil,
 };
 
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let auth = use_auth();
-    let user = auth.user;
+    // Classes
+    let class_name = ClassNameUtil::new("home-page", None);
+
+    let home_page = class_name.get_root_class();
 
     view! {
-        <AuthLayout class="home-page">
+        <AuthLayout class=home_page>
             <HomePageHero />
             <HomePageBenefits />
             <HomePageWorkflow />
-            <Card class="home-page__final-cta">
-                <h3>"Ready to simplify freelance admin?"</h3>
-                <p>"Create your account and start logging work in under five minutes."</p>
-                <Show when=move || user.get().is_none()>
-                    <Button href="/auth/sign-up">"Sign Up Now"</Button>
-                </Show>
-                <Show when=move || user.get().is_some()>
-                    <Button href="/dashboard">"Open Dashboard"</Button>
-                </Show>
-            </Card>
+            <HomePageCta />
         </AuthLayout>
     }
 }
