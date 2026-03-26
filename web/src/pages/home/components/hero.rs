@@ -2,8 +2,8 @@ use leptos::prelude::*;
 
 use crate::{
     components::{
-        Card, LogoIcon,
         button::{Button, ButtonVariant},
+        Card, LogoIcon,
     },
     contexts::use_auth,
     utils::class_name::ClassNameUtil,

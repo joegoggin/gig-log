@@ -25,71 +25,6 @@
         z-index: 1;
     }
 
-    &__workflow {
-        padding: clamp(20px, 2.7vw, 30px);
-
-        h3 {
-            margin-bottom: 14px;
-            font-size: clamp(25px, 2.4vw, 32px);
-        }
-    }
-
-    &__workflow {
-        grid-column: span 5;
-    }
-
-    &__workflow-list {
-        list-style: none;
-        display: grid;
-        gap: 10px;
-
-        li {
-            border-radius: 14px;
-            padding: 12px 14px;
-        }
-
-        span {
-            display: block;
-            font-family: Rubik;
-            font-size: clamp(16px, 1.45vw, 20px);
-            font-weight: 600;
-            line-height: 1.35;
-            margin-bottom: 4px;
-        }
-
-        p {
-            font-size: clamp(13px, 1.15vw, 15px);
-            line-height: 1.55;
-        }
-    }
-
-    &__workflow-list {
-        counter-reset: steps;
-
-        span {
-            position: relative;
-            padding-left: 30px;
-
-            &::before {
-                counter-increment: steps;
-                content: counter(steps);
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 22px;
-                height: 22px;
-                border-radius: 999px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: 700;
-                color: colors.$text;
-                background: color.change(colors.$yellow-80, $alpha: 0.85);
-            }
-        }
-    }
-
     &__final-cta {
         grid-column: 1 / -1;
         padding: clamp(24px, 3.2vw, 34px);
@@ -112,23 +47,12 @@
     }
 
     &__hero,
-    &__workflow,
     &__final-cta {
         animation: home-reveal 0.6s ease-out both;
     }
 
-    &__workflow {
-        animation-delay: 0.16s;
-    }
-
     &__final-cta {
         animation-delay: 0.22s;
-    }
-
-    @include media.tablet {
-        &__workflow {
-            grid-column: 1 / -1;
-        }
     }
 
     @include media.phone {
@@ -138,7 +62,6 @@
         }
 
         &__hero,
-        &__workflow,
         &__final-cta {
             border-radius: 18px;
         }
@@ -164,7 +87,6 @@
 
     @media (prefers-reduced-motion: reduce) {
         &__hero,
-        &__workflow,
         &__final-cta {
             animation: none;
         }
@@ -199,28 +121,12 @@
 
         &__eyebrow,
         &__hero-copy,
-        &__workflow-list p,
         &__final-cta p {
             color: color.change(colors.$text, $alpha: 0.8);
         }
 
-        &__workflow-list li {
-            background: color.change(colors.$background, $alpha: 0.42);
-            border: 1px solid color.change(colors.$primary-100, $alpha: 0.4);
-        }
-
-        &__workflow h3,
-        &__workflow-list span,
         &__final-cta h3 {
             color: color.change(colors.$text, $alpha: 0.96);
-        }
-
-        &__workflow {
-            background: linear-gradient(
-                142deg,
-                color.change(colors.$white, $alpha: 0.98),
-                color.change(colors.$cyan-60, $alpha: 0.76)
-            );
         }
     }
 
@@ -253,29 +159,13 @@
 
         &__eyebrow,
         &__hero-copy,
-        &__workflow-list p,
         &__final-cta p {
             color: color.change(colors.$background, $alpha: 0.82);
         }
 
-        &__workflow-list li {
-            background: color.change(colors.$background, $alpha: 0.08);
-            border: 1px solid color.change(colors.$cyan-100, $alpha: 0.36);
-        }
-
         &__benefits h3,
-        &__workflow h3,
-        &__workflow-list span,
         &__final-cta h3 {
             color: color.change(colors.$background, $alpha: 0.97);
-        }
-
-        &__workflow {
-            background: linear-gradient(
-                145deg,
-                color.change(colors.$text, $alpha: 0.96),
-                color.change(colors.$primary-100, $alpha: 0.24)
-            );
         }
     }
 }
