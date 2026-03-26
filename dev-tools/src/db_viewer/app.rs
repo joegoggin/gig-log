@@ -177,6 +177,7 @@ pub struct AppModel {
     query: String,
     query_result_lines: Vec<String>,
     status: String,
+    error_popup: Option<String>,
     help_visible: bool,
     text_entry: Option<TextEntryState>,
     datetime_picker: Option<DateTimePickerState>,
@@ -227,6 +228,7 @@ impl AppModel {
             query,
             query_result_lines: vec!["Run a query with 'r'. Edit query with 'e'.".to_string()],
             status: String::new(),
+            error_popup: None,
             help_visible: false,
             text_entry: None,
             datetime_picker: None,
@@ -263,6 +265,10 @@ impl AppModel {
     }
 
     async fn handle_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<AppEffect>> {
+        if self.error_popup.is_some() {
+            return Ok(self.handle_error_popup_key(key));
+        }
+
         if self.help_visible {
             return Ok(self.handle_help_key(key));
         }
@@ -316,6 +322,13 @@ impl AppModel {
             ActivePage::Grid => self.handle_grid_keys(key).await,
             ActivePage::Query => self.handle_query_keys(key).await,
         }
+    }
+
+    fn handle_error_popup_key(&mut self, key: KeyEvent) -> Option<AppEffect> {
+        if matches!(key.code, Key::Esc | Key::Enter) {
+            self.error_popup = None;
+        }
+        None
     }
 
     async fn handle_value_picker_key(
@@ -487,9 +500,23 @@ impl AppModel {
             Key::Char('y') | Key::Char('Y') => {
                 if let Some(confirm) = self.confirm_delete.take() {
                     if let Some(table) = self.selected_table().cloned() {
-                        let deleted = db::delete_rows(&self.pool, &table, &confirm.ctids).await?;
-                        self.status = format!("Deleted {deleted} row(s)");
-                        self.reload_rows().await?;
+                        match db::delete_rows(&self.pool, &table, &confirm.ctids).await {
+                            Ok(deleted) => {
+                                self.status = format!("Deleted {deleted} row(s)");
+                                if let Err(error) = self.reload_rows().await {
+                                    self.show_error(format!(
+                                        "Deleted row(s), but refresh failed: {}",
+                                        Self::format_error_for_status(&error)
+                                    ));
+                                }
+                            }
+                            Err(error) => {
+                                self.show_error(format!(
+                                    "Delete failed: {}",
+                                    Self::format_error_for_status(&error)
+                                ));
+                            }
+                        }
                     }
                 }
             }
@@ -521,7 +548,10 @@ impl AppModel {
                     target: TextEntryTarget::Query,
                     buffer: String::new(),
                 });
-                self.commit_text_entry(entry).await?;
+                if let Err(error) = self.commit_text_entry(entry.clone()).await {
+                    self.text_entry = Some(entry);
+                    self.show_error(Self::format_error_for_status(&error));
+                }
             }
             Key::Char(ch) => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -639,10 +669,24 @@ impl AppModel {
                     }
                 }
 
-                db::insert_row(&self.pool, &table, &payload).await?;
-                self.add_form = None;
-                self.status = "Inserted row".to_string();
-                self.reload_rows().await?;
+                match db::insert_row(&self.pool, &table, &payload).await {
+                    Ok(()) => {
+                        self.add_form = None;
+                        self.status = "Inserted row".to_string();
+                        if let Err(error) = self.reload_rows().await {
+                            self.show_error(format!(
+                                "Inserted row, but refresh failed: {}",
+                                Self::format_error_for_status(&error)
+                            ));
+                        }
+                    }
+                    Err(error) => {
+                        self.show_error(format!(
+                            "Insert failed: {}",
+                            Self::format_error_for_status(&error)
+                        ));
+                    }
+                }
             }
             KeyEvent {
                 code: Key::Enter,
@@ -886,7 +930,7 @@ impl AppModel {
                 code: Key::Char('s'),
                 modifiers: KeyModifiers::CONTROL,
             } => {
-                self.save_dirty_rows().await?;
+                self.save_dirty_rows().await;
             }
             KeyEvent {
                 code: Key::Char('r'),
@@ -1310,6 +1354,12 @@ impl AppModel {
         let data_type = column.data_type.to_ascii_lowercase();
         let udt_name = column.udt_name.to_ascii_lowercase();
 
+        if data_type == "uuid" || udt_name == "uuid" {
+            let parsed = sqlx::types::Uuid::parse_str(trimmed)
+                .with_context(|| format!("expected UUID for {}", column.name))?;
+            return Ok(Value::String(parsed.to_string()));
+        }
+
         if data_type.contains("boolean") {
             let parsed = trimmed
                 .parse::<bool>()
@@ -1383,29 +1433,114 @@ impl AppModel {
         self.confirm_delete = Some(DeleteConfirmation { ctids, description });
     }
 
-    async fn save_dirty_rows(&mut self) -> anyhow::Result<()> {
+    async fn save_dirty_rows(&mut self) {
         let Some(table) = self.selected_table().cloned() else {
-            return Ok(());
+            return;
         };
 
         let dirty_rows = self.dirty_rows.clone();
         if dirty_rows.is_empty() {
             self.status = "No pending edits".to_string();
-            return Ok(());
+            return;
         }
+
+        let mut saved = 0_usize;
+        let mut failed = 0_usize;
+        let mut first_error: Option<String> = None;
 
         for (row_index, updates) in dirty_rows {
             let Some(row) = self.rows.get(row_index) else {
                 continue;
             };
 
-            db::update_row_values(&self.pool, &table, &row.ctid, &updates).await?;
+            match db::update_row_values(&self.pool, &table, &row.ctid, &updates).await {
+                Ok(()) => {
+                    saved += 1;
+                    self.dirty_rows.remove(&row_index);
+                    self.apply_updates_to_local_row(row_index, &updates);
+                }
+                Err(error) => {
+                    failed += 1;
+                    if first_error.is_none() {
+                        first_error = Some(format!(
+                            "row {}: {}",
+                            row_index + 1,
+                            Self::format_error_for_status(&error)
+                        ));
+                    }
+                }
+            }
         }
 
-        self.status = format!("Saved {} row(s)", self.dirty_rows.len());
-        self.dirty_rows.clear();
-        self.reload_rows().await?;
-        Ok(())
+        let status = match (saved, failed) {
+            (0, 0) => "No rows were updated".to_string(),
+            (saved, 0) => format!("Saved {saved} row(s)"),
+            (0, failed) => {
+                let reason = first_error.unwrap_or_else(|| "unknown error".to_string());
+                format!("Failed to save {failed} row(s): {reason}")
+            }
+            (saved, failed) => {
+                let reason = first_error.unwrap_or_else(|| "unknown error".to_string());
+                format!("Saved {saved} row(s), failed {failed}: {reason}")
+            }
+        };
+
+        if failed > 0 {
+            self.show_error(status);
+        } else {
+            self.status = status;
+        }
+
+        if failed == 0
+            && saved > 0
+            && let Err(error) = self.reload_rows().await
+        {
+            self.show_error(format!(
+                "Saved {saved} row(s), but refresh failed: {}",
+                Self::format_error_for_status(&error)
+            ));
+        }
+    }
+
+    fn apply_updates_to_local_row(&mut self, row_index: usize, updates: &BTreeMap<String, Value>) {
+        let Some(row) = self.rows.get_mut(row_index) else {
+            return;
+        };
+
+        for (column, value) in updates {
+            row.values.insert(column.clone(), value.clone());
+        }
+    }
+
+    fn format_error_for_status(error: &anyhow::Error) -> String {
+        let chain = error.chain().map(|cause| cause.to_string()).collect::<Vec<_>>();
+        let primary = chain
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "unexpected error".to_string());
+        let root = chain.last().cloned().unwrap_or_else(|| primary.clone());
+
+        if root.contains("invalid input syntax for type uuid") {
+            return "invalid UUID value".to_string();
+        }
+
+        if primary == root {
+            primary
+        } else {
+            format!("{primary} ({root})")
+        }
+    }
+
+    fn show_error(&mut self, message: String) {
+        self.status = message.clone();
+        self.error_popup = Some(message);
+    }
+
+    pub fn report_runtime_error(&mut self, error: &anyhow::Error) {
+        self.show_error(format!(
+            "Unhandled error: {}",
+            Self::format_error_for_status(error)
+        ));
     }
 
     async fn execute_query(&mut self) {
@@ -1418,7 +1553,7 @@ impl AppModel {
             }
             Err(error) => {
                 self.query_result_lines = vec![format!("Error: {error}")];
-                self.status = "Query failed".to_string();
+                self.show_error("Query failed".to_string());
             }
         }
     }
@@ -1804,6 +1939,9 @@ impl AppModel {
         }
         if self.text_entry.is_some() {
             self.render_text_entry(frame);
+        }
+        if self.error_popup.is_some() {
+            self.render_error_popup(frame);
         }
     }
 
@@ -2319,6 +2457,33 @@ impl AppModel {
                 .title(format!(
                     "Select value: {} ({})",
                     picker.column_name, picker.column_type
+                )),
+        );
+        frame.render_widget(widget, area);
+    }
+
+    fn render_error_popup(&self, frame: &mut ratatui::Frame<'_>) {
+        let Some(message) = &self.error_popup else {
+            return;
+        };
+
+        let area = centered_rect(75, 30, frame.area());
+        frame.render_widget(Clear, area);
+
+        let lines = vec![
+            Line::from(message.clone()),
+            Line::from(""),
+            Line::from("Press Enter or Esc to dismiss."),
+        ];
+
+        let widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
+                .title(Span::styled(
+                    "Error",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 )),
         );
         frame.render_widget(widget, area);

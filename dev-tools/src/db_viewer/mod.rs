@@ -78,25 +78,32 @@ pub async fn run() -> anyhow::Result<()> {
         let messages = model.app.tick(PollStrategy::Once)?;
 
         for msg in messages {
-            match model.update(msg).await? {
-                Some(AppEffect::Close) => break 'app_loop Ok(()),
-                Some(AppEffect::OpenQueryEditor(initial_query)) => {
+            match model.update(msg).await {
+                Ok(Some(AppEffect::Close)) => break 'app_loop Ok(()),
+                Ok(Some(AppEffect::OpenQueryEditor(initial_query))) => {
                     restore_terminal(&mut terminal)?;
                     let editor_result = open_external_editor(&initial_query, ".sql");
                     terminal = init_terminal()?;
 
                     match editor_result {
                         Ok(query) => {
-                            model
-                                .update(Msg::App(AppMsg::QueryEditedExternally(query)))
-                                .await?;
+                            if let Err(error) =
+                                model.update(Msg::App(AppMsg::QueryEditedExternally(query))).await
+                            {
+                                eprintln!("db-viewer runtime error: {error:#}");
+                                model.report_runtime_error(&error);
+                            }
                         }
                         Err(error) => {
                             eprintln!("Editor error: {error}");
                         }
                     }
                 }
-                None => {}
+                Ok(None) => {}
+                Err(error) => {
+                    eprintln!("db-viewer runtime error: {error:#}");
+                    model.report_runtime_error(&error);
+                }
             }
         }
 
