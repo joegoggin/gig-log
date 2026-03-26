@@ -6,6 +6,7 @@
     grid-column: 1 / -1;
     padding: clamp(28px, 5vw, 64px);
     overflow: hidden;
+    animation: home-reveal 0.6s ease-out both;
 
     &::after {
         content: "";
