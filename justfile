@@ -94,3 +94,6 @@ dev: db-up
 
 setup *args:
     cargo run -p gig-log-dev-tools -- setup {{args}}
+
+db-viewer:
+	cargo run -p gig-log-dev-tools -- db-viewer

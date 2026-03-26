@@ -1,2 +1,2 @@
-selected_table = "public.auth_codes"
+selected_table = "public.users"
 active_page = "grid"
