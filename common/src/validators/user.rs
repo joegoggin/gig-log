@@ -1,6 +1,13 @@
+//! Validators for user authentication request payloads.
+//!
+//! Each function checks that password and confirmation fields match,
+//! returning a `validator::ValidationError` with code `"password_mismatch"`
+//! on failure.
+
 #[cfg(feature = "validation")]
 use crate::models::user::{ChangePasswordRequest, SetPasswordRequest, SignUpRequest};
 
+/// Validates that `password` and `confirm_password` match on a [`SignUpRequest`].
 #[cfg(feature = "validation")]
 pub fn validate_signup_passwords_match(
     req: &SignUpRequest,
@@ -14,6 +21,7 @@ pub fn validate_signup_passwords_match(
     Ok(())
 }
 
+/// Validates that `new_password` and `confirm_new_password` match on a [`SetPasswordRequest`].
 #[cfg(feature = "validation")]
 pub fn validate_set_password_match(
     req: &SetPasswordRequest,
@@ -27,6 +35,7 @@ pub fn validate_set_password_match(
     Ok(())
 }
 
+/// Validates that `new_password` and `confirm_new_password` match on a [`ChangePasswordRequest`].
 #[cfg(feature = "validation")]
 pub fn validate_change_password_match(
     req: &ChangePasswordRequest,
