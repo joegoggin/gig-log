@@ -7,21 +7,13 @@
     border-radius: 22px;
 
     @include theme.light {
-        background: linear-gradient(
-            148deg,
-            color.change(colors.$white, $alpha: 0.94),
-            color.change(colors.$blue-60, $alpha: 0.72)
-        );
+        background: rgba(255, 255, 255, 0.62);
         border: 1px solid color.change(colors.$text, $alpha: 0.18);
         box-shadow: 0 26px 62px color.change(colors.$black, $alpha: 0.2);
     }
 
     @include theme.dark {
-        background: linear-gradient(
-            152deg,
-            color.change(colors.$text, $alpha: 0.94),
-            color.change(colors.$black, $alpha: 0.88)
-        );
+        background: rgba(169, 177, 214, 0.1);
         border: 1px solid color.change(colors.$background, $alpha: 0.3);
         box-shadow: 0 32px 70px color.change(colors.$black, $alpha: 0.5);
     }
