@@ -15,9 +15,9 @@ struct RustdocAssets {
     noscript_css: String,
 }
 
-pub fn generate() -> Result<()> {
-    let doc_dir = doc_dir();
-    let static_dir = static_dir(&doc_dir);
+pub fn generate(target_dir: &str) -> Result<()> {
+    let doc_dir = PathBuf::from(target_dir).join("doc");
+    let static_dir = doc_dir.join("static.files");
     let assets = discover_assets(&static_dir)?;
     let html = render_html(&assets);
     let output_path = doc_dir.join("index.html");
@@ -67,15 +67,6 @@ fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -
                 static_dir.display()
             )
         })
-}
-
-fn doc_dir() -> PathBuf {
-    let target = std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string());
-    PathBuf::from(target).join("doc")
-}
-
-fn static_dir(doc_dir: &Path) -> PathBuf {
-    doc_dir.join("static.files")
 }
 
 fn render_html(assets: &RustdocAssets) -> String {

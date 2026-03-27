@@ -51,7 +51,7 @@ pub async fn run() -> Result<()> {
     }
 
     // Generate doc index
-    doc_index::generate()?;
+    doc_index::generate(DOCS_TARGET_DIR)?;
 
     // Start miniserve in background
     let mut miniserve = Command::new("miniserve")
@@ -103,7 +103,7 @@ async fn reset_docs_output_dir() -> Result<()> {
 }
 
 pub fn generate_index() -> Result<()> {
-    doc_index::generate()
+    doc_index::generate(DOCS_TARGET_DIR)
 }
 
 async fn check_requirements() -> Result<()> {
