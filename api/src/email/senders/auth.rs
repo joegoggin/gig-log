@@ -49,7 +49,7 @@ impl AuthSender {
     ///
     /// # Errors
     ///
-    /// Returns [`ApiErrorResponse::InternalServerError`] if email delivery fails.
+    /// Returns [`ApiErrorResponse::InternalServerError`](crate::core::error::ApiErrorResponse::InternalServerError) if email delivery fails.
     pub async fn send_email_verification(&self) -> ApiResult<()> {
         self.client
             .send_email(
@@ -68,7 +68,7 @@ impl AuthSender {
     ///
     /// # Errors
     ///
-    /// Returns [`ApiErrorResponse::InternalServerError`] if email delivery fails.
+    /// Returns [`ApiErrorResponse::InternalServerError`](crate::core::error::ApiErrorResponse::InternalServerError) if email delivery fails.
     pub async fn send_reset_password(&self) -> ApiResult<()> {
         self.client
             .send_email(
@@ -87,7 +87,7 @@ impl AuthSender {
     ///
     /// # Errors
     ///
-    /// Returns [`ApiErrorResponse::InternalServerError`] if email delivery fails.
+    /// Returns [`ApiErrorResponse::InternalServerError`](crate::core::error::ApiErrorResponse::InternalServerError) if email delivery fails.
     pub async fn send_email_change(&self) -> ApiResult<()> {
         self.client
             .send_email(
@@ -106,7 +106,7 @@ impl AuthSender {
     ///
     /// # Errors
     ///
-    /// Returns [`ApiErrorResponse::InternalServerError`] if email delivery fails.
+    /// Returns [`ApiErrorResponse::InternalServerError`](crate::core::error::ApiErrorResponse::InternalServerError) if email delivery fails.
     pub async fn send_password_change(&self) -> ApiResult<()> {
         self.client
             .send_email(
