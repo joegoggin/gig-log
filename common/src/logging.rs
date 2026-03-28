@@ -1,7 +1,17 @@
+//! Shared logging utilities and re-exports.
+//!
+//! This module re-exports the [`log`] facade macros for convenience and provides
+//! helper functions for parsing and converting log level configuration values.
+
 use log::{Level, LevelFilter};
 
+/// Convenience re-exports of the [`log`] facade macros.
 pub use log::{debug, error, info, trace, warn};
 
+/// Parses a string into a [`LevelFilter`].
+///
+/// Matching is case-insensitive and trims surrounding whitespace.
+/// Unrecognized values default to [`LevelFilter::Info`].
 pub fn parse_level_filter(log_level: &str) -> LevelFilter {
     match log_level.trim().to_ascii_lowercase().as_str() {
         "off" => LevelFilter::Off,
@@ -14,6 +24,10 @@ pub fn parse_level_filter(log_level: &str) -> LevelFilter {
     }
 }
 
+/// Converts a [`LevelFilter`] to a [`Level`].
+///
+/// Maps [`LevelFilter::Off`] to [`Level::Error`] so that a logger can still be
+/// initialized even when logging is disabled.
 pub fn level_for_logger(level_filter: LevelFilter) -> Level {
     match level_filter {
         LevelFilter::Off | LevelFilter::Error => Level::Error,
@@ -24,6 +38,7 @@ pub fn level_for_logger(level_filter: LevelFilter) -> Level {
     }
 }
 
+/// Returns `true` if the given filter is [`LevelFilter::Off`].
 pub fn is_off(level_filter: LevelFilter) -> bool {
     matches!(level_filter, LevelFilter::Off)
 }
