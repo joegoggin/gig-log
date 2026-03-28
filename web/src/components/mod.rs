@@ -1,7 +1,7 @@
 pub mod core;
-pub mod form;
+pub mod forms;
 pub mod icons;
 
 pub use core::*;
-pub use form::*;
+pub use forms::*;
 pub use icons::*;

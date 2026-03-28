@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use crate::{
     layouts::auth::AuthLayout,
     pages::home::components::{
-        HomePageCta, HomePageWorkflow, benefits::HomePageBenefits, hero::HomePageHero,
+        benefits::HomePageBenefits, hero::HomePageHero, HomePageCta, HomePageWorkflow,
     },
     utils::class_name::ClassNameUtil,
 };

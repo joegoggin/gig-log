@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
-    components::{Card, button::Button},
+    components::{button::Button, Card},
     contexts::use_auth,
     utils::class_name::ClassNameUtil,
 };
