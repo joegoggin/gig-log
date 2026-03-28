@@ -39,4 +39,6 @@ pub enum Command {
     // Add to the Command enum in dev-tools/src/cli.rs
     /// Launch the API tester TUI
     ApiTester,
+    /// Launch the database viewer TUI
+    DbViewer,
 }

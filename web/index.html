@@ -1,9 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Leptos Todo List</title>
+        <script>
+            (() => {
+                const root = document.documentElement;
+                const media = window.matchMedia("(prefers-color-scheme: dark)");
+                const applyTheme = (isDark) => {
+                    root.setAttribute("data-theme", isDark ? "dark" : "light");
+                };
+
+                applyTheme(media.matches);
+
+                if (media.addEventListener) {
+                    media.addEventListener("change", (event) =>
+                        applyTheme(event.matches),
+                    );
+                } else {
+                    media.addListener((event) => applyTheme(event.matches));
+                }
+            })();
+        </script>
+        <title>GigLog</title>
         <link data-trunk rel="rust" data-wasm-opt="z" />
         <link data-trunk rel="sass" href="styles/main.scss" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -1,0 +1,16 @@
+@use "mixins/media" as media;
+
+.main-layout {
+    display: flex;
+    min-height: 100dvh;
+    position: relative;
+
+    @include media.tablet {
+        flex-direction: column;
+    }
+}
+
+.main-layout__content {
+    flex: 1;
+    min-width: 0;
+}

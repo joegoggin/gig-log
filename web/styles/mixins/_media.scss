@@ -1,4 +1,4 @@
-@use "../variables/breakpoints" as breakpoints;
+@use "variables/breakpoints" as breakpoints;
 
 @mixin phone {
     @media (max-width: breakpoints.$tablet-sm) {

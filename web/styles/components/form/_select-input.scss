@@ -1,0 +1,59 @@
+@use "variables/colors" as colors;
+
+.select-input {
+    &__field {
+        position: relative;
+        width: 100%;
+    }
+
+    select {
+        display: block;
+        width: 100%;
+        font-family: Roboto;
+        font-size: 16px;
+        padding: 8px 32px 8px 8px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--text-color);
+        outline: none;
+        color: var(--text-color);
+        appearance: none;
+        cursor: pointer;
+        transition: all ease-in-out 0.3s;
+
+        &:focus {
+            border-bottom: 1px solid colors.$primary-100;
+            box-shadow: 0 1px 0 0 colors.$primary-100;
+            color: colors.$primary-100;
+        }
+    }
+
+    &__field::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--text-color);
+        border-bottom: 2px solid var(--text-color);
+        transform: translateY(-65%) rotate(45deg);
+        pointer-events: none;
+        transition: border-color ease-in-out 0.3s;
+    }
+
+    &__field:focus-within::after {
+        border-color: colors.$primary-100;
+    }
+
+    &.text-input--error {
+        select {
+            border-bottom: 1px solid colors.$red-100;
+            color: colors.$red-100;
+        }
+
+        .select-input__field::after {
+            border-color: colors.$red-100;
+        }
+    }
+}
