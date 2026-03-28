@@ -1,3 +1,9 @@
+//! Log output formatting for HTTP traffic and general log records.
+//!
+//! Provides colorized, structured output helpers used by the [`Logger`](super::Logger)
+//! backend and the HTTP logging middleware. Includes verbose request/response
+//! printers, compact one-line HTTP summaries, and JSON pretty-printing.
+
 use axum::http::{HeaderMap, Method, StatusCode};
 use colorized::{Colors, colorize_print, colorize_println};
 use log::Record;
@@ -6,6 +12,7 @@ use uuid::Uuid;
 
 use super::redaction::sanitize_header_value;
 
+/// Broad classification of an HTTP status code for color selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum StatusClass {
     Success,
@@ -14,6 +21,7 @@ pub(super) enum StatusClass {
     Other,
 }
 
+/// Maps an HTTP status code to its [`StatusClass`].
 pub(super) fn classify_status(status_code: StatusCode) -> StatusClass {
     if status_code.is_success() {
         StatusClass::Success
@@ -26,6 +34,7 @@ pub(super) fn classify_status(status_code: StatusCode) -> StatusClass {
     }
 }
 
+/// Returns a string of `#` characters with the given length, used for banner headings.
 pub(super) fn get_hashtags(level: i8) -> String {
     let mut hashtags = String::new();
 
@@ -36,6 +45,7 @@ pub(super) fn get_hashtags(level: i8) -> String {
     hashtags
 }
 
+/// Returns an indentation string of `level * 2` spaces, used for nested JSON output.
 pub(super) fn get_spaces(level: i8) -> String {
     let mut spaces = String::new();
 
@@ -46,19 +56,23 @@ pub(super) fn get_spaces(level: i8) -> String {
     spaces
 }
 
+/// Prints a colored heading surrounded by the given hashtag string.
 fn log_header(header: &str, hashtags: &str) {
     let header_string = format!("\n{} {} {}\n", hashtags, header, hashtags);
     colorize_println(header_string, Colors::MagentaFg);
 }
 
+/// Prints a level-1 heading (6 `#` characters).
 fn log_h1(header: &str) {
     log_header(header, &get_hashtags(6));
 }
 
+/// Prints a level-2 heading (5 `#` characters).
 fn log_h2(header: &str) {
     log_header(header, &get_hashtags(5));
 }
 
+/// Pretty-prints a JSON value with colorized keys and indentation.
 pub(super) fn log_json(json: Value, level: i8) {
     match json {
         Value::Array(values) => {
@@ -102,6 +116,7 @@ pub(super) fn log_json(json: Value, level: i8) {
     }
 }
 
+/// Pretty-prints a JSON array with indentation at the given nesting level.
 fn log_array(values: Vec<Value>, level: i8) {
     if values.is_empty() {
         println!("[],");
@@ -138,6 +153,7 @@ fn log_array(values: Vec<Value>, level: i8) {
     }
 }
 
+/// Prints HTTP headers with sensitive values redacted.
 pub(super) fn log_headers(headers: &HeaderMap) {
     for (key, value) in headers {
         colorize_print(format!("{}: ", key), Colors::CyanFg);
@@ -147,6 +163,7 @@ pub(super) fn log_headers(headers: &HeaderMap) {
     }
 }
 
+/// Prints a verbose HTTP request log with headers and optional body.
 pub(super) fn log_request(
     id: Uuid,
     method: &Method,
@@ -171,6 +188,7 @@ pub(super) fn log_request(
     }
 }
 
+/// Prints a verbose HTTP response log with status, duration, and optional body.
 pub(super) fn log_response(
     id: Uuid,
     status_code: StatusCode,
@@ -200,6 +218,7 @@ pub(super) fn log_response(
     }
 }
 
+/// Prints a single-line compact HTTP log: `[id] METHOD /path -> STATUS (duration ms)`.
 pub(super) fn log_compact_http(
     id: Uuid,
     method: &Method,
@@ -220,6 +239,7 @@ pub(super) fn log_compact_http(
     colorize_println(format!(" ({} ms)", duration_ms), Colors::BlueFg);
 }
 
+/// Extracts the path suffix after `src/`, returning an empty string if not found.
 pub(super) fn extract_after_src(path: Option<&str>) -> String {
     match path {
         Some(path) => {
@@ -236,6 +256,7 @@ pub(super) fn extract_after_src(path: Option<&str>) -> String {
     }
 }
 
+/// Prints a verbose error record with file path, line number, and red coloring.
 pub(super) fn log_error(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
     let error_header = format!("{} Error {}", hashtags, hashtags);
@@ -253,6 +274,7 @@ pub(super) fn log_error(record: &Record<'_>) {
     colorize_println(format!("{}", record.args()), Colors::RedFg);
 }
 
+/// Prints a verbose debug record with file path, line number, and yellow coloring.
 pub(super) fn log_debug(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
     let debug_header = format!("{} Debug {}", hashtags, hashtags);
