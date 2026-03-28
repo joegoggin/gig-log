@@ -1,3 +1,9 @@
+//! Authentication and account management route definitions.
+//!
+//! This module defines the [`AuthRouter`], which maps HTTP endpoints to
+//! [`AuthController`] handler
+//! methods for sign-up, login, password management, and email change flows.
+
 use axum::{
     Router,
     routing::{get, post},
@@ -5,9 +11,31 @@ use axum::{
 
 use crate::{controllers::auth::AuthController, routes::app::AppState};
 
+/// Router for authentication and account management endpoints.
 pub struct AuthRouter;
 
 impl AuthRouter {
+    /// Creates a [`Router`] with all authentication routes.
+    ///
+    /// Registers the following endpoints under the `/auth` prefix:
+    ///
+    /// - `POST /sign-up` — Register a new user account.
+    /// - `POST /confirm-email` — Confirm an email address.
+    /// - `POST /log-in` — Authenticate and obtain tokens.
+    /// - `POST /log-out` — Revoke the current session.
+    /// - `POST /refresh` — Refresh an access token.
+    /// - `GET /me` — Retrieve the authenticated user's profile.
+    /// - `POST /forgot-password` — Request a password reset code.
+    /// - `POST /verify-forgot-password` — Verify a password reset code.
+    /// - `POST /set-password` — Set a new password after reset.
+    /// - `POST /request-change-password` — Request a password change code.
+    /// - `POST /change-password` — Change the current password.
+    /// - `POST /request-email-change` — Request an email change.
+    /// - `POST /confirm-email-change` — Confirm an email change.
+    ///
+    /// # Returns
+    ///
+    /// A [`Router<AppState>`] with all authentication routes registered.
     pub fn new() -> Router<AppState> {
         Router::new()
             .route("/sign-up", post(AuthController::sign_up))

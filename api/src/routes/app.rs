@@ -1,3 +1,9 @@
+//! Application router and shared state for the GigLog API.
+//!
+//! This module defines [`AppState`], the shared state available to all
+//! request handlers, and [`AppRouter`], which assembles every route group,
+//! configures CORS, and applies HTTP logging middleware.
+
 use axum::{
     Router,
     http::{HeaderName, Method},
@@ -16,16 +22,39 @@ use crate::{
     routes::{auth::AuthRouter, health::HealthRouter},
 };
 
+/// Shared application state passed to every Axum handler.
+///
+/// Holds the runtime configuration, a PostgreSQL connection pool, and an
+/// email client. Axum clones this state for each request via its [`Clone`]
+/// implementation.
 #[derive(Debug, Clone)]
 pub struct AppState {
+    /// Runtime application configuration loaded from environment variables.
     pub config: Config,
+    /// PostgreSQL connection pool for database operations.
     pub db_pool: Pool<Postgres>,
+    /// Email client for sending transactional emails.
     pub email_client: EmailClient,
 }
 
+/// Top-level router builder for the GigLog API.
 pub struct AppRouter;
 
 impl AppRouter {
+    /// Creates a fully configured [`Router`] with all route groups and middleware.
+    ///
+    /// Parses the configured web origin for CORS, falling back to
+    /// `http://localhost:3000` on failure. Nests [`HealthRouter`] at `/health`
+    /// and [`AuthRouter`] at `/auth`, then applies HTTP request/response
+    /// logging and CORS middleware layers.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The [`AppState`] shared across all handlers.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`Router`] ready to serve requests.
     pub fn new(state: AppState) -> Router {
         let http_logging_config = HttpLoggingConfig::new(
             state.config.is_http_body_logging_enabled(),
