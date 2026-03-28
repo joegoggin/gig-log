@@ -25,6 +25,14 @@ const DOCS_ARGS: [&str; 14] = [
     "--locked",
 ];
 
+/// Builds workspace documentation, starts a live-reload docs server, and
+/// watches for source changes.
+///
+/// # Errors
+///
+/// Returns an error if required tools (`cargo-watch`, `miniserve`) are
+/// not installed, the documentation build fails, or the server cannot
+/// start.
 pub async fn run() -> Result<()> {
     check_requirements().await?;
 
@@ -95,6 +103,10 @@ pub async fn run() -> Result<()> {
 }
 
 /// Removes and recreates the docs output directory to ensure a clean build.
+///
+/// # Errors
+///
+/// Returns an error if the directory cannot be removed or recreated.
 async fn reset_docs_output_dir() -> Result<()> {
     if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
         tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;
@@ -103,11 +115,24 @@ async fn reset_docs_output_dir() -> Result<()> {
     Ok(())
 }
 
+/// Generates the workspace-level doc index page.
+///
+/// Delegates to [`doc_index::generate`] with the default docs target
+/// directory.
+///
+/// # Errors
+///
+/// Returns an error if index generation fails.
 pub fn generate_index() -> Result<()> {
     doc_index::generate(DOCS_TARGET_DIR)
 }
 
 /// Verifies that `cargo-watch` and `miniserve` are installed before starting the docs server.
+///
+/// # Errors
+///
+/// Returns an error if either `cargo-watch` or `miniserve` is not
+/// found on the system PATH.
 async fn check_requirements() -> Result<()> {
     let cargo_watch = Command::new("which")
         .arg("cargo-watch")

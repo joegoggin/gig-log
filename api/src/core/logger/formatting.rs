@@ -22,6 +22,14 @@ pub(super) enum StatusClass {
 }
 
 /// Maps an HTTP status code to its [`StatusClass`].
+///
+/// # Arguments
+///
+/// * `status_code` — The HTTP status code to classify.
+///
+/// # Returns
+///
+/// The corresponding [`StatusClass`] variant.
 pub(super) fn classify_status(status_code: StatusCode) -> StatusClass {
     if status_code.is_success() {
         StatusClass::Success
@@ -35,6 +43,14 @@ pub(super) fn classify_status(status_code: StatusCode) -> StatusClass {
 }
 
 /// Returns a string of `#` characters with the given length, used for banner headings.
+///
+/// # Arguments
+///
+/// * `level` — The number of `#` characters to produce.
+///
+/// # Returns
+///
+/// A [`String`] containing `level` hash characters.
 pub(super) fn get_hashtags(level: i8) -> String {
     let mut hashtags = String::new();
 
@@ -46,6 +62,14 @@ pub(super) fn get_hashtags(level: i8) -> String {
 }
 
 /// Returns an indentation string of `level * 2` spaces, used for nested JSON output.
+///
+/// # Arguments
+///
+/// * `level` — The nesting depth; each level adds two spaces.
+///
+/// # Returns
+///
+/// A [`String`] containing `level * 2` space characters.
 pub(super) fn get_spaces(level: i8) -> String {
     let mut spaces = String::new();
 
@@ -57,22 +81,40 @@ pub(super) fn get_spaces(level: i8) -> String {
 }
 
 /// Prints a colored heading surrounded by the given hashtag string.
+///
+/// # Arguments
+///
+/// * `header` — The heading text.
+/// * `hashtags` — The `#` string placed on each side of the heading.
 fn log_header(header: &str, hashtags: &str) {
     let header_string = format!("\n{} {} {}\n", hashtags, header, hashtags);
     colorize_println(header_string, Colors::MagentaFg);
 }
 
 /// Prints a level-1 heading (6 `#` characters).
+///
+/// # Arguments
+///
+/// * `header` — The heading text.
 fn log_h1(header: &str) {
     log_header(header, &get_hashtags(6));
 }
 
 /// Prints a level-2 heading (5 `#` characters).
+///
+/// # Arguments
+///
+/// * `header` — The heading text.
 fn log_h2(header: &str) {
     log_header(header, &get_hashtags(5));
 }
 
 /// Pretty-prints a JSON value with colorized keys and indentation.
+///
+/// # Arguments
+///
+/// * `json` — The JSON value to print.
+/// * `level` — The current nesting depth for indentation.
 pub(super) fn log_json(json: Value, level: i8) {
     match json {
         Value::Array(values) => {
@@ -117,6 +159,11 @@ pub(super) fn log_json(json: Value, level: i8) {
 }
 
 /// Pretty-prints a JSON array with indentation at the given nesting level.
+///
+/// # Arguments
+///
+/// * `values` — The array elements to print.
+/// * `level` — The current nesting depth for indentation.
 fn log_array(values: Vec<Value>, level: i8) {
     if values.is_empty() {
         println!("[],");
@@ -154,6 +201,10 @@ fn log_array(values: Vec<Value>, level: i8) {
 }
 
 /// Prints HTTP headers with sensitive values redacted.
+///
+/// # Arguments
+///
+/// * `headers` — The HTTP header map to print.
 pub(super) fn log_headers(headers: &HeaderMap) {
     for (key, value) in headers {
         colorize_print(format!("{}: ", key), Colors::CyanFg);
@@ -164,6 +215,14 @@ pub(super) fn log_headers(headers: &HeaderMap) {
 }
 
 /// Prints a verbose HTTP request log with headers and optional body.
+///
+/// # Arguments
+///
+/// * `id` — Unique request identifier.
+/// * `method` — The HTTP method.
+/// * `route` — The request path.
+/// * `headers` — The request headers.
+/// * `req_body` — Optional redacted JSON body to log.
 pub(super) fn log_request(
     id: Uuid,
     method: &Method,
@@ -189,6 +248,13 @@ pub(super) fn log_request(
 }
 
 /// Prints a verbose HTTP response log with status, duration, and optional body.
+///
+/// # Arguments
+///
+/// * `id` — Unique request identifier.
+/// * `status_code` — The HTTP response status.
+/// * `duration_ms` — Request processing time in milliseconds.
+/// * `res_body` — Optional redacted JSON body to log.
 pub(super) fn log_response(
     id: Uuid,
     status_code: StatusCode,
@@ -219,6 +285,14 @@ pub(super) fn log_response(
 }
 
 /// Prints a single-line compact HTTP log: `[id] METHOD /path -> STATUS (duration ms)`.
+///
+/// # Arguments
+///
+/// * `id` — Unique request identifier.
+/// * `method` — The HTTP method.
+/// * `route` — The request path.
+/// * `status_code` — The HTTP response status.
+/// * `duration_ms` — Request processing time in milliseconds.
 pub(super) fn log_compact_http(
     id: Uuid,
     method: &Method,
@@ -240,6 +314,15 @@ pub(super) fn log_compact_http(
 }
 
 /// Extracts the path suffix after `src/`, returning an empty string if not found.
+///
+/// # Arguments
+///
+/// * `path` — An optional full file path.
+///
+/// # Returns
+///
+/// The portion of the path after `src/`, or an empty [`String`] if
+/// `path` is `None` or does not contain `src/`.
 pub(super) fn extract_after_src(path: Option<&str>) -> String {
     match path {
         Some(path) => {
@@ -257,6 +340,10 @@ pub(super) fn extract_after_src(path: Option<&str>) -> String {
 }
 
 /// Prints a verbose error record with file path, line number, and red coloring.
+///
+/// # Arguments
+///
+/// * `record` — The log record to print.
 pub(super) fn log_error(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
     let error_header = format!("{} Error {}", hashtags, hashtags);
@@ -275,6 +362,10 @@ pub(super) fn log_error(record: &Record<'_>) {
 }
 
 /// Prints a verbose debug record with file path, line number, and yellow coloring.
+///
+/// # Arguments
+///
+/// * `record` — The log record to print.
 pub(super) fn log_debug(record: &Record<'_>) {
     let hashtags = get_hashtags(6);
     let debug_header = format!("{} Debug {}", hashtags, hashtags);

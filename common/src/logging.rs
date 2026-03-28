@@ -12,6 +12,15 @@ pub use log::{debug, error, info, trace, warn};
 ///
 /// Matching is case-insensitive and trims surrounding whitespace.
 /// Unrecognized values default to [`LevelFilter::Info`].
+///
+/// # Arguments
+///
+/// * `log_level` — The log level string (e.g. `"debug"`, `"info"`).
+///
+/// # Returns
+///
+/// The corresponding [`LevelFilter`], or [`LevelFilter::Info`] for
+/// unrecognized values.
 pub fn parse_level_filter(log_level: &str) -> LevelFilter {
     match log_level.trim().to_ascii_lowercase().as_str() {
         "off" => LevelFilter::Off,
@@ -28,6 +37,15 @@ pub fn parse_level_filter(log_level: &str) -> LevelFilter {
 ///
 /// Maps [`LevelFilter::Off`] to [`Level::Error`] so that a logger can still be
 /// initialized even when logging is disabled.
+///
+/// # Arguments
+///
+/// * `level_filter` — The filter to convert.
+///
+/// # Returns
+///
+/// The corresponding [`Level`], with [`LevelFilter::Off`] mapped to
+/// [`Level::Error`].
 pub fn level_for_logger(level_filter: LevelFilter) -> Level {
     match level_filter {
         LevelFilter::Off | LevelFilter::Error => Level::Error,
@@ -39,6 +57,14 @@ pub fn level_for_logger(level_filter: LevelFilter) -> Level {
 }
 
 /// Returns `true` if the given filter is [`LevelFilter::Off`].
+///
+/// # Arguments
+///
+/// * `level_filter` — The filter to check.
+///
+/// # Returns
+///
+/// `true` if the filter is [`LevelFilter::Off`].
 pub fn is_off(level_filter: LevelFilter) -> bool {
     matches!(level_filter, LevelFilter::Off)
 }

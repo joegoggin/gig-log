@@ -28,8 +28,12 @@ static LOG_VERBOSE: AtomicBool = AtomicBool::new(true);
 impl Logger {
     /// Registers the global logger and sets the maximum log level.
     ///
-    /// `verbose` controls whether log output includes source locations and
-    /// decorative banners (`true`) or uses compact single-line format (`false`).
+    /// # Arguments
+    ///
+    /// * `log_level` — A string parsed into a [`LevelFilter`](log::LevelFilter)
+    ///   (e.g. `"debug"`, `"info"`).
+    /// * `verbose` — When `true`, log output includes source locations and
+    ///   decorative banners; when `false`, uses compact single-line format.
     pub fn setup_logging(log_level: &str, verbose: bool) {
         LOG_VERBOSE.store(verbose, Ordering::Relaxed);
 
@@ -58,11 +62,19 @@ impl Logger {
     }
 
     /// Returns `true` when verbose logging is enabled.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the logger was initialized with `verbose` set to `true`.
     pub fn is_verbose() -> bool {
         LOG_VERBOSE.load(Ordering::Relaxed)
     }
 
     /// Prints a green success banner (verbose) or a plain green line (compact).
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — The text to display.
     pub fn log_success(message: &str) {
         if !log::log_enabled!(Level::Info) {
             return;
@@ -79,6 +91,10 @@ impl Logger {
     }
 
     /// Prints a blue informational banner (verbose) or a plain blue line (compact).
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — The text to display.
     pub fn log_message(message: &str) {
         if !log::log_enabled!(Level::Info) {
             return;

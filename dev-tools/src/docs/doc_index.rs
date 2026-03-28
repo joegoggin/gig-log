@@ -16,6 +16,21 @@ struct RustdocAssets {
     noscript_css: String,
 }
 
+/// Generates the workspace-level `index.html` for the rustdoc output.
+///
+/// Discovers the hashed static asset filenames from the `static.files`
+/// directory and writes an HTML index that links to each crate's
+/// documentation.
+///
+/// # Arguments
+///
+/// * `target_dir` — The cargo target directory containing the `doc/`
+///   output (e.g. `"target/docs"`).
+///
+/// # Errors
+///
+/// Returns an error if the static assets directory cannot be read, a
+/// required asset is missing, or the output file cannot be written.
 pub fn generate(target_dir: &str) -> Result<()> {
     let doc_dir = PathBuf::from(target_dir).join("doc");
     let static_dir = doc_dir.join("static.files");
@@ -30,6 +45,19 @@ pub fn generate(target_dir: &str) -> Result<()> {
 }
 
 /// Scans the rustdoc `static.files` directory and resolves each hashed asset filename.
+///
+/// # Arguments
+///
+/// * `static_dir` — Path to the `static.files` directory.
+///
+/// # Returns
+///
+/// A [`RustdocAssets`] struct with all discovered filenames.
+///
+/// # Errors
+///
+/// Returns an error if the directory cannot be read or a required
+/// asset is missing.
 fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
     let entries = fs::read_dir(static_dir)
         .with_context(|| format!("Failed to read {}", static_dir.display()))?;
@@ -57,6 +85,21 @@ fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
 }
 
 /// Finds a single asset filename matching the given prefix and suffix, or returns an error.
+///
+/// # Arguments
+///
+/// * `names` — Sorted list of filenames in the static assets directory.
+/// * `prefix` — The expected filename prefix (e.g. `"rustdoc-"`).
+/// * `suffix` — The expected filename suffix (e.g. `".css"`).
+/// * `static_dir` — Path to the directory, used in error messages.
+///
+/// # Returns
+///
+/// The matching filename as a [`String`].
+///
+/// # Errors
+///
+/// Returns an error if no filename matches the pattern.
 fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -> Result<String> {
     names
         .iter()
@@ -73,6 +116,14 @@ fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -
 }
 
 /// Renders the workspace-level `index.html` that links to each crate's documentation.
+///
+/// # Arguments
+///
+/// * `assets` — The resolved rustdoc static asset filenames.
+///
+/// # Returns
+///
+/// The complete HTML page as a [`String`].
 fn render_html(assets: &RustdocAssets) -> String {
     format!(
         r##"<!DOCTYPE html>
