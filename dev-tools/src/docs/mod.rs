@@ -94,6 +94,7 @@ pub async fn run() -> Result<()> {
     Ok(())
 }
 
+/// Removes and recreates the docs output directory to ensure a clean build.
 async fn reset_docs_output_dir() -> Result<()> {
     if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
         tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;
@@ -106,6 +107,7 @@ pub fn generate_index() -> Result<()> {
     doc_index::generate(DOCS_TARGET_DIR)
 }
 
+/// Verifies that `cargo-watch` and `miniserve` are installed before starting the docs server.
 async fn check_requirements() -> Result<()> {
     let cargo_watch = Command::new("which")
         .arg("cargo-watch")

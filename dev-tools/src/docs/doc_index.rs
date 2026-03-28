@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
+/// Holds the hashed filenames of rustdoc static assets discovered at build time.
 struct RustdocAssets {
     normalize_css: String,
     rustdoc_css: String,
@@ -28,6 +29,7 @@ pub fn generate(target_dir: &str) -> Result<()> {
     Ok(())
 }
 
+/// Scans the rustdoc `static.files` directory and resolves each hashed asset filename.
 fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
     let entries = fs::read_dir(static_dir)
         .with_context(|| format!("Failed to read {}", static_dir.display()))?;
@@ -54,6 +56,7 @@ fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
     })
 }
 
+/// Finds a single asset filename matching the given prefix and suffix, or returns an error.
 fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -> Result<String> {
     names
         .iter()
@@ -69,6 +72,7 @@ fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -
         })
 }
 
+/// Renders the workspace-level `index.html` that links to each crate's documentation.
 fn render_html(assets: &RustdocAssets) -> String {
     format!(
         r##"<!DOCTYPE html>
