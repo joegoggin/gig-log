@@ -1,5 +1,12 @@
+//! Reusable form field components.
+
+/// Provides a styled checkbox field.
 pub mod check_box;
+/// Provides a password input with visibility toggle.
 pub mod password_input;
+/// Provides a generic select input field.
 pub mod select_input;
+/// Provides a styled textarea field.
 pub mod text_area;
+/// Provides a styled single-line text input field.
 pub mod text_input;

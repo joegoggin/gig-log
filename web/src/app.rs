@@ -1,3 +1,5 @@
+//! Root application component and route configuration.
+
 use gig_log_frontend::{
     components::private_route::PrivateRoute,
     contexts::{provide_auth_context, provide_mobile_context, provide_notification_context},
@@ -10,6 +12,13 @@ use leptos_router::{
     path,
 };
 
+/// Renders the root GigLog application router.
+///
+/// Initializes shared contexts and registers all application routes.
+///
+/// # Returns
+///
+/// A Leptos view containing the application router tree.
 #[component]
 pub fn App() -> impl IntoView {
     provide_auth_context();

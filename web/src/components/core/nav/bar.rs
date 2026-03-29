@@ -1,3 +1,5 @@
+//! Primary navigation bar component.
+
 use leptos::prelude::*;
 use leptos_router::components::A;
 
@@ -10,6 +12,11 @@ use crate::{
     contexts::use_mobile,
 };
 
+/// Renders the primary sidebar navigation bar.
+///
+/// # Returns
+///
+/// A Leptos view containing the navigation shell and menu.
 #[component]
 pub fn NavBar() -> impl IntoView {
     let mobile = use_mobile();

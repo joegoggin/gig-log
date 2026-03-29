@@ -1,5 +1,12 @@
+//! Icon component for `CloseIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `CloseIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `CloseIcon` UI.
 #[component]
 pub fn CloseIcon() -> impl IntoView {
     view! {

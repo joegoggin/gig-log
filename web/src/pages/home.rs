@@ -1,3 +1,5 @@
+//! Page component for `HomePage`.
+
 use gig_log_common::models::error::ValidationError;
 use leptos::prelude::*;
 
@@ -12,6 +14,11 @@ use crate::{
     layouts::auth::AuthLayout,
 };
 
+/// Renders the `HomePage` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `HomePage` UI.
 #[component]
 pub fn HomePage() -> impl IntoView {
     let error: ValidationError = ValidationError::new(Some("test".to_string()), "This is a test!");

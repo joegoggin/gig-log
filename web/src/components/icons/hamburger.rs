@@ -1,5 +1,12 @@
+//! Icon component for `HamburgerIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `HamburgerIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `HamburgerIcon` UI.
 #[component]
 pub fn HamburgerIcon() -> impl IntoView {
     view! {
