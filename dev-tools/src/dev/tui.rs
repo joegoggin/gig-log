@@ -1,3 +1,8 @@
+//! Terminal runtime for dev orchestrator event handling and rendering.
+//!
+//! This module owns terminal setup/teardown, keyboard handling, and the event
+//! loop that applies orchestrator updates to UI state.
+
 use std::io::{self, stdout};
 use std::time::Duration;
 
@@ -14,13 +19,31 @@ use tokio::sync::mpsc;
 use super::log_store::{LogEntry, LogStore, Service};
 use super::ui::{self, AppState};
 
+/// Carries orchestrator updates into the TUI event loop.
 pub enum TuiEvent {
+    /// Appends a rendered log entry.
     Log(LogEntry),
+    /// Requests log clearing before batch execution.
     ClearLogs,
+    /// Marks a service as running in the header.
     ServiceStarted(Service),
+    /// Marks a service as stopped in the header.
     ServiceExited(Service),
 }
 
+/// Runs the interactive terminal UI until exit.
+///
+/// # Arguments
+///
+/// * `event_rx` — Receiver providing orchestrator events.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if terminal setup, drawing, or teardown fails.
 pub async fn run_tui(mut event_rx: mpsc::Receiver<TuiEvent>) -> Result<()> {
     // Setup terminal
     enable_raw_mode()?;
@@ -40,6 +63,22 @@ pub async fn run_tui(mut event_rx: mpsc::Receiver<TuiEvent>) -> Result<()> {
     result
 }
 
+/// Executes the draw/input loop while applying incoming events.
+///
+/// # Arguments
+///
+/// * `terminal` — Ratatui terminal backend wrapper.
+/// * `log_store` — Log storage used for filtering and rendering.
+/// * `state` — Mutable UI state for controls and scrolling.
+/// * `event_rx` — Receiver of orchestrator-generated events.
+///
+/// # Returns
+///
+/// An empty [`Result`] when the loop exits cleanly.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if polling input or drawing frames fails.
 async fn run_event_loop(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     log_store: &mut LogStore,
@@ -96,6 +135,20 @@ async fn run_event_loop(
     }
 }
 
+/// Applies one keyboard event and reports whether to quit.
+///
+/// # Arguments
+///
+/// * `log_store` — Log storage used by clear actions.
+/// * `state` — UI state updated by key bindings.
+/// * `key_code` — Key pressed by the user.
+/// * `modifiers` — Modifier keys held during the keypress.
+/// * `max_offset` — Maximum valid scroll offset for the current frame.
+/// * `page_jump` — Half-page step used by `Ctrl+u`/`Ctrl+d`.
+///
+/// # Returns
+///
+/// A boolean indicating whether the TUI should exit.
 fn handle_key_event(
     log_store: &mut LogStore,
     state: &mut AppState,
@@ -214,6 +267,13 @@ fn handle_key_event(
     }
 }
 
+/// Applies a single orchestrator event to logs and UI state.
+///
+/// # Arguments
+///
+/// * `log_store` — Log storage receiving appended or cleared entries.
+/// * `state` — Mutable view state updated by service lifecycle events.
+/// * `event` — Event payload to apply.
 fn apply_tui_event(log_store: &mut LogStore, state: &mut AppState, event: TuiEvent) {
     match event {
         TuiEvent::Log(entry) => {
