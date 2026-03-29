@@ -1,3 +1,10 @@
+//! Manages the API tester TUI application state and rendering.
+//!
+//! This module defines the screen-level models, messages, navigation history,
+//! and rendering helpers used by the API tester workflow. It coordinates
+//! route editing, request previewing, response inspection, and variable
+//! management while delegating component rendering to mounted widgets.
+
 use ratatui::{
     layout::{Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
@@ -36,183 +43,310 @@ use crate::api_tester::{
 use crate::utils::sub::SubUtils;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
+/// Identifies mounted components and focusable widgets in the application.
 pub enum Id {
+    /// Captures global keyboard, mouse, and resize events.
     GlobalListener,
+    /// Displays grouped routes and route-level actions.
     RouteList,
+    /// Route name input field.
     EditorName,
+    /// Route HTTP method selector.
     EditorMethod,
+    /// Route URL input field.
     EditorUrl,
+    /// Route headers input field.
     EditorHeaders,
+    /// Response details viewer panel.
     ResponseDetails,
+    /// Variable list table.
     VariableTable,
+    /// Variable key input field.
     VariableKeyInput,
+    /// Variable value input field.
     VariableValueInput,
+    /// Variable mode selector.
     VariableMode,
+    /// Route group selector.
     EditorGroup,
+    /// New route group name input field.
     EditorNewGroup,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Represents the currently visible top-level view.
 pub enum ActiveView {
+    /// Route list and summary view.
     RouteList,
+    /// Route editor form view.
     RouteEditor,
+    /// Request preview view.
     RequestPreview,
+    /// Response viewer view.
     ResponseViewer,
+    /// Variable manager view.
     VariableManager,
+    /// Keymap help overlay view.
     KeymapHelp,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines application-level messages shared across views.
 pub enum AppMsg {
+    /// Requests application shutdown.
     Close,
+    /// Switches to the provided top-level view.
     SwitchView(ActiveView),
+    /// Navigates to the previous history entry.
     NavigateBack,
+    /// Navigates to the next history entry.
     NavigateForward,
+    /// Opens the external body editor flow.
     OpenBodyEditor,
+    /// Toggles secret value visibility in UI surfaces.
     ToggleSecretVisibility,
+    /// Opens scoped variables for the selected route.
     OpenScopedVariables,
+    /// Updates tracked terminal dimensions.
     TerminalResize(u16, u16),
+    /// Switches input handling to insert mode.
     EnterInsertMode,
+    /// Switches input handling to normal mode.
     EnterNormalMode,
+    /// Scrolls content up by one line.
     ScrollUp,
+    /// Scrolls content down by one line.
     ScrollDown,
+    /// Scrolls content up by one page.
     PageUp,
+    /// Scrolls content down by one page.
     PageDown,
+    /// Scrolls content by a signed line delta.
     ScrollBy(isize),
+    /// Jumps scrolling to the start.
     ScrollToTop,
+    /// Jumps scrolling to the end.
     ScrollToBottom,
+    /// Toggles keymap help visibility.
     ToggleKeymapHelp,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines messages emitted by the route list screen.
 pub enum RouteListMsg {
+    /// Executes the route at the provided index.
     RunRoute(usize),
+    /// Opens editor for the route at the provided index.
     EditRoute(usize),
+    /// Creates a new route draft.
     NewRoute,
+    /// Deletes the route at the provided index.
     DeleteRoute(usize),
+    /// Persists updated route-list UI state.
     StateChanged(RouteListState),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines messages emitted by the route editor screen.
 pub enum RouteEditorMsg {
+    /// Saves the current route editor draft.
     Save,
+    /// Moves focus to the provided editor field.
     FocusField(Id),
+    /// Applies a method selection by index.
     MethodChanged(usize),
+    /// Applies a group selection by index.
     GroupSelected(usize),
+    /// Confirms creation of the typed group name.
     NewGroupEntered,
+    /// Applies optional body content returned by the body editor.
     BodyEditorResult(Option<String>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines messages emitted by the request preview screen.
 pub enum RequestPreviewMsg {
+    /// Executes the currently previewed request.
     Execute,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines messages emitted by the response viewer screen.
 pub enum ResponseViewerMsg {
+    /// Stores a successful route execution result.
     RouteExecuted(usize, CurlResponse),
+    /// Stores a failed route execution result.
     RouteExecutionFailed(usize, String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Stores the latest response viewer payload state.
 pub enum ResponseViewerResult {
+    /// Stores a successful HTTP response.
     Success(CurlResponse),
+    /// Stores an execution error message.
     Error(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines messages emitted by the variable manager screen.
 pub enum VariableManagerMsg {
+    /// Creates a new variable draft row.
     Add,
+    /// Changes the currently selected variable key.
     SelectionChanged(String),
+    /// Applies the selected variable mode.
     ModeChanged(VariableMode),
+    /// Loads an existing variable for editing.
     Edit(String),
+    /// Saves the current variable edits.
     Save,
+    /// Deletes the selected variable key.
     Delete(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Wraps messages from all screens into a single application event type.
 pub enum Msg {
+    /// Wraps an application-level message.
     App(AppMsg),
+    /// Wraps a route-list message.
     RouteList(RouteListMsg),
+    /// Wraps a route-editor message.
     RouteEditor(RouteEditorMsg),
+    /// Wraps a request-preview message.
     RequestPreview(RequestPreviewMsg),
+    /// Wraps a response-viewer message.
     ResponseViewer(ResponseViewerMsg),
+    /// Wraps a variable-manager message.
     VariableManager(VariableManagerMsg),
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Represents side effects that must be executed outside the reducer.
 pub enum AppEffect {
+    /// Requests the outer loop to close the app.
     Close,
+    /// Requests the outer loop to launch the body editor.
     OpenBodyEditor,
+    /// Requests the outer loop to execute the preview request.
     ExecutePreviewRequest,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Defines responsive layout breakpoints for the terminal UI.
 pub enum LayoutMode {
+    /// Wide two-pane layout.
     Wide,
+    /// Medium layout with reduced side content.
     Medium,
+    /// Narrow stacked layout.
     Narrow,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Defines keyboard interaction mode for inputs and commands.
 pub enum InputMode {
+    /// Command-oriented mode for navigation shortcuts.
     Normal,
+    /// Text-entry mode for editable fields.
     Insert,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Identifies scrollable sections rendered in the route editor.
 enum EditorSectionKind {
+    /// Route name section.
     Name,
+    /// Route group selector section.
     Group,
+    /// New route group input section.
     NewGroup,
+    /// HTTP method selector section.
     Method,
+    /// URL input section.
     Url,
+    /// Headers input section.
     Headers,
+    /// Body presence/status section.
     BodyStatus,
+    /// Body preview section.
     BodyPreview,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// Describes a rendered route editor section and its terminal height.
 struct EditorSection {
+    /// Stores the semantic kind of section being rendered.
     kind: EditorSectionKind,
+    /// Stores the vertical height for the section.
     height: u16,
 }
 
 #[derive(Debug, Clone)]
+/// Captures resolved and executable request preview data.
 struct RequestPreviewState {
+    /// Stores the route index this preview was built from.
     route_index: usize,
+    /// Stores the route scope id used for scoped variables.
     route_scope_id: String,
+    /// Stores the route name for display.
     route_name: String,
+    /// Stores the HTTP method.
     method: HttpMethod,
+    /// Stores the preview-safe URL with masked hidden values.
     display_url: String,
+    /// Stores the execution URL with full variable substitutions.
     execution_url: String,
+    /// Stores preview-safe headers for display.
     display_headers: Vec<String>,
+    /// Stores execution headers with full substitutions.
     execution_headers: Vec<String>,
+    /// Stores preview-safe body content.
     display_body: Option<String>,
+    /// Stores executable body content.
     execution_body: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// Defines whether variable operations target global or scoped values.
 enum VariableContext {
+    /// Operates on global variables.
     Global,
+    /// Operates on route-scoped variables.
     Scoped { scope_id: String },
 }
 
+/// Applies screen-local messages to screen-local state.
 trait Screen {
+    /// Defines the message type handled by the screen.
     type Message;
 
+    /// Applies a message to the screen state.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — Message to apply to the state.
     fn apply(&mut self, message: &Self::Message);
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the route list screen.
 struct RouteListScreenState {
+    /// Stores persisted list expansion and selection state.
     list_state: RouteListState,
+    /// Stores the last explicitly selected route index.
     selected_route: Option<usize>,
 }
 
 impl Screen for RouteListScreenState {
     type Message = RouteListMsg;
 
+    /// Applies route list messages to route list state.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — Route list message to apply.
     fn apply(&mut self, message: &Self::Message) {
         if let RouteListMsg::StateChanged(state) = message {
             self.list_state = state.clone();
@@ -221,38 +355,62 @@ impl Screen for RouteListScreenState {
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the route editor screen.
 struct RouteEditorScreenState {
+    /// Stores the currently edited route index, if editing existing route.
     editing_route: Option<usize>,
+    /// Stores the editable draft route.
     draft: Option<Route>,
+    /// Stores the topmost visible section index.
     scroll_offset: usize,
 }
 
 impl Screen for RouteEditorScreenState {
     type Message = RouteEditorMsg;
 
+    /// Applies route editor messages to route editor state.
+    ///
+    /// # Arguments
+    ///
+    /// * `_message` — Route editor message to apply.
     fn apply(&mut self, _message: &Self::Message) {}
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the request preview screen.
 struct RequestPreviewScreenState {
+    /// Stores the currently prepared request preview.
     preview: Option<RequestPreviewState>,
+    /// Stores the current preview scroll offset.
     scroll_offset: usize,
 }
 
 impl Screen for RequestPreviewScreenState {
     type Message = RequestPreviewMsg;
 
+    /// Applies request preview messages to request preview state.
+    ///
+    /// # Arguments
+    ///
+    /// * `_message` — Request preview message to apply.
     fn apply(&mut self, _message: &Self::Message) {}
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the response viewer screen.
 struct ResponseViewerScreenState {
+    /// Stores the latest response viewer result.
     response: Option<ResponseViewerResult>,
 }
 
 impl Screen for ResponseViewerScreenState {
     type Message = ResponseViewerMsg;
 
+    /// Applies response viewer messages to response viewer state.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — Response viewer message to apply.
     fn apply(&mut self, message: &Self::Message) {
         match message {
             ResponseViewerMsg::RouteExecuted(_, response) => {
@@ -266,59 +424,103 @@ impl Screen for ResponseViewerScreenState {
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the variable manager screen.
 struct VariableManagerScreenState {
+    /// Stores whether hidden variable values are visible.
     secrets_visible: bool,
+    /// Stores the key currently being edited.
     editing_variable: Option<String>,
+    /// Stores whether edits target global or scoped values.
     context: VariableContext,
 }
 
 impl Screen for VariableManagerScreenState {
     type Message = VariableManagerMsg;
 
+    /// Applies variable manager messages to variable manager state.
+    ///
+    /// # Arguments
+    ///
+    /// * `_message` — Variable manager message to apply.
     fn apply(&mut self, _message: &Self::Message) {}
 }
 
 #[derive(Debug, Clone)]
+/// Stores state for the keymap help page.
 struct KeymapHelpScreenState {
+    /// Stores the view to restore when closing keymap help.
     return_view: Option<ActiveView>,
+    /// Stores keymap help scroll offset.
     scroll_offset: usize,
+    /// Stores focus to restore after closing keymap help.
     previous_focus: Option<Id>,
 }
 
 impl Screen for KeymapHelpScreenState {
     type Message = AppMsg;
 
+    /// Applies app messages to keymap help state.
+    ///
+    /// # Arguments
+    ///
+    /// * `_message` — App message to apply.
     fn apply(&mut self, _message: &Self::Message) {}
 }
 
 #[derive(Debug, Clone)]
+/// Captures navigable snapshot data for back and forward history.
 struct NavigationSnapshot {
+    /// Stores the active view at capture time.
     active_view: ActiveView,
+    /// Stores the input mode at capture time.
     input_mode: InputMode,
+    /// Stores route list screen state.
     route_list: RouteListScreenState,
+    /// Stores route editor screen state.
     route_editor: RouteEditorScreenState,
+    /// Stores request preview screen state.
     request_preview: RequestPreviewScreenState,
+    /// Stores response viewer screen state.
     response_viewer: ResponseViewerScreenState,
+    /// Stores variable manager screen state.
     variable_manager: VariableManagerScreenState,
+    /// Stores currently focused component id.
     focus: Option<Id>,
 }
 
+/// Implements the API tester application state machine and UI renderer.
 pub struct AppModel {
+    /// Stores the mounted component application.
     pub app: Application<Id, Msg, NoUserEvent>,
+    /// Stores persisted route collection data.
     pub collection: Collection,
+    /// Stores current input mode.
     pub input_mode: InputMode,
+    /// Stores global and scoped variables.
     variables: Variables,
+    /// Stores route list screen state.
     route_list: RouteListScreenState,
+    /// Stores active view.
     active_view: ActiveView,
+    /// Stores route editor screen state.
     route_editor: RouteEditorScreenState,
+    /// Stores request preview screen state.
     request_preview: RequestPreviewScreenState,
+    /// Stores response viewer screen state.
     response_viewer: ResponseViewerScreenState,
+    /// Stores variable manager screen state.
     variable_manager: VariableManagerScreenState,
+    /// Stores keymap help screen state.
     keymap_help: KeymapHelpScreenState,
+    /// Stores view navigation history.
     navigation_history: Vec<NavigationSnapshot>,
+    /// Stores current navigation history index.
     navigation_index: usize,
+    /// Stores responsive layout mode.
     layout_mode: LayoutMode,
+    /// Stores current content width.
     terminal_width: u16,
+    /// Stores current content height.
     terminal_height: u16,
 }
 
@@ -330,6 +532,19 @@ impl AppModel {
     const EDITOR_FOOTER_MAX_HEIGHT: u16 = 1;
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
 
+    /// Creates a new application model and loads persisted state.
+    ///
+    /// # Arguments
+    ///
+    /// * `app` — Mounted component application used by the model.
+    ///
+    /// # Returns
+    ///
+    /// A newly initialized [`AppModel`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if loading routes or variables fails.
     pub fn new(app: Application<Id, Msg, NoUserEvent>) -> anyhow::Result<Self> {
         let mut model = Self {
             app,
@@ -372,6 +587,19 @@ impl AppModel {
         Ok(model)
     }
 
+    /// Applies a message and mutates model state.
+    ///
+    /// # Arguments
+    ///
+    /// * `msg` — Message to process.
+    ///
+    /// # Returns
+    ///
+    /// An optional [`AppEffect`] that the outer event loop should execute.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if a component remount or persistence call fails.
     pub fn update(&mut self, msg: Msg) -> anyhow::Result<Option<AppEffect>> {
         if self.active_view == ActiveView::KeymapHelp {
             match msg {
@@ -926,6 +1154,11 @@ impl AppModel {
         Ok(None)
     }
 
+    /// Returns initial content for the external body editor.
+    ///
+    /// # Returns
+    ///
+    /// The current editable body content for the active view, if available.
     pub fn body_editor_initial_content(&self) -> Option<&str> {
         match self.active_view {
             ActiveView::RouteEditor => self
@@ -942,6 +1175,11 @@ impl AppModel {
         }
     }
 
+    /// Builds an executable curl request from the current preview.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing route index and prepared executor when preview exists.
     pub fn build_preview_executor(&self) -> Option<(usize, CurlExecutor)> {
         let preview = self.request_preview.preview.as_ref()?;
         let route = Route {
@@ -957,6 +1195,15 @@ impl AppModel {
         Some((preview.route_index, CurlExecutor::from_prepared(route)))
     }
 
+    /// Builds display and execution preview state for a route index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` — Route index to build preview for.
+    ///
+    /// # Returns
+    ///
+    /// Prepared preview state when the route exists.
     fn build_request_preview_state(&self, index: usize) -> Option<RequestPreviewState> {
         let route = self.collection.routes.get(index)?;
 
@@ -1016,6 +1263,12 @@ impl AppModel {
         })
     }
 
+    /// Updates route list selection state for a route.
+    ///
+    /// # Arguments
+    ///
+    /// * `route_index` — Route index to select.
+    /// * `expand_group` — Whether to expand the route group if collapsed.
     fn select_route_in_state(&mut self, route_index: usize, expand_group: bool) {
         if let Some(route) = self.collection.routes.get(route_index) {
             let group_name = if route.group.trim().is_empty() {
@@ -1040,12 +1293,22 @@ impl AppModel {
         }
     }
 
+    /// Persists route list expansion and selection state.
     fn persist_route_list_state(&self) {
         if let Err(error) = self.route_list.list_state.save() {
             eprintln!("Warning: failed to persist route list state: {error}");
         }
     }
 
+    /// Rebuilds and mounts the route list component.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when remount succeeds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if mounting the route list fails.
     pub fn refresh_route_list(&mut self) -> anyhow::Result<()> {
         let _ = self.app.umount(&Id::RouteList);
         self.app.mount(
@@ -1078,6 +1341,11 @@ impl AppModel {
         Ok(())
     }
 
+    /// Renders the active view into the provided frame.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
     pub fn view(&mut self, frame: &mut ratatui::Frame<'_>) {
         let content_area = Self::content_area(frame.area());
         self.terminal_width = content_area.width;
@@ -1106,6 +1374,15 @@ impl AppModel {
         }
     }
 
+    /// Mounts and initializes variable manager components.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when variable manager mounts successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if component mount or focus operations fail.
     pub fn mount_variable_manager(&mut self) -> anyhow::Result<()> {
         self.variable_manager.editing_variable = None;
         let entries = self.variable_table_entries();
@@ -1132,6 +1409,11 @@ impl AppModel {
         Ok(())
     }
 
+    /// Collects rows for the variable table in the active context.
+    ///
+    /// # Returns
+    ///
+    /// Variable rows containing key, value, mode, and source label.
     fn variable_table_entries(&self) -> Vec<(String, String, VariableMode, String)> {
         if let Some(scope_id) = self.active_scope_id() {
             let mut merged: BTreeMap<String, (String, VariableMode, String)> = BTreeMap::new();
@@ -1190,6 +1472,11 @@ impl AppModel {
         }
     }
 
+    /// Finds global variable keys referenced by the scoped route draft.
+    ///
+    /// # Returns
+    ///
+    /// A sorted set of global keys referenced by route templates.
     fn scoped_route_used_global_keys(&self) -> BTreeSet<String> {
         let Some(route) = self.route_editor.draft.as_ref() else {
             return BTreeSet::new();
@@ -1224,6 +1511,12 @@ impl AppModel {
             .collect()
     }
 
+    /// Extracts `{{token}}` variable references from a template string.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Source template to scan.
+    /// * `output` — Set that receives discovered token names.
     fn collect_variable_tokens(template: &str, output: &mut BTreeSet<String>) {
         let mut rest = template;
 
@@ -1243,6 +1536,15 @@ impl AppModel {
         }
     }
 
+    /// Resolves variable value and mode for a key in active context.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Variable key to resolve.
+    ///
+    /// # Returns
+    ///
+    /// Variable value and mode when the key exists.
     fn variable_value_mode_for_key(&self, key: &str) -> Option<(String, VariableMode)> {
         if let Some(scope_id) = self.active_scope_id()
             && let Some(value) = self.variables.scoped_get(scope_id, key).cloned()
@@ -1265,6 +1567,19 @@ impl AppModel {
         })
     }
 
+    /// Loads a variable key into editable input components.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Variable key to load.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when loading succeeds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if remounting variable inputs fails.
     fn load_variable_into_inputs(&mut self, key: &str) -> anyhow::Result<()> {
         let Some((value, mode)) = self.variable_value_mode_for_key(key) else {
             return Ok(());
@@ -1276,6 +1591,21 @@ impl AppModel {
         Ok(())
     }
 
+    /// Mounts variable key, value, and mode input components.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Initial key field value.
+    /// * `value` — Initial value field value.
+    /// * `mode` — Initial variable mode selection.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when mounts and sync complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if remounting or attribute updates fail.
     fn mount_variable_inputs(
         &mut self,
         key: &str,
@@ -1303,6 +1633,15 @@ impl AppModel {
         Ok(())
     }
 
+    /// Mounts the response details component for the current response.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when mounting succeeds or no response is available.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if component mounting or focus changes fail.
     pub fn mount_response_viewer(&mut self) -> anyhow::Result<()> {
         if let Some(response) = &self.response_viewer.response {
             let _ = self.app.umount(&Id::ResponseDetails);
@@ -1337,10 +1676,22 @@ impl AppModel {
         Ok(())
     }
 
+    /// Renders the mounted response details view.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_response_viewer(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         self.app.view(&Id::ResponseDetails, frame, area);
     }
 
+    /// Renders the variable manager layout and status line.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_variable_manager(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         let chunks = Layout::vertical([
             Constraint::Min(5),
@@ -1370,6 +1721,15 @@ impl AppModel {
         frame.render_widget(status, chunks[4]);
     }
 
+    /// Opens the keymap help page and locks subscriptions.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when help view is shown.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if focus changes fail.
     fn show_keymap_help(&mut self) -> anyhow::Result<()> {
         if self.active_view == ActiveView::KeymapHelp {
             return Ok(());
@@ -1389,6 +1749,7 @@ impl AppModel {
         Ok(())
     }
 
+    /// Closes keymap help and restores prior view and focus.
     fn hide_keymap_help(&mut self) {
         if self.active_view == ActiveView::KeymapHelp {
             self.active_view = self
@@ -1408,6 +1769,12 @@ impl AppModel {
         }
     }
 
+    /// Renders the full keymap help page with scrollbar support.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_keymap_help_page(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         if area.width == 0 || area.height == 0 {
             return;
@@ -1460,6 +1827,11 @@ impl AppModel {
         }
     }
 
+    /// Builds keymap help lines for global and active-view shortcuts.
+    ///
+    /// # Returns
+    ///
+    /// Renderable lines for the keymap help page.
     fn keymap_help_lines(&self) -> Vec<Line<'static>> {
         let mut lines = vec![
             Self::keymap_help_heading("Global"),
@@ -1482,6 +1854,11 @@ impl AppModel {
         lines
     }
 
+    /// Returns the view whose keymaps should be displayed.
+    ///
+    /// # Returns
+    ///
+    /// The target view used to render view-specific keymap entries.
     fn keymap_help_target_view(&self) -> ActiveView {
         self.keymap_help
             .return_view
@@ -1491,6 +1868,15 @@ impl AppModel {
             })
     }
 
+    /// Returns title and shortcut entries for a specific view.
+    ///
+    /// # Arguments
+    ///
+    /// * `view` — View to fetch keymap entries for.
+    ///
+    /// # Returns
+    ///
+    /// A section title and associated shortcut descriptions.
     fn view_keymap_entries(view: ActiveView) -> (&'static str, Vec<&'static str>) {
         match view {
             ActiveView::RouteList => (
@@ -1551,10 +1937,20 @@ impl AppModel {
         }
     }
 
+    /// Returns whether a view should participate in navigation history.
+    ///
+    /// # Arguments
+    ///
+    /// * `view` — View to evaluate.
+    ///
+    /// # Returns
+    ///
+    /// `true` when the view is tracked in navigation history.
     fn is_history_view(view: ActiveView) -> bool {
         !matches!(view, ActiveView::KeymapHelp)
     }
 
+    /// Synchronizes route editor draft data from mounted input components.
     fn sync_route_editor_draft_from_inputs(&mut self) {
         if self.active_view != ActiveView::RouteEditor {
             return;
@@ -1615,12 +2011,18 @@ impl AppModel {
         }
     }
 
+    /// Synchronizes active view state from its mounted components.
     fn sync_active_view_state_from_components(&mut self) {
         if self.active_view == ActiveView::RouteEditor {
             self.sync_route_editor_draft_from_inputs();
         }
     }
 
+    /// Captures a full navigation snapshot of the current UI state.
+    ///
+    /// # Returns
+    ///
+    /// A snapshot used for backward and forward navigation.
     fn capture_navigation_snapshot(&self) -> NavigationSnapshot {
         NavigationSnapshot {
             active_view: self.active_view,
@@ -1638,6 +2040,7 @@ impl AppModel {
         }
     }
 
+    /// Replaces the current history entry with an updated snapshot.
     fn replace_current_history_entry(&mut self) {
         if !Self::is_history_view(self.active_view) || self.navigation_history.is_empty() {
             return;
@@ -1647,6 +2050,7 @@ impl AppModel {
         self.navigation_history[self.navigation_index] = self.capture_navigation_snapshot();
     }
 
+    /// Pushes the current snapshot onto navigation history.
     fn push_current_snapshot_to_history(&mut self) {
         if !Self::is_history_view(self.active_view) {
             return;
@@ -1669,6 +2073,11 @@ impl AppModel {
         self.navigation_index = self.navigation_history.len().saturating_sub(1);
     }
 
+    /// Switches active view and records navigation history.
+    ///
+    /// # Arguments
+    ///
+    /// * `view` — View to activate.
     fn set_active_view_with_history(&mut self, view: ActiveView) {
         if view == self.active_view {
             return;
@@ -1679,6 +2088,19 @@ impl AppModel {
         self.push_current_snapshot_to_history();
     }
 
+    /// Restores UI state from a previously captured navigation snapshot.
+    ///
+    /// # Arguments
+    ///
+    /// * `snapshot` — Snapshot to restore.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when restoration succeeds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if remounting components or focus changes fail.
     fn restore_navigation_snapshot(&mut self, snapshot: NavigationSnapshot) -> anyhow::Result<()> {
         let restored_focus = snapshot.focus.clone();
         let restored_editor_scroll = snapshot.route_editor.scroll_offset;
@@ -1728,6 +2150,15 @@ impl AppModel {
         Ok(())
     }
 
+    /// Navigates one step backward in view history.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when navigation completes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if restoring the prior snapshot fails.
     fn navigate_back_history(&mut self) -> anyhow::Result<()> {
         if self.navigation_history.is_empty() || self.navigation_index == 0 {
             return Ok(());
@@ -1739,6 +2170,15 @@ impl AppModel {
         self.restore_navigation_snapshot(snapshot)
     }
 
+    /// Navigates one step forward in view history.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when navigation completes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if restoring the next snapshot fails.
     fn navigate_forward_history(&mut self) -> anyhow::Result<()> {
         if self.navigation_history.is_empty()
             || self.navigation_index + 1 >= self.navigation_history.len()
@@ -1752,6 +2192,15 @@ impl AppModel {
         self.restore_navigation_snapshot(snapshot)
     }
 
+    /// Builds a styled heading line for keymap help sections.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` — Heading text.
+    ///
+    /// # Returns
+    ///
+    /// A styled line suitable for help section headings.
     fn keymap_help_heading(text: &'static str) -> Line<'static> {
         Line::from(Span::styled(
             text,
@@ -1761,6 +2210,16 @@ impl AppModel {
         ))
     }
 
+    /// Computes wrapped line metrics for keymap help scrolling.
+    ///
+    /// # Arguments
+    ///
+    /// * `lines` — Rendered lines to measure.
+    /// * `content_area` — Available content area.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of total lines, viewport height, and max scroll offset.
     fn keymap_scroll_metrics(lines: &[Line<'static>], content_area: Rect) -> (usize, usize, usize) {
         if content_area.width == 0 || content_area.height == 0 {
             return (0, 0, 0);
@@ -1775,6 +2234,11 @@ impl AppModel {
         (total_lines, viewport_height, max_offset)
     }
 
+    /// Returns the maximum scroll offset for keymap help.
+    ///
+    /// # Returns
+    ///
+    /// The largest valid keymap help scroll offset.
     fn keymap_help_max_offset(&self) -> usize {
         if self.terminal_width == 0 || self.terminal_height == 0 {
             return 0;
@@ -1803,6 +2267,15 @@ impl AppModel {
         max_offset
     }
 
+    /// Renders the keymap help scrollbar in the provided area.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Area reserved for scrollbar rendering.
+    /// * `content_length` — Total wrapped content length.
+    /// * `viewport_height` — Visible content height.
+    /// * `max_offset` — Maximum valid scroll offset.
     fn render_keymap_help_scrollbar(
         &self,
         frame: &mut ratatui::Frame<'_>,
@@ -1839,17 +2312,33 @@ impl AppModel {
         frame.render_stateful_widget(scrollbar, area, &mut state);
     }
 
+    /// Scrolls keymap help by a line offset.
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` — Signed line delta to apply.
     fn scroll_keymap_help_by(&mut self, delta: isize) {
         let max_offset = self.keymap_help_max_offset() as isize;
         let next_offset = (self.keymap_help.scroll_offset as isize + delta).clamp(0, max_offset);
         self.keymap_help.scroll_offset = next_offset as usize;
     }
 
+    /// Scrolls keymap help by approximately one page.
+    ///
+    /// # Arguments
+    ///
+    /// * `direction` — Page direction where `-1` is up and `1` is down.
     fn scroll_keymap_help_page(&mut self, direction: isize) {
         let page_step = self.terminal_height.saturating_sub(4).max(1) as isize;
         self.scroll_keymap_help_by(direction * page_step);
     }
 
+    /// Renders the request preview pane.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_request_preview(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         let Some(preview) = self.request_preview.preview.as_ref() else {
             let placeholder =
@@ -1899,6 +2388,15 @@ impl AppModel {
         }
     }
 
+    /// Builds rendered lines for the request preview pane.
+    ///
+    /// # Arguments
+    ///
+    /// * `preview` — Prepared preview state to display.
+    ///
+    /// # Returns
+    ///
+    /// Renderable lines including method, URL, headers, and body preview.
     fn request_preview_lines(&self, preview: &RequestPreviewState) -> Vec<Line<'static>> {
         let body_preview = preview
             .display_body
@@ -1960,6 +2458,11 @@ impl AppModel {
         lines
     }
 
+    /// Creates the base block used for request preview rendering.
+    ///
+    /// # Returns
+    ///
+    /// A configured preview block widget.
     fn request_preview_block() -> Block<'static> {
         Block::default()
             .borders(Borders::ALL)
@@ -1969,6 +2472,16 @@ impl AppModel {
             .title("Request Preview")
     }
 
+    /// Computes wrapped line metrics for request preview scrolling.
+    ///
+    /// # Arguments
+    ///
+    /// * `lines` — Rendered preview lines.
+    /// * `preview_inner` — Available preview content area.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of total lines, viewport height, and max scroll offset.
     fn request_preview_scroll_metrics(
         lines: &[Line<'static>],
         preview_inner: Rect,
@@ -1986,6 +2499,11 @@ impl AppModel {
         (total_lines, viewport_height, max_offset)
     }
 
+    /// Returns the maximum scroll offset for the current request preview.
+    ///
+    /// # Returns
+    ///
+    /// The largest valid request preview scroll offset.
     fn preview_scroll_max_offset(&self) -> usize {
         let Some(preview) = self.request_preview.preview.as_ref() else {
             return 0;
@@ -2012,6 +2530,15 @@ impl AppModel {
         max_offset
     }
 
+    /// Renders the request preview scrollbar in the provided area.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Area reserved for scrollbar rendering.
+    /// * `content_length` — Total wrapped content length.
+    /// * `viewport_height` — Visible content height.
+    /// * `max_offset` — Maximum valid scroll offset.
     fn render_preview_scrollbar(
         &self,
         frame: &mut ratatui::Frame<'_>,
@@ -2048,6 +2575,11 @@ impl AppModel {
         frame.render_stateful_widget(scrollbar, area, &mut state);
     }
 
+    /// Scrolls request preview by a line offset.
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` — Signed line delta to apply.
     fn scroll_preview_by(&mut self, delta: isize) {
         if self.active_view != ActiveView::RequestPreview {
             return;
@@ -2059,6 +2591,11 @@ impl AppModel {
         self.request_preview.scroll_offset = next_offset as usize;
     }
 
+    /// Scrolls request preview by approximately one page.
+    ///
+    /// # Arguments
+    ///
+    /// * `direction` — Page direction where `-1` is up and `1` is down.
     fn scroll_preview_page(&mut self, direction: isize) {
         if self.active_view != ActiveView::RequestPreview {
             return;
@@ -2068,6 +2605,12 @@ impl AppModel {
         self.scroll_preview_by(direction * page_step);
     }
 
+    /// Renders the route editor with section-based scrolling.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_route_editor(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         if area.height == 0 {
             return;
@@ -2218,6 +2761,16 @@ impl AppModel {
         }
     }
 
+    /// Renders the route editor scrollbar in the provided area.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Area reserved for scrollbar rendering.
+    /// * `sections` — Editor sections used to compute content length.
+    /// * `start_index` — First visible section index.
+    /// * `viewport_height` — Visible content height.
+    /// * `at_bottom` — Whether content is aligned to bottom.
     fn render_editor_scrollbar(
         &self,
         frame: &mut ratatui::Frame<'_>,
@@ -2260,6 +2813,14 @@ impl AppModel {
         frame.render_stateful_widget(scrollbar, area, &mut state);
     }
 
+    /// Renders the route editor footer status line.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for footer rendering.
+    /// * `can_scroll_up` — Whether content can scroll upward.
+    /// * `can_scroll_down` — Whether content can scroll downward.
     fn render_editor_footer(
         &self,
         frame: &mut ratatui::Frame<'_>,
@@ -2282,6 +2843,16 @@ impl AppModel {
         frame.render_widget(mode_widget, mode_area);
     }
 
+    /// Builds route editor mode text with optional scroll hints.
+    ///
+    /// # Arguments
+    ///
+    /// * `can_scroll_up` — Whether content can scroll upward.
+    /// * `can_scroll_down` — Whether content can scroll downward.
+    ///
+    /// # Returns
+    ///
+    /// A status string for the route editor footer.
     fn editor_mode_text(&self, can_scroll_up: bool, can_scroll_down: bool) -> String {
         let mode_label = match self.input_mode {
             InputMode::Normal => "-- NORMAL --",
@@ -2301,6 +2872,11 @@ impl AppModel {
         mode_label.to_string()
     }
 
+    /// Returns whether the editor group selector is on "New Group...".
+    ///
+    /// # Returns
+    ///
+    /// `true` when new group input should be shown.
     fn editor_show_new_group_selected(&self) -> bool {
         if let Ok(State::One(StateValue::Usize(index))) = self.app.state(&Id::EditorGroup) {
             let group_names = self.collection.group_names();
@@ -2310,6 +2886,11 @@ impl AppModel {
         }
     }
 
+    /// Builds a body preview for the current editor draft.
+    ///
+    /// # Returns
+    ///
+    /// A rendered body preview when draft body is non-empty.
     fn editor_body_preview(&self) -> Option<body_preview::BodyPreview> {
         let scope_id = self
             .route_editor
@@ -2329,11 +2910,26 @@ impl AppModel {
             .filter(|preview| !preview.lines.is_empty())
     }
 
+    /// Returns the current editor sections for rendering and scrolling.
+    ///
+    /// # Returns
+    ///
+    /// Ordered editor sections with heights.
     fn current_editor_sections(&self) -> Vec<EditorSection> {
         let body_preview = self.editor_body_preview();
         self.editor_sections(self.editor_show_new_group_selected(), body_preview.as_ref())
     }
 
+    /// Builds editor sections based on UI state and body preview.
+    ///
+    /// # Arguments
+    ///
+    /// * `show_new_group` — Whether to include the new-group input section.
+    /// * `body_preview` — Optional body preview used to size preview section.
+    ///
+    /// # Returns
+    ///
+    /// Ordered editor sections with heights.
     fn editor_sections(
         &self,
         show_new_group: bool,
@@ -2387,6 +2983,15 @@ impl AppModel {
         sections
     }
 
+    /// Maps a focus id to its route editor section kind.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` — Focus id to map.
+    ///
+    /// # Returns
+    ///
+    /// The corresponding editor section kind when applicable.
     fn editor_section_for_focus(id: &Id) -> Option<EditorSectionKind> {
         match id {
             Id::EditorName => Some(EditorSectionKind::Name),
@@ -2399,6 +3004,11 @@ impl AppModel {
         }
     }
 
+    /// Scrolls route editor by a section offset.
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` — Signed section delta to apply.
     fn scroll_editor_by(&mut self, delta: isize) {
         if self.active_view != ActiveView::RouteEditor {
             return;
@@ -2415,6 +3025,11 @@ impl AppModel {
         self.route_editor.scroll_offset = next as usize;
     }
 
+    /// Scrolls route editor by approximately one page of sections.
+    ///
+    /// # Arguments
+    ///
+    /// * `direction` — Page direction where `-1` is up and `1` is down.
     fn scroll_editor_page(&mut self, direction: isize) {
         if self.active_view != ActiveView::RouteEditor {
             return;
@@ -2444,6 +3059,7 @@ impl AppModel {
         self.scroll_editor_by(direction * step);
     }
 
+    /// Ensures the currently focused editor section is visible.
     fn ensure_editor_focus_visible(&mut self) {
         if let Some(focus_id) = self.app.focus().cloned()
             && let Some(section) = Self::editor_section_for_focus(&focus_id)
@@ -2452,6 +3068,11 @@ impl AppModel {
         }
     }
 
+    /// Scrolls route editor so a target section is visible.
+    ///
+    /// # Arguments
+    ///
+    /// * `section_kind` — Section that must become visible.
     fn ensure_editor_section_visible(&mut self, section_kind: EditorSectionKind) {
         if self.active_view != ActiveView::RouteEditor {
             return;
@@ -2508,6 +3129,11 @@ impl AppModel {
         }
     }
 
+    /// Clamps editor scroll offset to valid section bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `section_count` — Total number of editor sections.
     fn clamp_editor_scroll_offset(&mut self, section_count: usize) {
         if section_count == 0 {
             self.route_editor.scroll_offset = 0;
@@ -2517,11 +3143,25 @@ impl AppModel {
         }
     }
 
+    /// Returns viewport height available for editor content.
+    ///
+    /// # Returns
+    ///
+    /// Content height after accounting for footer height.
     fn editor_content_viewport_height(&self) -> u16 {
         self.terminal_height
             .saturating_sub(Self::editor_footer_height_for_height(self.terminal_height))
     }
 
+    /// Computes footer height for a terminal height.
+    ///
+    /// # Arguments
+    ///
+    /// * `height` — Total terminal content height.
+    ///
+    /// # Returns
+    ///
+    /// Footer height that preserves minimum editor content area.
     fn editor_footer_height_for_height(height: u16) -> u16 {
         if height == 0 {
             0
@@ -2532,6 +3172,17 @@ impl AppModel {
         }
     }
 
+    /// Computes the visible section range for an editor viewport.
+    ///
+    /// # Arguments
+    ///
+    /// * `sections` — All editor sections.
+    /// * `start` — Preferred starting section index.
+    /// * `available_height` — Available viewport height.
+    ///
+    /// # Returns
+    ///
+    /// A pair containing start index and exclusive end index.
     fn editor_visible_range(
         sections: &[EditorSection],
         start: usize,
@@ -2558,6 +3209,17 @@ impl AppModel {
         (start, end)
     }
 
+    /// Aligns editor start index to best fit the viewport.
+    ///
+    /// # Arguments
+    ///
+    /// * `sections` — All editor sections.
+    /// * `start` — Preferred starting section index.
+    /// * `available_height` — Available viewport height.
+    ///
+    /// # Returns
+    ///
+    /// An adjusted start index that avoids trailing empty space.
     fn editor_aligned_start(
         sections: &[EditorSection],
         start: usize,
@@ -2593,10 +3255,25 @@ impl AppModel {
         aligned_start
     }
 
+    /// Computes the total rendered height of all editor sections.
+    ///
+    /// # Arguments
+    ///
+    /// * `sections` — Sections to measure.
+    ///
+    /// # Returns
+    ///
+    /// Total section height in rows.
     fn editor_total_height(sections: &[EditorSection]) -> usize {
         sections.iter().map(|section| section.height as usize).sum()
     }
 
+    /// Renders the route list view and optional side preview.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_route_list(&mut self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         if self.layout_mode != LayoutMode::Wide {
             self.app.view(&Id::RouteList, frame, area);
@@ -2615,6 +3292,12 @@ impl AppModel {
         self.render_route_preview(frame, chunks[1]);
     }
 
+    /// Renders right-side route or group preview panel.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
     fn render_route_preview(&self, frame: &mut ratatui::Frame<'_>, area: Rect) {
         if let Some(SelectedItem::Route(selection)) = self.route_list.list_state.selected.as_ref()
             && let Some(route) = self.selected_route(selection)
@@ -2640,6 +3323,13 @@ impl AppModel {
         frame.render_widget(preview, area);
     }
 
+    /// Renders detailed preview for a selected route.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Target frame to render into.
+    /// * `area` — Screen area allocated for rendering.
+    /// * `route` — Route to summarize.
     fn render_selected_route_preview(
         &self,
         frame: &mut ratatui::Frame<'_>,
@@ -2741,6 +3431,15 @@ impl AppModel {
         frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
     }
 
+    /// Builds title and lines for route or group preview content.
+    ///
+    /// # Arguments
+    ///
+    /// * `max_lines` — Maximum number of lines that can be shown.
+    ///
+    /// # Returns
+    ///
+    /// A preview title and rendered lines clipped to available space.
     fn route_preview_content(&self, max_lines: usize) -> (String, Vec<Line<'static>>) {
         match self.route_list.list_state.selected.as_ref() {
             Some(SelectedItem::Route(selection)) => {
@@ -2793,6 +3492,15 @@ impl AppModel {
         }
     }
 
+    /// Builds summary lines for a route preview card.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route to summarize.
+    ///
+    /// # Returns
+    ///
+    /// Renderable route summary lines.
     fn route_summary_lines(route: &Route) -> Vec<Line<'static>> {
         let method = route.method.to_string();
         let group_name = Self::normalized_group_name(&route.group);
@@ -2819,6 +3527,15 @@ impl AppModel {
         ]
     }
 
+    /// Builds a body status line for a route.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route whose body status is displayed.
+    ///
+    /// # Returns
+    ///
+    /// A styled body status line.
     fn route_body_status_line(route: &Route) -> Line<'static> {
         let body_status = route
             .body
@@ -2833,6 +3550,17 @@ impl AppModel {
         ))
     }
 
+    /// Builds a group preview list with truncation hints.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_name` — Normalized group name.
+    /// * `routes` — Routes belonging to the group.
+    /// * `max_lines` — Maximum number of display lines.
+    ///
+    /// # Returns
+    ///
+    /// Renderable group preview lines.
     fn route_preview_for_group(
         &self,
         group_name: &str,
@@ -2901,6 +3629,15 @@ impl AppModel {
         Self::interleave_with_blank_lines(entries, max_lines)
     }
 
+    /// Builds one preview line for a route entry in a group list.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route to render.
+    ///
+    /// # Returns
+    ///
+    /// A styled route line.
     fn group_route_line(route: &Route) -> Line<'static> {
         let method = route.method.to_string();
 
@@ -2916,6 +3653,15 @@ impl AppModel {
         ])
     }
 
+    /// Finds the route matching a stored route selection.
+    ///
+    /// # Arguments
+    ///
+    /// * `selection` — Stored selection identity.
+    ///
+    /// # Returns
+    ///
+    /// The matching route when one exists.
     fn selected_route<'a>(&'a self, selection: &RouteSelection) -> Option<&'a Route> {
         self.collection
             .routes
@@ -2923,6 +3669,15 @@ impl AppModel {
             .find(|route| Self::route_matches_selection(route, selection))
     }
 
+    /// Returns routes that belong to a normalized group.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_name` — Group name to filter by.
+    ///
+    /// # Returns
+    ///
+    /// Route references in display order for the group.
     fn group_routes<'a>(&'a self, group_name: &str) -> Vec<&'a Route> {
         let normalized_group_name = Self::normalized_group_name(group_name);
 
@@ -2933,6 +3688,16 @@ impl AppModel {
             .collect()
     }
 
+    /// Compares a route with a persisted list selection identity.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route to test.
+    /// * `selection` — Persisted route selection identity.
+    ///
+    /// # Returns
+    ///
+    /// `true` when all selection fields match the route.
     fn route_matches_selection(route: &Route, selection: &RouteSelection) -> bool {
         Self::normalized_group_name(&route.group) == Self::normalized_group_name(&selection.group)
             && route.name == selection.name
@@ -2943,6 +3708,15 @@ impl AppModel {
             && route.url == selection.url
     }
 
+    /// Normalizes group names by trimming and applying default fallback.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_name` — Raw group name.
+    ///
+    /// # Returns
+    ///
+    /// A non-empty normalized group name.
     fn normalized_group_name(group_name: &str) -> String {
         let trimmed = group_name.trim();
 
@@ -2953,10 +3727,29 @@ impl AppModel {
         }
     }
 
+    /// Returns display color for an HTTP method.
+    ///
+    /// # Arguments
+    ///
+    /// * `method` — HTTP method to colorize.
+    ///
+    /// # Returns
+    ///
+    /// The configured terminal color for the method.
     fn method_color(method: &HttpMethod) -> Color {
         core_style::method_tui_color(method)
     }
 
+    /// Truncates preview lines to fit within a maximum line count.
+    ///
+    /// # Arguments
+    ///
+    /// * `lines` — Preview lines to truncate.
+    /// * `max_lines` — Maximum number of lines to keep.
+    ///
+    /// # Returns
+    ///
+    /// Truncated lines with an overflow indicator when needed.
     fn truncate_preview_lines(
         mut lines: Vec<Line<'static>>,
         max_lines: usize,
@@ -2983,6 +3776,16 @@ impl AppModel {
         lines
     }
 
+    /// Builds placeholder preview lines for empty states.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — Placeholder message to render.
+    /// * `max_lines` — Maximum number of lines available.
+    ///
+    /// # Returns
+    ///
+    /// Placeholder lines clipped to available space.
     fn placeholder_preview_lines(message: &str, max_lines: usize) -> Vec<Line<'static>> {
         if max_lines == 0 {
             return vec![];
@@ -2994,6 +3797,16 @@ impl AppModel {
         ))]
     }
 
+    /// Inserts blank separator lines between entries up to a line cap.
+    ///
+    /// # Arguments
+    ///
+    /// * `lines` — Source lines to interleave.
+    /// * `max_lines` — Maximum number of output lines.
+    ///
+    /// # Returns
+    ///
+    /// Interleaved lines that fit the provided limit.
     fn interleave_with_blank_lines(
         lines: Vec<Line<'static>>,
         max_lines: usize,
@@ -3020,6 +3833,15 @@ impl AppModel {
         spaced
     }
 
+    /// Chooses layout mode based on terminal width.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` — Current terminal content width.
+    ///
+    /// # Returns
+    ///
+    /// The selected responsive layout mode.
     fn layout_mode_for_width(width: u16) -> LayoutMode {
         if width >= Self::ROUTE_PREVIEW_MIN_WIDTH {
             LayoutMode::Wide
@@ -3030,6 +3852,19 @@ impl AppModel {
         }
     }
 
+    /// Mounts all route editor components for a route draft.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route draft to populate editor fields.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when editor components mount successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if remounting components or focus updates fail.
     pub fn mount_editor(&mut self, route: &Route) -> anyhow::Result<()> {
         let group_names = self.collection.group_names();
 
@@ -3072,6 +3907,15 @@ impl AppModel {
         Ok(())
     }
 
+    /// Updates editor input attributes to match current input mode.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when all editor attributes are updated.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if component attribute updates fail.
     fn sync_editor_input_mode(&mut self) -> anyhow::Result<()> {
         let is_insert_mode = self.input_mode == InputMode::Insert;
         let border_color = if is_insert_mode {
@@ -3107,6 +3951,15 @@ impl AppModel {
         Ok(())
     }
 
+    /// Updates variable input attributes to match current input mode.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when all variable attributes are updated.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if component attribute updates fail.
     fn sync_variable_input_mode(&mut self) -> anyhow::Result<()> {
         let is_insert_mode = self.input_mode == InputMode::Insert;
         let border_color = if is_insert_mode {
@@ -3139,6 +3992,15 @@ impl AppModel {
         Ok(())
     }
 
+    /// Updates variable value field visibility based on mode and toggle.
+    ///
+    /// # Returns
+    ///
+    /// An empty result when value field type is updated.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`anyhow::Error`] if input type attribute updates fail.
     fn sync_variable_value_visibility(&mut self) -> anyhow::Result<()> {
         let input_type = if self.variable_mode_value() == VariableMode::Hidden
             && !self.variable_manager.secrets_visible
@@ -3157,6 +4019,11 @@ impl AppModel {
         Ok(())
     }
 
+    /// Returns the active scoped variable context id.
+    ///
+    /// # Returns
+    ///
+    /// Scoped id when variable manager is in scoped mode.
     fn active_scope_id(&self) -> Option<&str> {
         match &self.variable_manager.context {
             VariableContext::Global => None,
@@ -3164,6 +4031,11 @@ impl AppModel {
         }
     }
 
+    /// Returns whether variable manager is in scoped context.
+    ///
+    /// # Returns
+    ///
+    /// `true` when variable operations target route-scoped variables.
     fn is_scoped_variable_context(&self) -> bool {
         matches!(
             self.variable_manager.context,
@@ -3171,6 +4043,11 @@ impl AppModel {
         )
     }
 
+    /// Reads selected variable mode from mounted controls.
+    ///
+    /// # Returns
+    ///
+    /// The currently selected variable mode.
     fn variable_mode_value(&self) -> VariableMode {
         match self.app.state(&Id::VariableMode) {
             Ok(State::One(StateValue::Usize(1))) => VariableMode::Hidden,
@@ -3178,6 +4055,15 @@ impl AppModel {
         }
     }
 
+    /// Reads a string value from a mounted editor input component.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` — Component id whose state should be read.
+    ///
+    /// # Returns
+    ///
+    /// Current input text, or an empty string when unavailable.
     fn editor_input_value(&self, id: &Id) -> String {
         match self.app.state(id) {
             Ok(State::One(StateValue::String(value))) => value,
@@ -3185,6 +4071,15 @@ impl AppModel {
         }
     }
 
+    /// Computes the inner content area used by the application layout.
+    ///
+    /// # Arguments
+    ///
+    /// * `area` — Full frame area.
+    ///
+    /// # Returns
+    ///
+    /// The area after applying outer layout margins.
     fn content_area(area: Rect) -> Rect {
         area.inner(Margin {
             vertical: 1,

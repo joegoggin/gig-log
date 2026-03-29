@@ -222,6 +222,27 @@ pub struct EmailClient {
 }
 ```
 
+### Enum Variant Docs
+
+When documenting enums, each variant must have its own `///` comment.
+
+- Unit variants: describe the meaning, behavior, or state represented.
+- Tuple variants: describe what each payload value represents.
+- Struct variants: include `///` docs for variant fields when applicable.
+- Variant summaries end with a period.
+
+```rust
+/// Message emitted by the route list screen.
+pub enum RouteListMsg {
+    /// Executes the route at the provided index.
+    RunRoute(usize),
+    /// Opens the editor for the route at the provided index.
+    EditRoute(usize),
+    /// Persists updated route-list UI state.
+    StateChanged(RouteListState),
+}
+```
+
 ### Function and Method Docs
 
 Use `///` comments with formal sections in this order:

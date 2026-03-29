@@ -1,3 +1,8 @@
+//! Body preview formatting and syntax highlighting helpers.
+//!
+//! This module turns request and response body strings into styled
+//! [`Line`] values used by API tester preview surfaces.
+
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -5,18 +10,33 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use serde_json::Value;
 
+/// Output format used by body preview rendering.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BodyPreviewFormat {
+    /// JSON content with lightweight syntax highlighting.
     Json,
+    /// Plain text content without JSON-specific formatting.
     Text,
 }
 
+/// Styled body preview payload consumed by TUI components.
 #[derive(Debug, Clone)]
 pub struct BodyPreview {
+    /// Styled output lines.
     pub lines: Vec<Line<'static>>,
+    /// Resolved preview format.
     pub format: BodyPreviewFormat,
 }
 
+/// Builds a styled preview for request or response body content.
+///
+/// # Arguments
+///
+/// * `body` — Raw body text.
+///
+/// # Returns
+///
+/// A [`BodyPreview`] with format detection and styled lines.
 pub fn build(body: &str) -> BodyPreview {
     let trimmed = body.trim();
 
@@ -42,16 +62,43 @@ pub fn build(body: &str) -> BodyPreview {
     }
 }
 
+/// Converts plain text content into unstyled preview lines.
+///
+/// # Arguments
+///
+/// * `body` — Raw plain text body.
+///
+/// # Returns
+///
+/// A [`Vec`] of plain [`Line`] values.
 fn plain_text_lines(body: &str) -> Vec<Line<'static>> {
     body.lines()
         .map(|line| Line::from(line.to_string()))
         .collect()
 }
 
+/// Applies token-level highlighting to pretty-printed JSON text.
+///
+/// # Arguments
+///
+/// * `pretty_json` — Pretty-printed JSON text.
+///
+/// # Returns
+///
+/// A [`Vec`] of highlighted [`Line`] values.
 fn highlight_json(pretty_json: &str) -> Vec<Line<'static>> {
     pretty_json.lines().map(highlight_json_line).collect()
 }
 
+/// Highlights a single pretty-printed JSON line.
+///
+/// # Arguments
+///
+/// * `line` — JSON line text.
+///
+/// # Returns
+///
+/// A highlighted [`Line`] value.
 fn highlight_json_line(line: &str) -> Line<'static> {
     let mut chars = line.chars().peekable();
     let mut spans = vec![];
@@ -150,6 +197,15 @@ fn highlight_json_line(line: &str) -> Line<'static> {
     Line::from(spans)
 }
 
+/// Consumes a JSON string token from a character stream.
+///
+/// # Arguments
+///
+/// * `chars` — Peekable character stream.
+///
+/// # Returns
+///
+/// A [`String`] containing the consumed JSON string token.
 fn consume_string(chars: &mut Peekable<Chars<'_>>) -> String {
     let mut token = String::new();
     let mut escaped = false;
@@ -179,6 +235,15 @@ fn consume_string(chars: &mut Peekable<Chars<'_>>) -> String {
     token
 }
 
+/// Consumes a JSON number token from a character stream.
+///
+/// # Arguments
+///
+/// * `chars` — Peekable character stream.
+///
+/// # Returns
+///
+/// A [`String`] containing the consumed number token.
 fn consume_number(chars: &mut Peekable<Chars<'_>>) -> String {
     let mut token = String::new();
 
@@ -198,6 +263,16 @@ fn consume_number(chars: &mut Peekable<Chars<'_>>) -> String {
     token
 }
 
+/// Attempts to consume a specific literal from a character stream.
+///
+/// # Arguments
+///
+/// * `chars` — Peekable character stream.
+/// * `literal` — Literal token expected at the current position.
+///
+/// # Returns
+///
+/// A [`bool`] indicating whether the literal was consumed.
 fn try_consume_literal(chars: &mut Peekable<Chars<'_>>, literal: &str) -> bool {
     let mut probe = chars.clone();
 
@@ -215,34 +290,69 @@ fn try_consume_literal(chars: &mut Peekable<Chars<'_>>, literal: &str) -> bool {
     true
 }
 
+/// Returns the style used for JSON punctuation.
+///
+/// # Returns
+///
+/// A [`Style`] for punctuation tokens.
 fn punctuation_style() -> Style {
     Style::default().fg(Color::DarkGray)
 }
 
+/// Returns the style used for JSON object keys.
+///
+/// # Returns
+///
+/// A [`Style`] for key tokens.
 fn key_style() -> Style {
     Style::default()
         .fg(Color::Cyan)
         .add_modifier(Modifier::BOLD)
 }
 
+/// Returns the style used for JSON string values.
+///
+/// # Returns
+///
+/// A [`Style`] for string value tokens.
 fn string_style() -> Style {
     Style::default().fg(Color::Green)
 }
 
+/// Returns the style used for hidden values.
+///
+/// # Returns
+///
+/// A [`Style`] for masked `hidden` tokens.
 fn hidden_style() -> Style {
     Style::default()
         .fg(Color::DarkGray)
         .add_modifier(Modifier::ITALIC)
 }
 
+/// Returns the style used for JSON numbers.
+///
+/// # Returns
+///
+/// A [`Style`] for number tokens.
 fn number_style() -> Style {
     Style::default().fg(Color::Yellow)
 }
 
+/// Returns the style used for JSON booleans.
+///
+/// # Returns
+///
+/// A [`Style`] for boolean tokens.
 fn boolean_style() -> Style {
     Style::default().fg(Color::Magenta)
 }
 
+/// Returns the style used for JSON null values.
+///
+/// # Returns
+///
+/// A [`Style`] for null tokens.
 fn null_style() -> Style {
     Style::default()
         .fg(Color::DarkGray)

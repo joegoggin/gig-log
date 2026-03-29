@@ -1,3 +1,8 @@
+//! Persistence model for route list expansion and selection state.
+//!
+//! This module stores which route groups are expanded and which route or group
+//! is currently selected so the route list can restore UI context across runs.
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -5,15 +10,29 @@ use std::path::Path;
 
 use crate::api_tester::{collection::Route, paths};
 
+/// Serializable route identity used to restore route selection.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RouteSelection {
+    /// Normalized group name.
     pub group: String,
+    /// Route display name.
     pub name: String,
+    /// HTTP method label.
     pub method: String,
+    /// Route URL template.
     pub url: String,
 }
 
 impl RouteSelection {
+    /// Builds a persisted selection payload from a concrete route.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route to snapshot.
+    ///
+    /// # Returns
+    ///
+    /// A [`RouteSelection`] that can be persisted and compared later.
     pub fn from_route(route: &Route) -> Self {
         let group = if route.group.trim().is_empty() {
             crate::api_tester::collection::DEFAULT_ROUTE_GROUP.to_string()
@@ -30,26 +49,47 @@ impl RouteSelection {
     }
 }
 
+/// Selected row kind persisted by the route list.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SelectedItem {
+    /// Selected route row.
     Route(RouteSelection),
+    /// Selected group header row.
     Group { name: String },
 }
 
+/// Persisted state for route list expansion and selection.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct RouteListState {
+    /// Expanded route group names.
     #[serde(default)]
     pub expanded_groups: Vec<String>,
+    /// Currently selected route or group.
     #[serde(default)]
     pub selected: Option<SelectedItem>,
 }
 
 impl RouteListState {
+    /// Loads route list state from the default API tester path.
+    ///
+    /// # Returns
+    ///
+    /// A [`RouteListState`] loaded from disk, or default state on failure.
     pub fn load() -> Self {
         Self::load_or_default(&paths::route_list_state_path())
     }
 
+    /// Loads route list state from a path, defaulting on read/parse failure.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — Route list state file path.
+    ///
+    /// # Returns
+    ///
+    /// A [`RouteListState`] parsed from disk or [`RouteListState::default`]
+    /// when loading fails.
     pub fn load_or_default(path: &Path) -> Self {
         match Self::load_from(path) {
             Ok(state) => state,
@@ -63,6 +103,19 @@ impl RouteListState {
         }
     }
 
+    /// Loads route list state from a specific path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — Route list state file path.
+    ///
+    /// # Returns
+    ///
+    /// A parsed [`RouteListState`] value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if the file cannot be read or parsed.
     pub fn load_from(path: &Path) -> anyhow::Result<Self> {
         if !path.exists() {
             return Ok(Self::default());
@@ -75,10 +128,33 @@ impl RouteListState {
             .with_context(|| format!("failed to parse route list state TOML: {}", path.display()))
     }
 
+    /// Saves route list state to the default API tester path.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`anyhow::Result`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if serialization or writing fails.
     pub fn save(&self) -> anyhow::Result<()> {
         self.save_to(&paths::route_list_state_path())
     }
 
+    /// Saves route list state to a specific path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — Destination file path.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`anyhow::Result`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if directory creation, serialization, or
+    /// writing fails.
     pub fn save_to(&self, path: &Path) -> anyhow::Result<()> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -96,6 +172,11 @@ impl RouteListState {
             .with_context(|| format!("failed to write route list state file: {}", path.display()))
     }
 
+    /// Produces a normalized copy suitable for stable persistence.
+    ///
+    /// # Returns
+    ///
+    /// A normalized [`RouteListState`] with trimmed, deduplicated values.
     fn normalized(&self) -> Self {
         let mut state = self.clone();
 
