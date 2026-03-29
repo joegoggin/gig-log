@@ -6,11 +6,11 @@
 //!
 //! # Modules
 //!
-//! - [`code`] — Authorization code generation.
-//! - [`cookies`] — Cookie construction and clearing for auth tokens.
-//! - [`jwt`] — JWT token creation and validation.
-//! - [`password`] — Password hashing and verification with Argon2.
-//! - [`user`] — [`AuthUser`] Axum extractor for protected routes.
+//! - [`code`](crate::auth::code) — Authorization code generation.
+//! - [`cookies`](crate::auth::cookies) — Cookie construction and clearing for auth tokens.
+//! - [`jwt`](crate::auth::jwt) — JWT token creation and validation.
+//! - [`password`](crate::auth::password) — Password hashing and verification with Argon2.
+//! - [`user`](crate::auth::user) — [`AuthUser`](crate::auth::AuthUser) Axum extractor for protected routes.
 
 pub mod code;
 pub mod cookies;

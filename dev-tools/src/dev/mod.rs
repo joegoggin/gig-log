@@ -51,10 +51,13 @@ const DOCS_TARGET_DIR: &str = "target/docs";
 const DOCS_SERVE_DIR: &str = "target/docs/doc";
 /// Defines isolated cargo home used during docs builds.
 const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
+/// Defines rustdoc lint settings enforced during docs builds.
+const DOCS_RUSTDOCFLAGS: &str = "-D rustdoc::broken_intra_doc_links";
 /// Defines environment variables injected into docs build commands.
-const DOCS_BUILD_ENVS: [(&str, &str); 2] = [
+const DOCS_BUILD_ENVS: [(&str, &str); 3] = [
     ("CARGO_TARGET_DIR", DOCS_TARGET_DIR),
     ("CARGO_HOME", DOCS_CARGO_HOME),
+    ("RUSTDOCFLAGS", DOCS_RUSTDOCFLAGS),
 ];
 /// Defines cargo arguments used to generate workspace documentation.
 const DOCS_ARGS: [&str; 14] = [

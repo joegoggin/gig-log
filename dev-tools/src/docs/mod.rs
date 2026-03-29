@@ -8,6 +8,7 @@ mod doc_index;
 const DOCS_TARGET_DIR: &str = "target/docs";
 const DOCS_SERVE_DIR: &str = "target/docs/doc";
 const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
+const DOCS_RUSTDOCFLAGS: &str = "-D rustdoc::broken_intra_doc_links";
 const DOCS_ARGS: [&str; 14] = [
     "doc",
     "-p",
@@ -50,12 +51,13 @@ pub async fn run() -> Result<()> {
         .args(DOCS_ARGS)
         .env("CARGO_TARGET_DIR", DOCS_TARGET_DIR)
         .env("CARGO_HOME", DOCS_CARGO_HOME)
+        .env("RUSTDOCFLAGS", DOCS_RUSTDOCFLAGS)
         .status()
         .await
         .context("Failed to run cargo doc")?;
 
     if !status.success() {
-        eprintln!("Warning: cargo doc exited with non-zero status, continuing anyway...");
+        anyhow::bail!("cargo doc exited with non-zero status");
     }
 
     // Generate doc index
@@ -74,11 +76,10 @@ pub async fn run() -> Result<()> {
 
     // Run cargo watch to rebuild docs on changes
     let mut watch = Command::new("cargo")
-        .args([
-            "watch",
-            "-s",
-            "rm -rf target/docs/doc && mkdir -p target/docs/doc && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home cargo doc -p gig-log-api -p gig-log-common -p gig-log-dev-tools -p gig-log-frontend --no-deps --document-private-items --color always --locked && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home cargo run -p gig-log-dev-tools -- docs-index",
-        ])
+        .args(["watch", "-s"])
+        .arg(
+            "rm -rf target/docs/doc && mkdir -p target/docs/doc && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home RUSTDOCFLAGS='-D rustdoc::broken_intra_doc_links' cargo doc -p gig-log-api -p gig-log-common -p gig-log-dev-tools -p gig-log-frontend --no-deps --document-private-items --color always --locked && CARGO_TARGET_DIR=target/docs CARGO_HOME=target/.cargo-docs-home cargo run -p gig-log-dev-tools -- docs-index",
+        )
         .kill_on_drop(true)
         .spawn()
         .context("Failed to start cargo watch")?;

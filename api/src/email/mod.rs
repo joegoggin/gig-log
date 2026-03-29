@@ -6,8 +6,8 @@
 //!
 //! # Modules
 //!
-//! - [`client`] — Core HTTP client for the Resend API.
-//! - [`senders`] — Specialized email sender implementations.
+//! - [`client`](crate::email::client) — Core HTTP client for the Resend API.
+//! - [`senders`](crate::email::senders) — Specialized email sender implementations.
 
 pub mod client;
 pub mod senders;

@@ -6,8 +6,8 @@
 //!
 //! # Modules
 //!
-//! - [`auth`] — Authentication and account management endpoints.
-//! - [`health`] — Health check endpoints.
+//! - [`auth`](crate::controllers::auth) — Authentication and account management endpoints.
+//! - [`health`](crate::controllers::health) — Health check endpoints.
 
 pub mod auth;
 pub mod health;
