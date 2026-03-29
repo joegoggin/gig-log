@@ -340,9 +340,7 @@ impl AppModel {
         };
 
         match key {
-            KeyEvent {
-                code: Key::Esc, ..
-            } => {
+            KeyEvent { code: Key::Esc, .. } => {
                 self.value_picker = None;
                 self.status = "Selection cancelled".to_string();
             }
@@ -399,9 +397,7 @@ impl AppModel {
         };
 
         match key {
-            KeyEvent {
-                code: Key::Esc, ..
-            } => {
+            KeyEvent { code: Key::Esc, .. } => {
                 self.datetime_picker = None;
                 self.status = "Date/time edit cancelled".to_string();
             }
@@ -429,8 +425,7 @@ impl AppModel {
             | KeyEvent {
                 code: Key::Left, ..
             } => {
-                picker.selected_part =
-                    Self::prev_temporal_part(picker.mode, picker.selected_part);
+                picker.selected_part = Self::prev_temporal_part(picker.mode, picker.selected_part);
             }
             KeyEvent {
                 code: Key::Char('j'),
@@ -475,8 +470,7 @@ impl AppModel {
 
                     let row_dirty = self.dirty_rows.entry(picker.row_index).or_default();
                     row_dirty.insert(picker.column_name.clone(), value);
-                    self.status =
-                        format!("Set {} (Ctrl+S to save)", picker.column_name);
+                    self.status = format!("Set {} (Ctrl+S to save)", picker.column_name);
                 }
             }
             _ => {}
@@ -866,9 +860,7 @@ impl AppModel {
                 code: Key::Char('G'),
                 ..
             }
-            | KeyEvent {
-                code: Key::End, ..
-            } => {
+            | KeyEvent { code: Key::End, .. } => {
                 if !self.rows.is_empty() {
                     self.selected_row = self.rows.len().saturating_sub(1);
                     moved_cursor = true;
@@ -1069,7 +1061,9 @@ impl AppModel {
             }
         }
 
-        picker.day = picker.day.min(Self::days_in_month(picker.year, picker.month));
+        picker.day = picker
+            .day
+            .min(Self::days_in_month(picker.year, picker.month));
         self.datetime_picker = Some(picker);
         true
     }
@@ -1168,7 +1162,11 @@ impl AppModel {
     fn temporal_parts(mode: TemporalMode) -> &'static [TemporalPart] {
         match mode {
             TemporalMode::Date => &[TemporalPart::Year, TemporalPart::Month, TemporalPart::Day],
-            TemporalMode::Time => &[TemporalPart::Hour, TemporalPart::Minute, TemporalPart::Second],
+            TemporalMode::Time => &[
+                TemporalPart::Hour,
+                TemporalPart::Minute,
+                TemporalPart::Second,
+            ],
             TemporalMode::DateTime => &[
                 TemporalPart::Year,
                 TemporalPart::Month,
@@ -1206,13 +1204,17 @@ impl AppModel {
         match picker.selected_part {
             TemporalPart::Year => {
                 picker.year = picker.year.saturating_add(delta);
-                picker.day = picker.day.min(Self::days_in_month(picker.year, picker.month));
+                picker.day = picker
+                    .day
+                    .min(Self::days_in_month(picker.year, picker.month));
             }
             TemporalPart::Month => {
                 let month = picker.month as i32 - 1 + delta;
                 let wrapped = month.rem_euclid(12) + 1;
                 picker.month = wrapped as u32;
-                picker.day = picker.day.min(Self::days_in_month(picker.year, picker.month));
+                picker.day = picker
+                    .day
+                    .min(Self::days_in_month(picker.year, picker.month));
             }
             TemporalPart::Day => {
                 let max_day = Self::days_in_month(picker.year, picker.month) as i32;
@@ -1311,9 +1313,14 @@ impl AppModel {
 
     fn format_temporal_value(picker: &DateTimePickerState) -> String {
         match picker.mode {
-            TemporalMode::Date => format!("{:04}-{:02}-{:02}", picker.year, picker.month, picker.day),
+            TemporalMode::Date => {
+                format!("{:04}-{:02}-{:02}", picker.year, picker.month, picker.day)
+            }
             TemporalMode::Time => {
-                format!("{:02}:{:02}:{:02}", picker.hour, picker.minute, picker.second)
+                format!(
+                    "{:02}:{:02}:{:02}",
+                    picker.hour, picker.minute, picker.second
+                )
             }
             TemporalMode::DateTime => format!(
                 "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
@@ -1513,7 +1520,10 @@ impl AppModel {
     }
 
     fn format_error_for_status(error: &anyhow::Error) -> String {
-        let chain = error.chain().map(|cause| cause.to_string()).collect::<Vec<_>>();
+        let chain = error
+            .chain()
+            .map(|cause| cause.to_string())
+            .collect::<Vec<_>>();
         let primary = chain
             .first()
             .cloned()
@@ -1756,7 +1766,9 @@ impl AppModel {
             let end = start.saturating_add(width.saturating_sub(1));
             column_ranges.push((start, end));
 
-            let mut style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+            let mut style = Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD);
             if index == self.selected_col {
                 style = style.bg(Color::Rgb(35, 35, 80));
             }
@@ -1799,7 +1811,8 @@ impl AppModel {
             };
 
             let mut spans = Vec::new();
-            for (col_index, (column, width)) in table.columns.iter().zip(widths.iter()).enumerate() {
+            for (col_index, (column, width)) in table.columns.iter().zip(widths.iter()).enumerate()
+            {
                 let value = self
                     .current_cell_value(row_index, &column.name)
                     .unwrap_or(Value::Null);
@@ -2100,8 +2113,16 @@ impl AppModel {
 
         let header_left = header_cols[0];
         let header_right = header_cols[1];
-        let body_left = if body_cols.is_empty() { Rect::new(0, 0, 0, 0) } else { body_cols[0] };
-        let body_right = if body_cols.len() > 1 { body_cols[1] } else { Rect::new(0, 0, 0, 0) };
+        let body_left = if body_cols.is_empty() {
+            Rect::new(0, 0, 0, 0)
+        } else {
+            body_cols[0]
+        };
+        let body_right = if body_cols.len() > 1 {
+            body_cols[1]
+        } else {
+            Rect::new(0, 0, 0, 0)
+        };
 
         self.ensure_selected_cell_visible(
             &render_data.column_ranges,
@@ -2132,8 +2153,7 @@ impl AppModel {
                 render_data.right_rows
             };
 
-            let body = Paragraph::new(right_rows)
-                .scroll((scroll_y, scroll_x));
+            let body = Paragraph::new(right_rows).scroll((scroll_y, scroll_x));
             frame.render_widget(body, body_right);
         }
     }
@@ -2438,7 +2458,9 @@ impl AppModel {
         let area = centered_rect(50, 50, frame.area());
         frame.render_widget(Clear, area);
 
-        let mut lines = vec![Line::from("j/k or Up/Down: move | Enter: select | Esc: cancel")];
+        let mut lines = vec![Line::from(
+            "j/k or Up/Down: move | Enter: select | Esc: cancel",
+        )];
         lines.push(Line::from(""));
 
         for (index, option) in picker.options.iter().enumerate() {

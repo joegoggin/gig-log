@@ -57,8 +57,8 @@ pub async fn run() -> anyhow::Result<()> {
 
     install_panic_hook();
 
-    let database_url = env::required_var("DATABASE_URL")
-        .context("db-viewer requires a database connection")?;
+    let database_url =
+        env::required_var("DATABASE_URL").context("db-viewer requires a database connection")?;
     let pool = db::connect(&database_url).await?;
 
     let mut terminal = init_terminal()?;
@@ -87,8 +87,9 @@ pub async fn run() -> anyhow::Result<()> {
 
                     match editor_result {
                         Ok(query) => {
-                            if let Err(error) =
-                                model.update(Msg::App(AppMsg::QueryEditedExternally(query))).await
+                            if let Err(error) = model
+                                .update(Msg::App(AppMsg::QueryEditedExternally(query)))
+                                .await
                             {
                                 eprintln!("db-viewer runtime error: {error:#}");
                                 model.report_runtime_error(&error);
