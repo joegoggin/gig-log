@@ -1,3 +1,14 @@
+//! Builds and serves workspace rustdoc output for local development.
+//!
+//! This module powers the `docs` and `docs-index` subcommands. It validates
+//! required tooling, generates rustdoc output for workspace crates (including
+//! private items), writes a workspace landing page, serves docs over HTTP, and
+//! watches for source changes to keep generated docs up to date.
+//!
+//! # Modules
+//!
+//! - [`doc_index`] — Workspace `index.html` generation for rustdoc output.
+
 use std::process::Stdio;
 
 use anyhow::{Context, Result};
@@ -5,10 +16,15 @@ use tokio::process::Command;
 
 mod doc_index;
 
+/// Defines the cargo target directory used for docs builds.
 const DOCS_TARGET_DIR: &str = "target/docs";
+/// Defines the directory served by `miniserve`.
 const DOCS_SERVE_DIR: &str = "target/docs/doc";
+/// Defines the isolated cargo home used during docs builds.
 const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
+/// Defines rustdoc lint settings enforced during docs generation.
 const DOCS_RUSTDOCFLAGS: &str = "-D rustdoc::broken_intra_doc_links";
+/// Defines cargo arguments used to generate workspace documentation.
 const DOCS_ARGS: [&str; 14] = [
     "doc",
     "-p",
@@ -26,14 +42,20 @@ const DOCS_ARGS: [&str; 14] = [
     "--locked",
 ];
 
-/// Builds workspace documentation, starts a live-reload docs server, and
-/// watches for source changes.
+/// Runs the docs workflow for local development.
+///
+/// Validates required tools, clears the docs output directory, builds
+/// workspace docs, generates the workspace `index.html`, starts `miniserve` on
+/// port `7007`, and launches `cargo watch` to rebuild docs on file changes.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
 ///
 /// # Errors
 ///
-/// Returns an error if required tools (`cargo-watch`, `miniserve`) are
-/// not installed, the documentation build fails, or the server cannot
-/// start.
+/// Returns an [`anyhow::Error`] if requirements are missing, docs generation
+/// fails, or background docs processes cannot be started.
 pub async fn run() -> Result<()> {
     check_requirements().await?;
 
@@ -105,9 +127,14 @@ pub async fn run() -> Result<()> {
 
 /// Removes and recreates the docs output directory to ensure a clean build.
 ///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
 /// # Errors
 ///
-/// Returns an error if the directory cannot be removed or recreated.
+/// Returns an [`anyhow::Error`] if the directory cannot be removed or
+/// recreated.
 async fn reset_docs_output_dir() -> Result<()> {
     if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
         tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;
@@ -121,19 +148,30 @@ async fn reset_docs_output_dir() -> Result<()> {
 /// Delegates to [`doc_index::generate`] with the default docs target
 /// directory.
 ///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
 /// # Errors
 ///
-/// Returns an error if index generation fails.
+/// Returns an [`anyhow::Error`] if index generation fails.
 pub fn generate_index() -> Result<()> {
     doc_index::generate(DOCS_TARGET_DIR)
 }
 
-/// Verifies that `cargo-watch` and `miniserve` are installed before starting the docs server.
+/// Verifies docs command prerequisites.
+///
+/// Checks whether `cargo-watch` and `miniserve` are available on the system
+/// `PATH` before docs generation starts.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
 ///
 /// # Errors
 ///
-/// Returns an error if either `cargo-watch` or `miniserve` is not
-/// found on the system PATH.
+/// Returns an [`anyhow::Error`] if either `cargo-watch` or `miniserve` is not
+/// found on the system `PATH`.
 async fn check_requirements() -> Result<()> {
     let cargo_watch = Command::new("which")
         .arg("cargo-watch")

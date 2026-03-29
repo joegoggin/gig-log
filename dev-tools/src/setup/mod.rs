@@ -1,3 +1,12 @@
+//! Bootstraps local GigLog development prerequisites.
+//!
+//! This module powers the `setup` subcommand. It validates required tools,
+//! creates missing `.env` files from discovered `.env.example` templates,
+//! optionally starts Postgres, runs SQLx migrations, and builds the workspace.
+//!
+//! The workflow is intentionally non-destructive: existing `.env` files are
+//! preserved and reported as skipped in the setup summary.
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,25 +18,44 @@ use rand::distr::Alphanumeric;
 use rand::{Rng, rng};
 use tokio::process::Command;
 
+/// Defines command-line options controlling setup execution.
 pub struct SetupOptions {
+    /// Disables prompts and fails when required values are missing.
     pub non_interactive: bool,
+    /// Skips Docker database startup and readiness checks.
     pub skip_db: bool,
+    /// Skips SQLx migration execution.
     pub skip_migrate: bool,
+    /// Skips workspace build execution.
     pub skip_build: bool,
+    /// Prints planned actions without executing commands.
     pub dry_run: bool,
+    /// Builds the workspace in release mode when enabled.
     pub release: bool,
 }
 
+/// Tracks setup outcomes used for terminal summary output.
 struct SetupSummary {
+    /// Lists newly created `.env` files.
     env_created: Vec<PathBuf>,
+    /// Lists `.env` files skipped because they already existed.
     env_skipped: Vec<PathBuf>,
+    /// Stores warnings about unresolved placeholder-like values.
     env_warnings: Vec<String>,
+    /// Indicates whether database startup was attempted.
     db_started: bool,
+    /// Indicates whether migrations were executed.
     migrations_ran: bool,
+    /// Indicates whether a workspace build was executed.
     build_ran: bool,
 }
 
 impl SetupSummary {
+    /// Creates an empty setup summary accumulator.
+    ///
+    /// # Returns
+    ///
+    /// A new [`SetupSummary`] with default counters and lists.
     fn new() -> Self {
         Self {
             env_created: Vec::new(),
@@ -40,6 +68,24 @@ impl SetupSummary {
     }
 }
 
+/// Runs the local setup and initialization workflow.
+///
+/// Executes prerequisite checks, creates missing environment files, optionally
+/// starts the database, optionally runs migrations, optionally builds the
+/// workspace, and prints a terminal summary.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling prompts and skipped workflow steps.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if prerequisite checks fail, env file
+/// generation fails, or an enabled command step fails.
 pub async fn run(options: SetupOptions) -> Result<()> {
     let mut summary = SetupSummary::new();
 
@@ -69,6 +115,20 @@ pub async fn run(options: SetupOptions) -> Result<()> {
     Ok(())
 }
 
+/// Validates required external tools and runtime prerequisites.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling optional checks and dry-run behavior.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if a required command is unavailable or Docker
+/// is not running when database setup is enabled.
 async fn check_prerequisites(options: &SetupOptions) -> Result<()> {
     for tool in ["cargo", "docker"] {
         ensure_command_exists(tool, options).await?;
@@ -96,6 +156,21 @@ async fn check_prerequisites(options: &SetupOptions) -> Result<()> {
     Ok(())
 }
 
+/// Verifies a command is available on the system `PATH`.
+///
+/// # Arguments
+///
+/// * `command` — Command name to verify.
+/// * `options` — Setup flags controlling dry-run behavior.
+///
+/// # Returns
+///
+/// An empty [`Result`] when the command exists.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if command lookup fails or the command is not
+/// found.
 async fn ensure_command_exists(command: &str, options: &SetupOptions) -> Result<()> {
     if options.dry_run {
         println!("[dry-run] Would verify command exists: {command}");
@@ -113,6 +188,23 @@ async fn ensure_command_exists(command: &str, options: &SetupOptions) -> Result<
     Ok(())
 }
 
+/// Creates missing `.env` files from discovered `.env.example` templates.
+///
+/// Existing target files are preserved and recorded as skipped.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling prompting and dry-run behavior.
+/// * `summary` — Mutable setup summary updated with creation results.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if template discovery, template rendering, or
+/// file-system operations fail.
 fn create_env_files(options: &SetupOptions, summary: &mut SetupSummary) -> Result<()> {
     let templates = discover_env_templates()?;
     if templates.is_empty() {
@@ -157,6 +249,15 @@ fn create_env_files(options: &SetupOptions, summary: &mut SetupSummary) -> Resul
     Ok(())
 }
 
+/// Discovers all `.env.example` templates under the workspace root.
+///
+/// # Returns
+///
+/// A sorted [`Vec<PathBuf>`] containing discovered template paths.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if recursive directory traversal fails.
 fn discover_env_templates() -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     collect_env_examples(Path::new("."), &mut out)?;
@@ -164,6 +265,23 @@ fn discover_env_templates() -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 
+/// Recursively collects `.env.example` files under a directory.
+///
+/// Skips common generated directories (`.git`, `target`, and
+/// `node_modules`) during traversal.
+///
+/// # Arguments
+///
+/// * `dir` — Directory to scan recursively.
+/// * `out` — Mutable destination for discovered template paths.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if directory listing fails.
 fn collect_env_examples(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     for entry in
         fs::read_dir(dir).with_context(|| format!("Failed to read directory {}", dir.display()))?
@@ -195,6 +313,26 @@ fn collect_env_examples(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+/// Renders a template file into concrete `.env` contents.
+///
+/// Resolves placeholder-like values by prompting the user (or generating
+/// values in non-interactive mode when supported) and preserves original line
+/// ordering and comments.
+///
+/// # Arguments
+///
+/// * `template_text` — Raw contents of the `.env.example` file.
+/// * `template_path` — Path to the template, used for prompts and warnings.
+/// * `options` — Setup flags controlling prompts and dry-run behavior.
+/// * `summary` — Mutable setup summary updated with placeholder warnings.
+///
+/// # Returns
+///
+/// A rendered `.env` file as a [`String`].
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if required input cannot be resolved.
 fn render_env_template(
     template_text: &str,
     template_path: &Path,
@@ -249,6 +387,26 @@ fn render_env_template(
     Ok(rendered)
 }
 
+/// Resolves a single placeholder value for env-file rendering.
+///
+/// Prompts interactively when allowed, auto-generates `JWT_SECRET` in
+/// non-interactive mode, and normalizes output formatting for env files.
+///
+/// # Arguments
+///
+/// * `key` — Environment variable key being resolved.
+/// * `suggested` — Suggested default value derived from the template.
+/// * `template_path` — Template path displayed in prompts and errors.
+/// * `options` — Setup flags controlling prompts and dry-run behavior.
+///
+/// # Returns
+///
+/// A formatted env value as a [`String`].
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if interactive input fails or a required value
+/// is missing in non-interactive mode.
 fn resolve_sensitive_value(
     key: &str,
     suggested: &str,
@@ -296,6 +454,16 @@ fn resolve_sensitive_value(
     Ok(format_env_value(&input))
 }
 
+/// Determines whether a template key/value pair requires user input.
+///
+/// # Arguments
+///
+/// * `key` — Environment variable key.
+/// * `raw_value` — Raw template value associated with `key`.
+///
+/// # Returns
+///
+/// A boolean indicating whether setup should resolve the value interactively.
 fn needs_user_value(key: &str, raw_value: &str) -> bool {
     let value = normalize_value(raw_value);
     key == "JWT_SECRET"
@@ -305,6 +473,15 @@ fn needs_user_value(key: &str, raw_value: &str) -> bool {
         || value.contains("re_your")
 }
 
+/// Normalizes a raw env value by trimming and stripping surrounding quotes.
+///
+/// # Arguments
+///
+/// * `value` — Raw value to normalize.
+///
+/// # Returns
+///
+/// A normalized env value as a [`String`].
 fn normalize_value(value: &str) -> String {
     let mut out = value.trim().to_string();
     if out.starts_with('"') && out.ends_with('"') && out.len() >= 2 {
@@ -313,6 +490,15 @@ fn normalize_value(value: &str) -> String {
     out
 }
 
+/// Detects unresolved placeholder-like values in rendered env text.
+///
+/// # Arguments
+///
+/// * `text` — Rendered env file text to inspect.
+///
+/// # Returns
+///
+/// A boolean indicating whether placeholder-like values remain.
 fn contains_placeholder_values(text: &str) -> bool {
     text.lines().any(|line| {
         let trimmed = line.trim();
@@ -332,10 +518,30 @@ fn contains_placeholder_values(text: &str) -> bool {
     })
 }
 
+/// Identifies whether a key should be treated as secret input.
+///
+/// # Arguments
+///
+/// * `key` — Environment variable key to classify.
+///
+/// # Returns
+///
+/// A boolean indicating whether input should be hidden while prompting.
 fn is_secret_key(key: &str) -> bool {
     key.contains("SECRET") || key.contains("PASSWORD") || key.contains("API_KEY")
 }
 
+/// Formats an env value for output in `.env` files.
+///
+/// Wraps values containing spaces in double quotes.
+///
+/// # Arguments
+///
+/// * `value` — Env value to format.
+///
+/// # Returns
+///
+/// A formatted env value as a [`String`].
 fn format_env_value(value: &str) -> String {
     if value.contains(' ') {
         format!("\"{value}\"")
@@ -344,6 +550,11 @@ fn format_env_value(value: &str) -> String {
     }
 }
 
+/// Generates a random `JWT_SECRET` value.
+///
+/// # Returns
+///
+/// A 64-character alphanumeric secret as a [`String`].
 fn generate_jwt_secret() -> String {
     let rng = rng();
     rng.sample_iter(&Alphanumeric)
@@ -352,6 +563,20 @@ fn generate_jwt_secret() -> String {
         .collect()
 }
 
+/// Starts the Postgres container and waits for readiness.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling dry-run behavior.
+///
+/// # Returns
+///
+/// An empty [`Result`] when Postgres becomes ready.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if container startup fails or readiness does
+/// not succeed before timeout.
 async fn start_db_and_wait(options: &SetupOptions) -> Result<()> {
     run_command(
         options,
@@ -392,6 +617,19 @@ async fn start_db_and_wait(options: &SetupOptions) -> Result<()> {
     anyhow::bail!("Postgres did not become ready in time")
 }
 
+/// Runs SQLx migrations when a workspace migrations directory exists.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling dry-run behavior.
+///
+/// # Returns
+///
+/// A boolean indicating whether migrations were actually executed.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if migration execution fails.
 async fn run_migrations(options: &SetupOptions) -> Result<bool> {
     if !Path::new("migrations").exists() {
         println!("No migrations directory found. Skipping sqlx migrate run.");
@@ -402,6 +640,21 @@ async fn run_migrations(options: &SetupOptions) -> Result<bool> {
     Ok(true)
 }
 
+/// Builds workspace crates according to setup options.
+///
+/// Uses release build mode when `options.release` is enabled.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling release and dry-run behavior.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if the build command fails.
 async fn run_build(options: &SetupOptions) -> Result<()> {
     if options.release {
         run_command(
@@ -422,6 +675,23 @@ async fn run_build(options: &SetupOptions) -> Result<()> {
     }
 }
 
+/// Executes a command step used by setup workflow stages.
+///
+/// # Arguments
+///
+/// * `options` — Setup flags controlling dry-run behavior.
+/// * `cmd` — Executable name to run.
+/// * `args` — Command-line arguments passed to `cmd`.
+/// * `description` — Human-readable description used in logs and errors.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if process spawning fails or the command exits
+/// with a non-zero status.
 async fn run_command(
     options: &SetupOptions,
     cmd: &str,
@@ -450,6 +720,12 @@ async fn run_command(
     Ok(())
 }
 
+/// Prints a terminal summary of setup actions.
+///
+/// # Arguments
+///
+/// * `summary` — Aggregated setup outcomes.
+/// * `options` — Setup flags used to explain skipped steps.
 fn print_summary(summary: &SetupSummary, options: &SetupOptions) {
     println!();
     println!("Setup complete.");

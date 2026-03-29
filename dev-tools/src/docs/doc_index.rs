@@ -1,3 +1,10 @@
+//! Generates the workspace-level rustdoc index page.
+//!
+//! Rustdoc emits hashed static assets under `doc/static.files/`. This module
+//! discovers the current filenames at build time and renders a custom
+//! `index.html` that links to each workspace crate while reusing rustdoc's
+//! bundled styles and scripts.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -5,14 +12,23 @@ use anyhow::{Context, Result};
 
 /// Holds the hashed filenames of rustdoc static assets discovered at build time.
 struct RustdocAssets {
+    /// Stores the hashed `normalize-*.css` filename.
     normalize_css: String,
+    /// Stores the hashed `rustdoc-*.css` filename.
     rustdoc_css: String,
+    /// Stores the hashed `main-*.js` filename.
     main_js: String,
+    /// Stores the hashed `search-*.js` filename.
     search_js: String,
+    /// Stores the hashed `stringdex-*.js` filename.
     stringdex_js: String,
+    /// Stores the hashed `storage-*.js` filename.
     storage_js: String,
+    /// Stores the hashed `favicon-*.svg` filename.
     favicon_svg: String,
+    /// Stores the hashed `favicon-32x32-*.png` filename.
     favicon_png: String,
+    /// Stores the hashed `noscript-*.css` filename.
     noscript_css: String,
 }
 
@@ -27,10 +43,14 @@ struct RustdocAssets {
 /// * `target_dir` — The cargo target directory containing the `doc/`
 ///   output (e.g. `"target/docs"`).
 ///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
 /// # Errors
 ///
-/// Returns an error if the static assets directory cannot be read, a
-/// required asset is missing, or the output file cannot be written.
+/// Returns an [`anyhow::Error`] if the static assets directory cannot be read,
+/// a required asset is missing, or the output file cannot be written.
 pub fn generate(target_dir: &str) -> Result<()> {
     let doc_dir = PathBuf::from(target_dir).join("doc");
     let static_dir = doc_dir.join("static.files");
@@ -56,7 +76,7 @@ pub fn generate(target_dir: &str) -> Result<()> {
 ///
 /// # Errors
 ///
-/// Returns an error if the directory cannot be read or a required
+/// Returns an [`anyhow::Error`] if the directory cannot be read or a required
 /// asset is missing.
 fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
     let entries = fs::read_dir(static_dir)
@@ -99,7 +119,7 @@ fn discover_assets(static_dir: &Path) -> Result<RustdocAssets> {
 ///
 /// # Errors
 ///
-/// Returns an error if no filename matches the pattern.
+/// Returns an [`anyhow::Error`] if no filename matches the pattern.
 fn find_asset(names: &[String], prefix: &str, suffix: &str, static_dir: &Path) -> Result<String> {
     names
         .iter()
