@@ -1,5 +1,12 @@
+//! Icon component for `LogoIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `LogoIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `LogoIcon` UI.
 #[component]
 pub fn LogoIcon() -> impl IntoView {
     const LOGO_SIZE: u16 = 48;

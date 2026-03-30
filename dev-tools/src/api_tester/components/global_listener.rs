@@ -1,3 +1,8 @@
+//! Global input listener for API tester shortcuts.
+//!
+//! This component converts keyboard, mouse, and resize events into high-level
+//! application messages while honoring the current input mode.
+
 use ratatui::{Frame, layout::Rect};
 use tuirealm::{
     AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent, State,
@@ -10,15 +15,25 @@ use crate::api_tester::app::{
 };
 use crate::api_tester::components::core::keymap::{is_jump_to_end, is_plain_g};
 
+/// Global event mapper for normal/insert mode interactions.
 pub struct GlobalListener {
+    /// Current application input mode.
     input_mode: InputMode,
+    /// Last drag row used for mouse drag scrolling.
     touch_drag_row: Option<u16>,
+    /// Tracks pending first `g` for `gg` keymap support.
     pending_g: bool,
 }
 
 impl GlobalListener {
+    /// Maximum number of rows moved per drag event.
     const MAX_DRAG_STEP: isize = 3;
 
+    /// Creates a new global listener in normal mode.
+    ///
+    /// # Returns
+    ///
+    /// A [`GlobalListener`] with default key-sequence state.
     pub fn new() -> Self {
         Self {
             input_mode: InputMode::Normal,
@@ -27,6 +42,15 @@ impl GlobalListener {
         }
     }
 
+    /// Maps normal-mode keyboard input to application messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event from the terminal listener.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing a mapped [`Msg`] when applicable.
     fn map_normal_key(&mut self, key: KeyEvent) -> Option<Msg> {
         if self.pending_g {
             self.pending_g = false;
@@ -80,6 +104,15 @@ impl GlobalListener {
         }
     }
 
+    /// Maps insert-mode keyboard input to application messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event from the terminal listener.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing a mapped [`Msg`] when applicable.
     fn map_insert_key(key: KeyEvent) -> Option<Msg> {
         match key.code {
             Key::Esc => Some(Msg::App(AppMsg::EnterNormalMode)),
@@ -87,6 +120,15 @@ impl GlobalListener {
         }
     }
 
+    /// Maps mouse events to scroll-related application messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `mouse` — Mouse event from the terminal listener.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing a mapped [`Msg`] when applicable.
     fn map_mouse(&mut self, mouse: MouseEvent) -> Option<Msg> {
         self.pending_g = false;
 
@@ -134,12 +176,35 @@ impl GlobalListener {
 }
 
 impl MockComponent for GlobalListener {
+    /// Renders the listener component.
+    ///
+    /// This component is non-visual and intentionally renders nothing.
+    ///
+    /// # Arguments
+    ///
+    /// * `_frame` — Frame to render into.
+    /// * `_area` — Area allocated to the widget.
     fn view(&mut self, _frame: &mut Frame, _area: Rect) {}
 
+    /// Queries a widget attribute value.
+    ///
+    /// # Arguments
+    ///
+    /// * `_attr` — Attribute to query.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`Option`] because this component has no queryable attributes.
     fn query(&self, _attr: Attribute) -> Option<AttrValue> {
         None
     }
 
+    /// Updates component attributes.
+    ///
+    /// # Arguments
+    ///
+    /// * `attr` — Attribute to update.
+    /// * `value` — New attribute value.
     fn attr(&mut self, attr: Attribute, value: AttrValue) {
         if attr == Attribute::Custom("input_mode") {
             if let AttrValue::Flag(is_insert) = value {
@@ -152,16 +217,40 @@ impl MockComponent for GlobalListener {
         }
     }
 
+    /// Returns the current component state.
+    ///
+    /// # Returns
+    ///
+    /// A [`State::None`] value because this component is stateless.
     fn state(&self) -> State {
         State::None
     }
 
+    /// Executes a command against the component.
+    ///
+    /// # Arguments
+    ///
+    /// * `_cmd` — Command to execute.
+    ///
+    /// # Returns
+    ///
+    /// A [`CmdResult::None`] value because this component has no command
+    /// handling.
     fn perform(&mut self, _cmd: Cmd) -> CmdResult {
         CmdResult::None
     }
 }
 
 impl Component<Msg, NoUserEvent> for GlobalListener {
+    /// Maps a terminal event into an application message.
+    ///
+    /// # Arguments
+    ///
+    /// * `ev` — Incoming terminal event.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the mapped application [`Msg`].
     fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
         match ev {
             Event::Keyboard(key) => match self.input_mode {

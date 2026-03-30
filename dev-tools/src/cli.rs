@@ -1,44 +1,51 @@
+//! Command-line argument definitions for `gig-log-dev-tools`.
+//!
+//! This module defines the top-level CLI parser and the available subcommands
+//! used to run development workflows.
+
 use clap::{Parser, Subcommand};
 
+/// Parses top-level command-line input for `gig-log-dev-tools`.
 #[derive(Parser)]
 #[command(name = "gig-log-dev-tools", about = "Development tools for gig-log")]
 pub struct Cli {
+    /// Selected subcommand to execute.
     #[command(subcommand)]
     pub command: Command,
 }
 
+/// Enumerates all supported `gig-log-dev-tools` subcommands.
 #[derive(Subcommand)]
 pub enum Command {
-    /// Start the development orchestrator in TUI mode
+    /// Starts the development orchestrator in TUI mode.
     Dev,
-    /// Build and serve workspace documentation
+    /// Builds and serves workspace documentation.
     Docs,
-    /// Generate workspace documentation index.html
+    /// Generates the workspace documentation `index.html` file.
     DocsIndex,
-    /// Initialize local development environment
+    /// Initializes the local development environment.
     Setup {
-        /// Do not prompt for input; fail if required values are missing
+        /// Disables interactive prompts and fails when required values are missing.
         #[arg(long)]
         non_interactive: bool,
-        /// Skip starting database containers
+        /// Skips starting database containers.
         #[arg(long)]
         skip_db: bool,
-        /// Skip running SQLx migrations
+        /// Skips running SQLx migrations.
         #[arg(long)]
         skip_migrate: bool,
-        /// Skip building workspace crates
+        /// Skips building workspace crates.
         #[arg(long)]
         skip_build: bool,
-        /// Print actions without executing commands
+        /// Prints planned actions without executing commands.
         #[arg(long)]
         dry_run: bool,
-        /// Build in release mode
+        /// Builds the workspace in release mode.
         #[arg(long)]
         release: bool,
     },
-    // Add to the Command enum in dev-tools/src/cli.rs
-    /// Launch the API tester TUI
+    /// Launches the API tester TUI.
     ApiTester,
-    /// Launch the database viewer TUI
+    /// Launches the database viewer TUI.
     DbViewer,
 }

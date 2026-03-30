@@ -1,8 +1,25 @@
+//! Styled text input component with validation feedback.
+
 use gig_log_common::models::error::ValidationError;
 use leptos::prelude::*;
 
 use crate::utils::class_name::ClassNameUtil;
 
+/// Renders a text or password input with validation feedback.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS class names.
+/// * `label` — Optional input label text.
+/// * `placeholder` — Optional placeholder text.
+/// * `is_password` — Whether to render the input as `password`.
+/// * `name` — Field name used for matching validation errors.
+/// * `errors` — Signal containing field validation errors.
+/// * `value` — Signal containing the current input value.
+///
+/// # Returns
+///
+/// A Leptos view containing the text input field.
 #[component]
 pub fn TextInput(
     #[prop(optional, into)] class: Option<String>,

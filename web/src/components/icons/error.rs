@@ -1,5 +1,12 @@
+//! Icon component for `ErrorIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `ErrorIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `ErrorIcon` UI.
 #[component]
 pub fn ErrorIcon() -> impl IntoView {
     view! {

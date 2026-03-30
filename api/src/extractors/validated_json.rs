@@ -1,3 +1,10 @@
+//! Validated JSON extractor for Axum request handlers.
+//!
+//! This module provides [`ValidatedJson<T>`], a custom Axum extractor that
+//! combines JSON deserialization with automatic validation using the
+//! [`validator`] crate. When extraction fails, structured error responses
+//! are returned to clients as [`ApiErrorResponse`] variants.
+
 use axum::{
     extract::rejection::JsonRejection,
     extract::{FromRequest, Json, Request},
@@ -7,10 +14,23 @@ use validator::Validate;
 
 use crate::core::error::ApiErrorResponse;
 
+/// Axum extractor that deserializes JSON and validates the result.
+///
+/// Wraps Axum's [`Json`] extractor with an additional validation step using the
+/// [`Validate`] trait. If deserialization or validation fails, a structured
+/// [`ApiErrorResponse`] is returned to the client.
 #[derive(Debug)]
-pub struct ValidatedJson<T>(pub T);
+pub struct ValidatedJson<T>(
+    /// The validated inner value.
+    pub T,
+);
 
 impl<T> ValidatedJson<T> {
+    /// Consumes the extractor and returns the inner validated value.
+    ///
+    /// # Returns
+    ///
+    /// The inner `T` that was deserialized and validated.
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -24,6 +44,28 @@ where
 {
     type Rejection = ApiErrorResponse;
 
+    /// Extracts and validates a JSON payload from an incoming request.
+    ///
+    /// Deserializes the request body as JSON using Axum's [`Json`] extractor,
+    /// then runs [`Validate::validate`] on the result. Missing-field errors
+    /// from serde are converted into structured [`ApiErrorResponse::Validation`]
+    /// responses with human-readable field names.
+    ///
+    /// # Arguments
+    ///
+    /// * `req` — The incoming HTTP request.
+    /// * `state` — The Axum application state.
+    ///
+    /// # Returns
+    ///
+    /// A [`ValidatedJson<T>`] containing the deserialized and validated value.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::Validation`] if a required field is missing
+    /// or validation constraints are violated.
+    /// Returns [`ApiErrorResponse::BadRequest`] if JSON deserialization fails
+    /// for other reasons (e.g., type mismatch).
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state)
             .await
@@ -43,6 +85,16 @@ where
     }
 }
 
+/// Maps a serde missing-field error message into a structured validation error.
+///
+/// # Arguments
+///
+/// * `message` — The error message from serde's JSON deserialization.
+///
+/// # Returns
+///
+/// An [`ApiErrorResponse::Validation`] if the message contains a missing-field
+/// error, or [`None`] if the message does not match the expected pattern.
 fn map_missing_field_error(message: &str) -> Option<ApiErrorResponse> {
     let field = extract_missing_field_name(message)?;
 
@@ -52,6 +104,19 @@ fn map_missing_field_error(message: &str) -> Option<ApiErrorResponse> {
     }]))
 }
 
+/// Extracts the field name from a serde missing-field error message.
+///
+/// Parses messages matching the pattern ``missing field `field_name` `` and
+/// returns the field name.
+///
+/// # Arguments
+///
+/// * `message` — The error message from serde's JSON deserialization.
+///
+/// # Returns
+///
+/// The extracted field name, or [`None`] if the message does not match
+/// the expected pattern.
 fn extract_missing_field_name(message: &str) -> Option<&str> {
     let prefix = "missing field `";
     let start = message.find(prefix)? + prefix.len();
@@ -61,6 +126,18 @@ fn extract_missing_field_name(message: &str) -> Option<&str> {
     Some(&remainder[..end])
 }
 
+/// Formats a snake_case field name into a human-readable, capitalized string.
+///
+/// Replaces underscores with spaces and capitalizes the first character.
+///
+/// # Arguments
+///
+/// * `field` — The snake_case field name.
+///
+/// # Returns
+///
+/// A [`String`] with underscores replaced by spaces and the first letter
+/// capitalized (e.g., `"first_name"` becomes `"First name"`).
 fn format_field_name(field: &str) -> String {
     let normalized = field.replace('_', " ");
     let mut chars = normalized.chars();

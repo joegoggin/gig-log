@@ -1,3 +1,5 @@
+//! Tab-style radio selector wrapper with API tester key bindings.
+
 use tui_realm_stdlib::Radio;
 use tuirealm::command::{Cmd, CmdResult, Direction};
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
@@ -6,14 +8,28 @@ use tuirealm::{AttrValue, Attribute, Event, MockComponent, NoUserEvent, State, S
 
 use crate::api_tester::app::{InputMode, Msg};
 
+/// Key binding configuration for [`CoreTabRadio`] events.
 #[derive(Debug, Clone)]
 pub struct RadioBindings {
+    /// Message emitted when tab is pressed.
     pub on_tab: Option<Msg>,
+    /// Message emitted when reverse-tab is pressed.
     pub on_backtab: Option<Msg>,
+    /// Message emitted when control-s is pressed.
     pub on_ctrl_s: Option<Msg>,
 }
 
 impl RadioBindings {
+    /// Creates tab-cycle bindings for forward and reverse focus movement.
+    ///
+    /// # Arguments
+    ///
+    /// * `on_tab` — Message emitted for tab.
+    /// * `on_backtab` — Message emitted for reverse-tab.
+    ///
+    /// # Returns
+    ///
+    /// A [`RadioBindings`] value with tab handlers configured.
     pub fn tab_cycle(on_tab: Msg, on_backtab: Msg) -> Self {
         Self {
             on_tab: Some(on_tab),
@@ -23,13 +39,29 @@ impl RadioBindings {
     }
 }
 
+/// Reusable tab-style radio component.
 pub struct CoreTabRadio {
+    /// Underlying standard radio component.
     component: Radio,
+    /// Choice labels rendered as tabs.
     choices: Vec<String>,
+    /// Current input mode used for key handling.
     input_mode: InputMode,
 }
 
 impl CoreTabRadio {
+    /// Creates a tab-style radio selector.
+    ///
+    /// # Arguments
+    ///
+    /// * `title` — Widget title.
+    /// * `choices` — Ordered choice labels.
+    /// * `selected` — Initially selected index.
+    /// * `border_color` — Border color for the widget.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`CoreTabRadio`] instance.
     pub fn new(title: &str, choices: Vec<String>, selected: usize, border_color: Color) -> Self {
         let choice_refs: Vec<&str> = choices.iter().map(String::as_str).collect();
         let component = Radio::default()
@@ -49,6 +81,11 @@ impl CoreTabRadio {
         }
     }
 
+    /// Returns the currently selected choice index.
+    ///
+    /// # Returns
+    ///
+    /// A [`usize`] selected index.
     pub fn selected_index(&self) -> usize {
         match self.state() {
             State::One(StateValue::Usize(index)) => index,
@@ -56,6 +93,17 @@ impl CoreTabRadio {
         }
     }
 
+    /// Handles an input event and maps selection changes to messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `ev` — Incoming UI event.
+    /// * `bindings` — Key binding configuration.
+    /// * `on_change` — Callback used to build a message from the new index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing an emitted application [`Msg`].
     pub fn on_event<F>(
         &mut self,
         ev: Event<NoUserEvent>,
@@ -100,6 +148,12 @@ impl CoreTabRadio {
 }
 
 impl MockComponent for CoreTabRadio {
+    /// Renders the tab radio widget.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Frame to render into.
+    /// * `area` — Area allocated to the widget.
     fn view(&mut self, frame: &mut ratatui::Frame, area: ratatui::layout::Rect) {
         let display = self
             .component
@@ -170,10 +224,25 @@ impl MockComponent for CoreTabRadio {
         frame.render_widget(tabs, area);
     }
 
+    /// Queries a widget attribute value.
+    ///
+    /// # Arguments
+    ///
+    /// * `attr` — Attribute to query.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the queried attribute value.
     fn query(&self, attr: Attribute) -> Option<AttrValue> {
         self.component.query(attr)
     }
 
+    /// Updates a widget attribute value.
+    ///
+    /// # Arguments
+    ///
+    /// * `attr` — Attribute to update.
+    /// * `value` — New attribute value.
     fn attr(&mut self, attr: Attribute, value: AttrValue) {
         if attr == Attribute::Custom("input_mode") {
             if let AttrValue::Flag(is_insert) = value {
@@ -189,10 +258,24 @@ impl MockComponent for CoreTabRadio {
         self.component.attr(attr, value);
     }
 
+    /// Returns the current widget state.
+    ///
+    /// # Returns
+    ///
+    /// A [`State`] snapshot for the widget.
     fn state(&self) -> State {
         self.component.state()
     }
 
+    /// Executes a command against the widget.
+    ///
+    /// # Arguments
+    ///
+    /// * `cmd` — Command to execute.
+    ///
+    /// # Returns
+    ///
+    /// A [`CmdResult`] produced by the widget.
     fn perform(&mut self, cmd: Cmd) -> CmdResult {
         self.component.perform(cmd)
     }

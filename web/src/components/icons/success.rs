@@ -1,5 +1,12 @@
+//! Icon component for `SuccessIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `SuccessIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `SuccessIcon` UI.
 #[component]
 pub fn SuccessIcon() -> impl IntoView {
     view! {

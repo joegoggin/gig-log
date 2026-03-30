@@ -1,5 +1,12 @@
+//! Icon component for `LogOutIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `LogOutIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `LogOutIcon` UI.
 #[component]
 pub fn LogOutIcon() -> impl IntoView {
     view! {

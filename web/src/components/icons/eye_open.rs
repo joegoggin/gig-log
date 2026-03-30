@@ -1,5 +1,12 @@
+//! Icon component for `EyeOpenIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `EyeOpenIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `EyeOpenIcon` UI.
 #[component]
 pub fn EyeOpenIcon() -> impl IntoView {
     view! {

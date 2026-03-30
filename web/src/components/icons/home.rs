@@ -1,5 +1,12 @@
+//! Icon component for `HomeIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `HomeIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `HomeIcon` UI.
 #[component]
 pub fn HomeIcon() -> impl IntoView {
     view! {

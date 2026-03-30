@@ -1,5 +1,12 @@
+//! Icon component for `EyeClosedIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `EyeClosedIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `EyeClosedIcon` UI.
 #[component]
 pub fn EyeClosedIcon() -> impl IntoView {
     view! {

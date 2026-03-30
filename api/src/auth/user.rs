@@ -1,3 +1,10 @@
+//! Authenticated-user extractor for Axum route handlers.
+//!
+//! Provides [`AuthUser`], an Axum [`FromRequestParts`] extractor that
+//! reads the `access_token` cookie, validates the JWT, and yields the
+//! caller's user ID. Including `AuthUser` as a handler parameter is
+//! sufficient to enforce authentication on a route.
+
 use axum::{extract::FromRequestParts, http::request::Parts};
 use log::error;
 use uuid::Uuid;
@@ -6,13 +13,38 @@ use crate::auth::jwt::JwtUtil;
 use crate::core::error::ApiErrorResponse;
 use crate::routes::app::AppState;
 
+/// An authenticated user extracted from an incoming request.
+///
+/// Add this type to a route handler's parameter list to require a
+/// valid `access_token` cookie. The extractor will reject the request
+/// with [`ApiErrorResponse::Unauthorized`] if the token is missing or
+/// invalid.
 pub struct AuthUser {
+    /// The unique identifier of the authenticated user.
     pub user_id: Uuid,
 }
 
 impl FromRequestParts<AppState> for AuthUser {
     type Rejection = ApiErrorResponse;
 
+    /// Extracts an [`AuthUser`] from the request cookies.
+    ///
+    /// # Arguments
+    ///
+    /// * `parts` — The HTTP request head (headers, URI, etc.).
+    /// * `state` — Shared application state containing the
+    ///   [`Config`](crate::core::config::Config) used for JWT
+    ///   validation.
+    ///
+    /// # Returns
+    ///
+    /// An [`AuthUser`] populated with the user ID from the JWT
+    /// claims.
+    ///
+    /// # Errors
+    ///
+    /// * [`ApiErrorResponse::Unauthorized`] — if the `access_token`
+    ///   cookie is missing or the JWT is invalid/expired.
     async fn from_request_parts(
         parts: &mut Parts,
         state: &AppState,

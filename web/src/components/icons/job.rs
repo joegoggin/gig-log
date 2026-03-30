@@ -1,5 +1,12 @@
+//! Icon component for `JobIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `JobIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `JobIcon` UI.
 #[component]
 pub fn JobIcon() -> impl IntoView {
     view! {

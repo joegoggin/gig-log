@@ -1,8 +1,23 @@
+//! Route guard component for authenticated-only routes.
+
 use leptos::prelude::*;
 use leptos_router::{MatchNestedRoutes, NestedRoute, PossibleRouteMatch, components::Redirect};
 
 use crate::contexts::use_auth;
 
+/// Creates a route that only renders when a user is authenticated.
+///
+/// When auth state is loading, this component renders a loading placeholder.
+/// If no user is authenticated, it redirects to `/login`.
+///
+/// # Arguments
+///
+/// * `path` — Route path matcher for the guarded route.
+/// * `view` — View factory used to render protected content.
+///
+/// # Returns
+///
+/// A nested route matcher that enforces authentication checks.
 #[component(transparent)]
 pub fn PrivateRoute<Segments, ViewFactory, View>(
     path: Segments,

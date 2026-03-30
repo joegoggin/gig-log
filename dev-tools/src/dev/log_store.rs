@@ -1,14 +1,31 @@
+//! In-memory log storage and service labeling for the dev orchestrator.
+//!
+//! This module defines service channels, log entry records, and filtering
+//! operations used by the terminal UI.
+
+/// Represents a log-producing service within the orchestrator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Service {
+    /// Indicates the API service process.
     Api,
+    /// Indicates the web service process.
     Web,
+    /// Indicates the shared common crate build step.
     Common,
+    /// Indicates the dev-tools crate build step.
     DevTools,
+    /// Indicates docs generation and docs-serving workflows.
     Docs,
+    /// Indicates orchestrator/system lifecycle messages.
     System,
 }
 
 impl Service {
+    /// Returns the uppercase display label for the service.
+    ///
+    /// # Returns
+    ///
+    /// A static string label used by log headers and filters.
     pub fn label(&self) -> &'static str {
         match self {
             Service::Api => "API",
@@ -21,31 +38,52 @@ impl Service {
     }
 }
 
+/// Stores a single emitted log line with its source service.
 #[derive(Debug, Clone)]
 pub struct LogEntry {
+    /// Identifies which service produced the line.
     pub service: Service,
+    /// Contains the rendered log content.
     pub line: String,
 }
 
+/// Holds log entries and provides service-level filtering operations.
 pub struct LogStore {
+    /// Accumulates logs in insertion order.
     entries: Vec<LogEntry>,
 }
 
 impl LogStore {
+    /// Creates an empty log store.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`LogStore`] on success.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
         }
     }
 
+    /// Appends a log entry to the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` — Log entry to append.
     pub fn push(&mut self, entry: LogEntry) {
         self.entries.push(entry);
     }
 
+    /// Removes all log entries from the store.
     pub fn clear(&mut self) {
         self.entries.clear();
     }
 
+    /// Removes entries for a specific service, or all entries.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` — Service filter to clear, or `None` to clear all entries.
     pub fn clear_filtered(&mut self, service: Option<Service>) {
         match service {
             Some(service) => self.entries.retain(|entry| entry.service != service),
@@ -53,6 +91,15 @@ impl LogStore {
         }
     }
 
+    /// Returns entries filtered by service when requested.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` — Service filter to apply, or `None` for all entries.
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to matching [`LogEntry`] values.
     pub fn filtered(&self, service: Option<Service>) -> Vec<&LogEntry> {
         match service {
             Some(s) => self.entries.iter().filter(|e| e.service == s).collect(),

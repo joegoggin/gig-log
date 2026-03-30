@@ -1,3 +1,10 @@
+//! API error types and Axum response conversions.
+//!
+//! This module defines [`ApiErrorResponse`], the canonical error enum returned
+//! by route handlers. Each variant maps to an HTTP status code and is
+//! automatically serialized into a JSON [`ApiError`] body via its
+//! [`IntoResponse`] implementation.
+
 use axum::{
     extract::rejection::JsonRejection,
     http::StatusCode,
@@ -7,14 +14,28 @@ use axum::{
 use gig_log_common::models::error::{ApiError, ValidationError};
 use log::{error, warn};
 
+/// Convenience alias for handler return types that may fail with an [`ApiErrorResponse`].
 pub type ApiResult<T> = Result<T, ApiErrorResponse>;
 
+/// An error that can be returned from an API route handler.
+///
+/// Each variant carries a human-readable message and maps to a specific HTTP
+/// status code. The [`IntoResponse`] implementation logs the
+/// error and serializes it as a JSON [`ApiError`].
 #[derive(Debug)]
 pub enum ApiErrorResponse {
+    /// Resource not found. Returns HTTP `404 Not Found`.
     NotFound(String),
+    /// Client sent an invalid request. Returns HTTP `400 Bad Request`.
     BadRequest(String),
+    /// One or more fields failed validation. Returns HTTP `400 Bad Request`.
     Validation(Vec<ValidationError>),
+    /// Unexpected server-side failure. Returns HTTP `500 Internal Server Error`.
+    ///
+    /// The original message is logged but not exposed to the client; the
+    /// response body always reads "Something went wrong".
     InternalServerError(String),
+    /// Missing or invalid authentication credentials. Returns HTTP `401 Unauthorized`.
     Unauthorized(String),
 }
 
@@ -63,6 +84,11 @@ impl IntoResponse for ApiErrorResponse {
     }
 }
 
+/// Converts a database error into an [`ApiErrorResponse`].
+///
+/// [`sqlx::Error::RowNotFound`] becomes [`NotFound`](ApiErrorResponse::NotFound);
+/// all other database errors become
+/// [`InternalServerError`](ApiErrorResponse::InternalServerError).
 impl From<sqlx::Error> for ApiErrorResponse {
     fn from(err: sqlx::Error) -> Self {
         match err {
@@ -74,6 +100,7 @@ impl From<sqlx::Error> for ApiErrorResponse {
     }
 }
 
+/// Converts validator field errors into an [`ApiErrorResponse::Validation`] variant.
 impl From<validator::ValidationErrors> for ApiErrorResponse {
     fn from(errs: validator::ValidationErrors) -> Self {
         let validation_errors = errs
@@ -91,6 +118,7 @@ impl From<validator::ValidationErrors> for ApiErrorResponse {
     }
 }
 
+/// Converts an Axum JSON extraction rejection into an [`ApiErrorResponse::BadRequest`].
 impl From<JsonRejection> for ApiErrorResponse {
     fn from(err: JsonRejection) -> Self {
         ApiErrorResponse::BadRequest(err.body_text())

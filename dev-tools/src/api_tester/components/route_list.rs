@@ -1,3 +1,9 @@
+//! Grouped route list component for the API tester home screen.
+//!
+//! This component renders persisted routes grouped by route group, supports
+//! Vim-style keyboard navigation, and emits route list actions for run, edit,
+//! and delete flows.
+
 use ratatui::{
     layout::{Constraint, Layout},
     style::{Color as TuiColor, Style},
@@ -18,42 +24,76 @@ use crate::api_tester::{
     route_list_state::{RouteListState, RouteSelection, SelectedItem},
 };
 
+/// Internal grouped-route representation used for list rendering.
 struct RouteGroup {
+    /// Group display name.
     name: String,
+    /// Indexes of routes belonging to this group.
     route_indexes: Vec<usize>,
+    /// Whether routes in this group are currently expanded.
     expanded: bool,
 }
 
+/// Row kinds rendered by the route list.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RowKind {
+    /// Group header row for the group at the given index.
     GroupHeader(usize),
+    /// Route row for the route at the given index.
     Route(usize),
+    /// Visual spacer row between groups.
     Spacer,
+    /// Empty-state row shown when no routes exist.
     EmptyState,
 }
 
 impl RowKind {
+    /// Returns whether a row kind can be selected by navigation.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether this row can be selected.
     fn is_selectable(&self) -> bool {
         matches!(self, Self::GroupHeader(_) | Self::Route(_))
     }
 }
 
+/// Selection target used while rebuilding list rows.
 enum SelectionTarget {
+    /// Select a specific group header row.
     GroupHeader(usize),
+    /// Select a specific route row.
     Route(usize),
 }
 
+/// Width reserved for the optional route list scrollbar.
 const SCROLLBAR_WIDTH: u16 = 1;
 
+/// Scrollable grouped route list component.
 pub struct RouteList {
+    /// Underlying list widget.
     component: List,
+    /// Full route collection snapshot used for rendering and actions.
     routes: Vec<Route>,
+    /// Grouped route metadata.
     groups: Vec<RouteGroup>,
+    /// Row-kind map aligned with rendered rows.
     row_kinds: Vec<RowKind>,
+    /// Tracks pending first `g` for `gg` navigation.
     pending_g: bool,
 }
 
 impl RouteList {
+    /// Creates a grouped route list from routes and persisted UI state.
+    ///
+    /// # Arguments
+    ///
+    /// * `routes` — Route definitions to render.
+    /// * `persisted_state` — Persisted expansion and selection state.
+    ///
+    /// # Returns
+    ///
+    /// A [`RouteList`] initialized from route and state snapshots.
     pub fn new(routes: &[Route], persisted_state: &RouteListState) -> Self {
         let mut groups: Vec<RouteGroup> = vec![];
 
@@ -92,6 +132,18 @@ impl RouteList {
         list
     }
 
+    /// Restores a selection target from persisted route list state.
+    ///
+    /// # Arguments
+    ///
+    /// * `persisted_state` — Saved expansion and selection state.
+    /// * `routes` — Current route collection.
+    /// * `groups` — Mutable group metadata that may be expanded to reveal a
+    ///   selected route.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the resolved [`SelectionTarget`].
     fn selection_target_from_state(
         persisted_state: &RouteListState,
         routes: &[Route],
@@ -126,6 +178,16 @@ impl RouteList {
         }
     }
 
+    /// Returns whether a route matches a persisted route selection snapshot.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Current route value.
+    /// * `saved_route` — Persisted route snapshot.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether the route matches persisted identity.
     fn route_matches_selection(route: &Route, saved_route: &RouteSelection) -> bool {
         Self::group_name(route) == saved_route.group
             && route.name == saved_route.name
@@ -133,6 +195,15 @@ impl RouteList {
             && route.url == saved_route.url
     }
 
+    /// Returns a normalized group name for a route.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route value to inspect.
+    ///
+    /// # Returns
+    ///
+    /// A normalized group [`String`].
     fn group_name(route: &Route) -> String {
         if route.group.trim().is_empty() {
             DEFAULT_ROUTE_GROUP.to_string()
@@ -141,6 +212,11 @@ impl RouteList {
         }
     }
 
+    /// Returns the selected route index, if a route row is selected.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the selected route index.
     fn selected_route_index(&self) -> Option<usize> {
         match self.selected_row_kind() {
             Some(RowKind::Route(route_index)) => Some(route_index),
@@ -148,6 +224,11 @@ impl RouteList {
         }
     }
 
+    /// Returns the selected group index, if a group header row is selected.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the selected group index.
     fn selected_group_index(&self) -> Option<usize> {
         match self.selected_row_kind() {
             Some(RowKind::GroupHeader(group_index)) => Some(group_index),
@@ -155,6 +236,11 @@ impl RouteList {
         }
     }
 
+    /// Returns the kind of the currently selected row.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the selected [`RowKind`].
     fn selected_row_kind(&self) -> Option<RowKind> {
         if let State::One(StateValue::Usize(index)) = self.state() {
             self.row_kinds.get(index).copied()
@@ -163,6 +249,11 @@ impl RouteList {
         }
     }
 
+    /// Returns the currently selected row index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the selected row index.
     fn selected_row_index(&self) -> Option<usize> {
         if let State::One(StateValue::Usize(index)) = self.state() {
             Some(index)
@@ -171,6 +262,11 @@ impl RouteList {
         }
     }
 
+    /// Updates the selected row index in component state.
+    ///
+    /// # Arguments
+    ///
+    /// * `row_index` — Row index to select.
     fn set_selected_row(&mut self, row_index: usize) {
         self.attr(
             Attribute::Value,
@@ -178,26 +274,47 @@ impl RouteList {
         );
     }
 
+    /// Returns the first selectable row index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the first selectable row index.
     fn first_selectable_row_index(&self) -> Option<usize> {
         self.row_kinds.iter().position(RowKind::is_selectable)
     }
 
+    /// Returns the last selectable row index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the last selectable row index.
     fn last_selectable_row_index(&self) -> Option<usize> {
         self.row_kinds.iter().rposition(RowKind::is_selectable)
     }
 
+    /// Returns the first group header row index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the first group header row index.
     fn first_group_header_row_index(&self) -> Option<usize> {
         self.row_kinds
             .iter()
             .position(|kind| matches!(kind, RowKind::GroupHeader(_)))
     }
 
+    /// Returns the last group header row index.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the last group header row index.
     fn last_group_header_row_index(&self) -> Option<usize> {
         self.row_kinds
             .iter()
             .rposition(|kind| matches!(kind, RowKind::GroupHeader(_)))
     }
 
+    /// Moves selection down to the next selectable row with wrapping.
     fn move_selection_down(&mut self) {
         let current = self.selected_row_index().unwrap_or(0);
 
@@ -214,6 +331,7 @@ impl RouteList {
         }
     }
 
+    /// Moves selection up to the previous selectable row with wrapping.
     fn move_selection_up(&mut self) {
         let current = self.selected_row_index().unwrap_or(0);
 
@@ -227,6 +345,7 @@ impl RouteList {
         }
     }
 
+    /// Moves selection to the next group header with wrapping.
     fn move_selection_to_next_group_header(&mut self) {
         let current = self.selected_row_index().unwrap_or(0);
 
@@ -243,6 +362,7 @@ impl RouteList {
         }
     }
 
+    /// Moves selection to the previous group header with wrapping.
     fn move_selection_to_previous_group_header(&mut self) {
         let current = self.selected_row_index().unwrap_or(0);
 
@@ -256,23 +376,64 @@ impl RouteList {
         }
     }
 
+    /// Returns whether a key event matches plain lowercase `g`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event to inspect.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether the event is plain `g`.
     fn is_plain_g(key: &KeyEvent) -> bool {
         keymap::is_plain_g(key)
     }
 
+    /// Returns whether a key event matches jump-to-end bindings.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event to inspect.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether the event means "jump to end".
     fn is_jump_to_end(key: &KeyEvent) -> bool {
         keymap::is_jump_to_end(key)
     }
 
+    /// Returns whether a key event cycles to the next group header.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event to inspect.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether forward group cycling should occur.
     fn is_forward_group_cycle(key: &KeyEvent) -> bool {
         key.code == Key::Tab && !key.modifiers.intersects(KeyModifiers::SHIFT)
     }
 
+    /// Returns whether a key event cycles to the previous group header.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event to inspect.
+    ///
+    /// # Returns
+    ///
+    /// A [`bool`] indicating whether reverse group cycling should occur.
     fn is_reverse_group_cycle(key: &KeyEvent) -> bool {
         key.code == Key::BackTab
             || (key.code == Key::Tab && key.modifiers.intersects(KeyModifiers::SHIFT))
     }
 
+    /// Captures current expansion and selection state for persistence.
+    ///
+    /// # Returns
+    ///
+    /// A [`RouteListState`] snapshot of the current list view state.
     fn snapshot_state(&self) -> RouteListState {
         let expanded_groups = self
             .groups
@@ -301,10 +462,24 @@ impl RouteList {
         }
     }
 
+    /// Builds a route-list-state change message from the current snapshot.
+    ///
+    /// # Returns
+    ///
+    /// A [`Msg::RouteList`] state-changed message.
     fn route_list_state_changed_msg(&self) -> Msg {
         Msg::RouteList(RouteListMsg::StateChanged(self.snapshot_state()))
     }
 
+    /// Handles keyboard input and maps it to route-list actions.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Keyboard event from the terminal listener.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the resulting application [`Msg`].
     fn on_keyboard(&mut self, key: KeyEvent) -> Option<Msg> {
         if self.pending_g {
             self.pending_g = false;
@@ -411,18 +586,25 @@ impl RouteList {
         }
     }
 
+    /// Moves selection to the first selectable row.
     fn move_selection_home(&mut self) {
         if let Some(first_selectable_row) = self.first_selectable_row_index() {
             self.set_selected_row(first_selectable_row);
         }
     }
 
+    /// Moves selection to the last selectable row.
     fn move_selection_end(&mut self) {
         if let Some(last_selectable_row) = self.last_selectable_row_index() {
             self.set_selected_row(last_selectable_row);
         }
     }
 
+    /// Toggles expanded state for a group and rebuilds rows.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_index` — Group index to toggle.
     fn toggle_group(&mut self, group_index: usize) {
         if let Some(group) = self.groups.get_mut(group_index) {
             group.expanded = !group.expanded;
@@ -430,6 +612,11 @@ impl RouteList {
         }
     }
 
+    /// Rebuilds rendered rows and row-kind mappings.
+    ///
+    /// # Arguments
+    ///
+    /// * `selection_target` — Optional target to restore as selected.
     fn rebuild_rows(&mut self, selection_target: Option<SelectionTarget>) {
         let (rows, row_kinds) = if self.routes.is_empty() {
             (
@@ -491,6 +678,16 @@ impl RouteList {
         self.row_kinds = row_kinds;
     }
 
+    /// Resolves selected line index from row kinds and target preference.
+    ///
+    /// # Arguments
+    ///
+    /// * `row_kinds` — Row kind map for the rebuilt list.
+    /// * `selection_target` — Optional target row preference.
+    ///
+    /// # Returns
+    ///
+    /// A [`usize`] selected line index.
     fn resolve_selected_line(
         row_kinds: &[RowKind],
         selection_target: Option<SelectionTarget>,
@@ -515,6 +712,16 @@ impl RouteList {
         }
     }
 
+    /// Builds the underlying list component from rows and selection.
+    ///
+    /// # Arguments
+    ///
+    /// * `rows` — Render rows.
+    /// * `selected_line` — Initial selected line index.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`List`] instance.
     fn build_component(rows: Vec<Vec<TextSpan>>, selected_line: usize) -> List {
         List::default()
             .borders(Borders::default().sides(BorderSides::NONE))
@@ -525,10 +732,28 @@ impl RouteList {
             .selected_line(selected_line)
     }
 
+    /// Returns the display color for an HTTP method label.
+    ///
+    /// # Arguments
+    ///
+    /// * `method` — HTTP method value.
+    ///
+    /// # Returns
+    ///
+    /// A [`Color`] used for route method rendering.
     fn method_color(method: &crate::api_tester::collection::HttpMethod) -> Color {
         style::method_color(method)
     }
 
+    /// Returns the uppercase label for an HTTP method.
+    ///
+    /// # Arguments
+    ///
+    /// * `method` — HTTP method value.
+    ///
+    /// # Returns
+    ///
+    /// A method label as a `&'static str`.
     fn method_label(method: &HttpMethod) -> &'static str {
         match method {
             HttpMethod::Get => "GET",
@@ -541,6 +766,12 @@ impl RouteList {
 }
 
 impl MockComponent for RouteList {
+    /// Renders route list content and optional scrollbar.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — Frame to render into.
+    /// * `area` — Area allocated to the widget.
     fn view(&mut self, frame: &mut ratatui::Frame, area: ratatui::layout::Rect) {
         let block = ratatui::widgets::Block::default()
             .borders(ratatui::widgets::Borders::ALL)
@@ -594,24 +825,62 @@ impl MockComponent for RouteList {
         }
     }
 
+    /// Queries a widget attribute value.
+    ///
+    /// # Arguments
+    ///
+    /// * `attr` — Attribute to query.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the queried attribute value.
     fn query(&self, attr: Attribute) -> Option<AttrValue> {
         self.component.query(attr)
     }
 
+    /// Updates a widget attribute value.
+    ///
+    /// # Arguments
+    ///
+    /// * `attr` — Attribute to update.
+    /// * `value` — New attribute value.
     fn attr(&mut self, attr: Attribute, value: AttrValue) {
         self.component.attr(attr, value);
     }
 
+    /// Returns the current widget state.
+    ///
+    /// # Returns
+    ///
+    /// A [`tuirealm::State`] snapshot for the widget.
     fn state(&self) -> tuirealm::State {
         self.component.state()
     }
 
+    /// Executes a command against the widget.
+    ///
+    /// # Arguments
+    ///
+    /// * `cmd` — Command to execute.
+    ///
+    /// # Returns
+    ///
+    /// A [`CmdResult`] produced by the widget.
     fn perform(&mut self, cmd: Cmd) -> CmdResult {
         self.component.perform(cmd)
     }
 }
 
 impl Component<Msg, NoUserEvent> for RouteList {
+    /// Handles component events and emits route-list messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `ev` — Incoming component event.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing an emitted application [`Msg`].
     fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Msg> {
         match ev {
             Event::Keyboard(key) => self.on_keyboard(key),

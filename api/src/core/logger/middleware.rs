@@ -1,3 +1,9 @@
+//! Axum middleware for logging HTTP requests and responses.
+//!
+//! Captures request method, path, headers, and optionally the JSON body,
+//! then logs the corresponding response with status code and duration.
+//! Sensitive headers and JSON fields are redacted before output.
+
 use std::time::Instant;
 
 use axum::{
@@ -19,14 +25,32 @@ use super::{
     redaction::parse_redacted_json,
 };
 
+/// Configuration for the HTTP logging middleware.
 #[derive(Debug, Clone)]
 pub struct HttpLoggingConfig {
+    /// Whether to capture and log request/response bodies.
     pub body_enabled: bool,
+    /// Maximum body size in bytes that will be buffered for logging.
     pub max_body_bytes: usize,
+    /// Use verbose (multi-line) output instead of compact single-line format.
     pub verbose: bool,
 }
 
 impl HttpLoggingConfig {
+    /// Creates a new configuration with the given settings.
+    ///
+    /// # Arguments
+    ///
+    /// * `body_enabled` — Whether to capture and log request/response
+    ///   bodies.
+    /// * `max_body_bytes` — Maximum body size in bytes that will be
+    ///   buffered for logging.
+    /// * `verbose` — Use verbose multi-line output instead of compact
+    ///   single-line format.
+    ///
+    /// # Returns
+    ///
+    /// A new [`HttpLoggingConfig`] instance.
     pub fn new(body_enabled: bool, max_body_bytes: usize, verbose: bool) -> Self {
         Self {
             body_enabled,
@@ -36,6 +60,7 @@ impl HttpLoggingConfig {
     }
 }
 
+/// Defaults to body logging disabled, 16 KB max body size, and verbose output.
 impl Default for HttpLoggingConfig {
     fn default() -> Self {
         Self {
@@ -47,6 +72,22 @@ impl Default for HttpLoggingConfig {
 }
 
 impl Logger {
+    /// Axum middleware that logs each HTTP request and its response.
+    ///
+    /// In verbose mode, prints detailed headers and bodies; otherwise prints
+    /// a compact one-line summary. Body logging is gated on
+    /// [`HttpLoggingConfig::body_enabled`] and respects the configured
+    /// [`max_body_bytes`](HttpLoggingConfig::max_body_bytes) limit.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` — The [`HttpLoggingConfig`] extracted from Axum state.
+    /// * `request` — The incoming HTTP request.
+    /// * `next` — The next middleware or handler in the chain.
+    ///
+    /// # Returns
+    ///
+    /// The HTTP [`Response`] produced by downstream handlers.
     pub async fn log_request_and_response(
         State(config): State<HttpLoggingConfig>,
         request: Request,
@@ -140,6 +181,17 @@ impl Logger {
     }
 }
 
+/// Returns `true` if the request body should be logged based on method, content type, and size.
+///
+/// # Arguments
+///
+/// * `method` — The HTTP method of the request.
+/// * `headers` — The request headers.
+/// * `config` — The logging configuration.
+///
+/// # Returns
+///
+/// `true` if the body should be captured for logging.
 fn should_attempt_request_body_logging(
     method: &Method,
     headers: &HeaderMap,
@@ -163,6 +215,18 @@ fn should_attempt_request_body_logging(
     }
 }
 
+/// Returns `true` if the response body should be logged based on content type and size.
+///
+/// # Arguments
+///
+/// * `headers` — The response headers.
+/// * `body_size_hint_upper` — Optional upper bound of the body size
+///   from the response body's size hint.
+/// * `config` — The logging configuration.
+///
+/// # Returns
+///
+/// `true` if the body should be captured for logging.
 fn should_attempt_response_body_logging(
     headers: &HeaderMap,
     body_size_hint_upper: Option<u64>,
@@ -184,6 +248,15 @@ fn should_attempt_response_body_logging(
     }
 }
 
+/// Returns `true` if the `Content-Type` header indicates JSON.
+///
+/// # Arguments
+///
+/// * `headers` — The HTTP header map to inspect.
+///
+/// # Returns
+///
+/// `true` if the `Content-Type` contains `application/json` or `+json`.
 fn is_json_content_type(headers: &HeaderMap) -> bool {
     let content_type = headers
         .get(CONTENT_TYPE)
@@ -198,6 +271,16 @@ fn is_json_content_type(headers: &HeaderMap) -> bool {
     }
 }
 
+/// Parses the `Content-Length` header as a `usize`, returning `None` if absent or invalid.
+///
+/// # Arguments
+///
+/// * `headers` — The HTTP header map to inspect.
+///
+/// # Returns
+///
+/// The parsed content length, or `None` if the header is missing or
+/// cannot be parsed.
 fn content_length(headers: &HeaderMap) -> Option<usize> {
     headers
         .get(CONTENT_LENGTH)

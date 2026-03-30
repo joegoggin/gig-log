@@ -1,3 +1,17 @@
+//! Development orchestrator for GigLog local workflows.
+//!
+//! This module coordinates service processes, file watching, docs generation,
+//! web-log relay intake, and terminal UI rendering for the `dev` command.
+//!
+//! # Modules
+//!
+//! - [`log_store`] — Service labels and in-memory log storage.
+//! - [`process`] — Process spawn/shutdown and command execution helpers.
+//! - [`tui`] — Terminal event loop and keyboard handling.
+//! - [`ui`] — Ratatui rendering primitives for orchestrator views.
+//! - [`watcher`] — Filesystem watch classification and debounce batching.
+//! - [`web_log_relay`] — HTTP relay for browser logs from the web app.
+
 mod log_store;
 mod process;
 mod tui;
@@ -17,20 +31,35 @@ use process::{ServiceProcess, check_requirements, run_job};
 use tui::TuiEvent;
 use watcher::IntentBatch;
 
+/// Defines top-level workspace directories watched for change events.
 const WATCH_PATHS: [&str; 4] = ["web", "api", "common", "dev-tools"];
+/// Defines debounce duration used to merge nearby watch events.
 const DEBOUNCE_DURATION: Duration = Duration::from_millis(400);
+/// Defines maximum wait time for a trunk build completion signal.
 const WEB_BUILD_TIMEOUT: Duration = Duration::from_secs(60);
+/// Defines maximum wait time for the API socket to become reachable.
 const API_READY_TIMEOUT: Duration = Duration::from_secs(30);
+/// Defines polling interval used while waiting for API readiness.
 const API_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
+/// Defines graceful shutdown timeout for the orchestrator task.
 const ORCHESTRATOR_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(300);
+/// Defines socket address used to probe API readiness.
 const API_READY_ADDR: &str = "127.0.0.1:8000";
+/// Defines cargo target directory used for docs builds.
 const DOCS_TARGET_DIR: &str = "target/docs";
+/// Defines output directory served by the docs HTTP server.
 const DOCS_SERVE_DIR: &str = "target/docs/doc";
+/// Defines isolated cargo home used during docs builds.
 const DOCS_CARGO_HOME: &str = "target/.cargo-docs-home";
-const DOCS_BUILD_ENVS: [(&str, &str); 2] = [
+/// Defines rustdoc lint settings enforced during docs builds.
+const DOCS_RUSTDOCFLAGS: &str = "-D rustdoc::broken_intra_doc_links";
+/// Defines environment variables injected into docs build commands.
+const DOCS_BUILD_ENVS: [(&str, &str); 3] = [
     ("CARGO_TARGET_DIR", DOCS_TARGET_DIR),
     ("CARGO_HOME", DOCS_CARGO_HOME),
+    ("RUSTDOCFLAGS", DOCS_RUSTDOCFLAGS),
 ];
+/// Defines cargo arguments used to generate workspace documentation.
 const DOCS_ARGS: [&str; 14] = [
     "doc",
     "-p",
@@ -48,19 +77,38 @@ const DOCS_ARGS: [&str; 14] = [
     "--locked",
 ];
 
+/// Represents lifecycle events parsed from trunk output.
 #[derive(Debug, Clone, Copy)]
 enum TrunkEvent {
+    /// Indicates a trunk build has started.
     BuildStarted,
+    /// Indicates a trunk build finished successfully.
     BuildSucceeded,
+    /// Indicates a trunk build failed.
     BuildFailed,
 }
 
+/// Stores drained trunk event state before waiting for fresh terminal events.
 #[derive(Debug, Clone, Copy, Default)]
 struct DrainedTrunkState {
+    /// Tracks whether a start event was observed without terminal outcome.
     waiting_for_terminal: bool,
+    /// Stores the terminal outcome observed after the latest start event.
     terminal_after_start: Option<TrunkEvent>,
 }
 
+/// Runs the development orchestrator entry workflow.
+///
+/// Validates local prerequisites, launches orchestrator services, and starts
+/// the interactive terminal UI.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if requirements are missing or runtime tasks fail.
 pub async fn run() -> Result<()> {
     check_requirements()?;
 
@@ -82,6 +130,21 @@ pub async fn run() -> Result<()> {
     tui_result
 }
 
+/// Runs the background orchestrator task until shutdown is requested.
+///
+/// # Arguments
+///
+/// * `tui_tx` — Sender used to publish TUI events.
+/// * `shutdown_rx` — Watch channel receiver signaling orchestrator shutdown.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if docs prerequisites, watchers, or service
+/// process startup fails.
 async fn run_orchestrator(
     tui_tx: mpsc::Sender<TuiEvent>,
     mut shutdown_rx: watch::Receiver<bool>,
@@ -249,6 +312,14 @@ async fn run_orchestrator(
     Ok(())
 }
 
+/// Waits for initial web build completion and performs first docs build.
+///
+/// # Arguments
+///
+/// * `tui_tx` — Sender used to publish service lifecycle events.
+/// * `system_tx` — Sender used to emit system log messages.
+/// * `log_senders` — Per-service log sender map.
+/// * `trunk_events` — Receiver for parsed trunk build lifecycle events.
 async fn run_initial_docs_after_startup(
     tui_tx: &mpsc::Sender<TuiEvent>,
     system_tx: &mpsc::Sender<LogEntry>,
@@ -314,6 +385,16 @@ async fn run_initial_docs_after_startup(
     }
 }
 
+/// Executes rebuild and restart actions for a merged watch-event batch.
+///
+/// # Arguments
+///
+/// * `batch` — Merged intent batch to execute.
+/// * `tui_tx` — Sender used to publish service lifecycle events.
+/// * `system_tx` — Sender used to emit system log messages.
+/// * `log_senders` — Per-service log sender map.
+/// * `processes` — Mutable list of long-running orchestrated processes.
+/// * `trunk_events` — Receiver for parsed trunk build lifecycle events.
 async fn execute_batch(
     batch: IntentBatch,
     tui_tx: &mpsc::Sender<TuiEvent>,
@@ -433,6 +514,18 @@ async fn execute_batch(
     }
 }
 
+/// Restarts the API process and reconnects log forwarding.
+///
+/// # Arguments
+///
+/// * `processes` — Mutable list of running long-lived service processes.
+/// * `tui_tx` — Sender used to publish service lifecycle events.
+/// * `system_tx` — Sender used to emit system log messages.
+/// * `log_senders` — Per-service log sender map.
+///
+/// # Returns
+///
+/// A boolean indicating whether API restart succeeded.
 async fn restart_api(
     processes: &mut Vec<ServiceProcess>,
     tui_tx: &mpsc::Sender<TuiEvent>,
@@ -481,6 +574,21 @@ async fn restart_api(
     }
 }
 
+/// Runs a single build step while emitting lifecycle and log events.
+///
+/// # Arguments
+///
+/// * `service` — Service channel associated with this build step.
+/// * `cmd` — Executable name to run.
+/// * `args` — Command-line arguments passed to `cmd`.
+/// * `working_dir` — Optional working directory override.
+/// * `envs` — Optional environment variables to inject.
+/// * `tui_tx` — Sender used to emit service started/exited events.
+/// * `log_senders` — Per-service log sender map.
+///
+/// # Returns
+///
+/// A boolean indicating whether the command completed successfully.
 async fn run_build_step(
     service: Service,
     cmd: &str,
@@ -516,6 +624,15 @@ async fn run_build_step(
     }
 }
 
+/// Waits until the API port is reachable.
+///
+/// # Returns
+///
+/// An empty [`Result`] once the API socket accepts connections.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if readiness polling exceeds timeout.
 async fn wait_for_api_ready() -> Result<()> {
     let fut = async {
         loop {
@@ -535,6 +652,21 @@ async fn wait_for_api_ready() -> Result<()> {
     Ok(())
 }
 
+/// Waits for a trunk build start event followed by a terminal outcome.
+///
+/// # Arguments
+///
+/// * `rx` — Receiver of parsed trunk build lifecycle events.
+/// * `drained` — State collected from events already queued before waiting.
+///
+/// # Returns
+///
+/// An empty [`Result`] when a successful build terminal event is observed.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if trunk reports a failure, times out, or the
+/// event stream ends before success.
 async fn wait_for_web_build(
     rx: &mut mpsc::UnboundedReceiver<TrunkEvent>,
     drained: DrainedTrunkState,
@@ -575,6 +707,15 @@ async fn wait_for_web_build(
     Ok(())
 }
 
+/// Drains pending trunk events and captures the latest terminal context.
+///
+/// # Arguments
+///
+/// * `rx` — Receiver to drain without awaiting.
+///
+/// # Returns
+///
+/// A [`DrainedTrunkState`] snapshot used by subsequent wait logic.
 fn drain_trunk_events(rx: &mut mpsc::UnboundedReceiver<TrunkEvent>) -> DrainedTrunkState {
     let mut state = DrainedTrunkState::default();
     while let Ok(event) = rx.try_recv() {
@@ -600,6 +741,15 @@ fn drain_trunk_events(rx: &mut mpsc::UnboundedReceiver<TrunkEvent>) -> DrainedTr
     state
 }
 
+/// Parses a trunk output line into a lifecycle event when recognized.
+///
+/// # Arguments
+///
+/// * `line` — Raw web service log line.
+///
+/// # Returns
+///
+/// An optional [`TrunkEvent`] when the line contains build lifecycle markers.
 fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
     let lower = line.to_lowercase();
 
@@ -625,6 +775,15 @@ fn parse_trunk_event(line: &str) -> Option<TrunkEvent> {
     None
 }
 
+/// Spawns a background task that forwards log entries into TUI events.
+///
+/// # Arguments
+///
+/// * `tui_tx` — Sender receiving forwarded [`TuiEvent::Log`] events.
+///
+/// # Returns
+///
+/// A [`mpsc::Sender`] used by producers to submit [`LogEntry`] values.
 fn spawn_log_forwarder(tui_tx: &mpsc::Sender<TuiEvent>) -> mpsc::Sender<LogEntry> {
     let (log_tx, mut log_rx) = mpsc::channel::<LogEntry>(256);
     let tx = tui_tx.clone();
@@ -640,6 +799,12 @@ fn spawn_log_forwarder(tui_tx: &mpsc::Sender<TuiEvent>) -> mpsc::Sender<LogEntry
     log_tx
 }
 
+/// Emits a system-scoped log line.
+///
+/// # Arguments
+///
+/// * `tx` — Log sender for system service entries.
+/// * `message` — Message content to emit.
 async fn system_log(tx: &mpsc::Sender<LogEntry>, message: String) {
     let _ = tx
         .send(LogEntry {
@@ -649,6 +814,15 @@ async fn system_log(tx: &mpsc::Sender<LogEntry>, message: String) {
         .await;
 }
 
+/// Describes a merged intent batch for human-readable logging.
+///
+/// # Arguments
+///
+/// * `batch` — Intent batch to describe.
+///
+/// # Returns
+///
+/// A comma-separated label string for enabled intents.
 fn describe_batch(batch: IntentBatch) -> String {
     let mut labels = Vec::new();
     if batch.common {
@@ -666,6 +840,16 @@ fn describe_batch(batch: IntentBatch) -> String {
     labels.join(", ")
 }
 
+/// Starts docs-serving prerequisites for orchestrator-managed docs builds.
+///
+/// # Returns
+///
+/// A running `miniserve` child process handle.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if docs directory creation or `miniserve`
+/// startup fails.
 async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
     use std::process::Stdio;
 
@@ -686,6 +870,15 @@ async fn start_docs_prerequisites() -> Result<tokio::process::Child> {
     Ok(child)
 }
 
+/// Recreates docs output directory before each docs generation pass.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if directory removal or creation fails.
 async fn reset_docs_output_dir() -> Result<()> {
     if tokio::fs::try_exists(DOCS_SERVE_DIR).await? {
         tokio::fs::remove_dir_all(DOCS_SERVE_DIR).await?;

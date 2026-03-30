@@ -1,3 +1,8 @@
+//! Filesystem watch classification and debounce batching.
+//!
+//! This module maps raw notify events into orchestrator intents so rebuild and
+//! restart work can be executed in minimal batches.
+
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -6,23 +11,38 @@ use notify::event::ModifyKind;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
+/// Identifies which orchestrator workflow should run for a path change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Intent {
+    /// Rebuild docs after web-related changes.
     Web,
+    /// Restart the API process and run docs generation.
     Api,
+    /// Rebuild common, then restart API and regenerate docs.
     Common,
+    /// Rebuild dev-tools artifacts and regenerate docs.
     DevTools,
 }
 
+/// Represents a merged set of change intents within one debounce window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct IntentBatch {
+    /// Indicates whether web intent is present.
     pub web: bool,
+    /// Indicates whether api intent is present.
     pub api: bool,
+    /// Indicates whether common intent is present.
     pub common: bool,
+    /// Indicates whether dev-tools intent is present.
     pub dev_tools: bool,
 }
 
 impl IntentBatch {
+    /// Adds a single intent to the batch.
+    ///
+    /// # Arguments
+    ///
+    /// * `intent` — Intent to merge into this batch.
     pub fn add(&mut self, intent: Intent) {
         match intent {
             Intent::Web => self.web = true,
@@ -32,10 +52,23 @@ impl IntentBatch {
         }
     }
 
+    /// Returns whether no intents are currently set.
+    ///
+    /// # Returns
+    ///
+    /// A boolean indicating whether all intent flags are `false`.
     pub fn is_empty(&self) -> bool {
         !self.web && !self.api && !self.common && !self.dev_tools
     }
 
+    /// Collapses overlapping intents into an execution-safe set.
+    ///
+    /// When `common` is set, `api` and `web` become redundant because common
+    /// changes already force downstream API and docs work.
+    ///
+    /// # Returns
+    ///
+    /// An [`IntentBatch`] normalized for command execution.
     pub fn merged_for_execution(self) -> Self {
         if self.common {
             Self {
@@ -50,6 +83,15 @@ impl IntentBatch {
     }
 }
 
+/// Classifies a changed path into an orchestrator intent.
+///
+/// # Arguments
+///
+/// * `path` — Workspace-relative file path reported by the watcher.
+///
+/// # Returns
+///
+/// An optional [`Intent`] when the path maps to a watched workspace area.
 pub fn classify_path(path: &Path) -> Option<Intent> {
     if is_ignored_generated_path(path) {
         return None;
@@ -65,6 +107,15 @@ pub fn classify_path(path: &Path) -> Option<Intent> {
     }
 }
 
+/// Detects generated output paths that should not trigger rebuilds.
+///
+/// # Arguments
+///
+/// * `path` — Workspace-relative path to evaluate.
+///
+/// # Returns
+///
+/// A boolean indicating whether the path should be ignored.
 fn is_ignored_generated_path(path: &Path) -> bool {
     let mut components = path.components();
     let first = match components.next() {
@@ -87,6 +138,15 @@ fn is_ignored_generated_path(path: &Path) -> bool {
     false
 }
 
+/// Filters notify events to those that imply meaningful source changes.
+///
+/// # Arguments
+///
+/// * `kind` — Notify event kind emitted by the filesystem watcher.
+///
+/// # Returns
+///
+/// A boolean indicating whether the event should be processed.
 pub fn is_relevant_event(kind: &EventKind) -> bool {
     match kind {
         EventKind::Create(_) | EventKind::Remove(_) => true,
@@ -99,16 +159,34 @@ pub fn is_relevant_event(kind: &EventKind) -> bool {
     }
 }
 
+/// Provides asynchronous access to classified watch intents.
 pub struct WatchStream {
+    /// Holds the underlying watcher to keep it alive for the stream lifetime.
     _watcher: RecommendedWatcher,
+    /// Receives classified intents from the watcher callback.
     rx: mpsc::UnboundedReceiver<Intent>,
 }
 
 impl WatchStream {
+    /// Receives the next classified intent from the watcher.
+    ///
+    /// # Returns
+    ///
+    /// An optional [`Intent`] when the watcher is still active.
     pub async fn recv(&mut self) -> Option<Intent> {
         self.rx.recv().await
     }
 
+    /// Collects a debounced batch beginning with the first intent.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` — First intent already received.
+    /// * `debounce` — Debounce interval used to merge nearby events.
+    ///
+    /// # Returns
+    ///
+    /// An [`IntentBatch`] containing merged intents for one execution window.
     pub async fn collect_debounced_batch(
         &mut self,
         first: Intent,
@@ -118,6 +196,19 @@ impl WatchStream {
     }
 }
 
+/// Starts recursive watchers for the provided workspace paths.
+///
+/// # Arguments
+///
+/// * `paths` — Root directories to monitor recursively.
+///
+/// # Returns
+///
+/// A [`WatchStream`] that yields classified intents.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if watcher creation fails or a path cannot be watched.
 pub fn start(paths: &[&str]) -> Result<WatchStream> {
     let (tx, rx) = mpsc::unbounded_channel::<Intent>();
 
@@ -152,6 +243,17 @@ pub fn start(paths: &[&str]) -> Result<WatchStream> {
     })
 }
 
+/// Collects intents until the debounce window expires.
+///
+/// # Arguments
+///
+/// * `first` — First intent already received before debounce collection begins.
+/// * `rx` — Intent receiver to drain during the debounce window.
+/// * `debounce` — Duration to wait for additional intents.
+///
+/// # Returns
+///
+/// An [`IntentBatch`] with all intents merged during the window.
 pub async fn collect_debounced_batch(
     first: Intent,
     rx: &mut mpsc::UnboundedReceiver<Intent>,
@@ -183,6 +285,15 @@ pub async fn collect_debounced_batch(
     batch
 }
 
+/// Converts an absolute path to a workspace-relative path when possible.
+///
+/// # Arguments
+///
+/// * `path` — Path reported by notify.
+///
+/// # Returns
+///
+/// A [`PathBuf`] relative to the current workspace, or the original path.
 fn normalize_to_workspace_relative(path: &Path) -> PathBuf {
     if path.is_relative() {
         return path.to_path_buf();

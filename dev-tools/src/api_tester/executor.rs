@@ -1,3 +1,9 @@
+//! `curl` execution support for API tester requests.
+//!
+//! This module converts route definitions into temporary curl config files,
+//! executes requests asynchronously, and parses responses into structured data
+//! for the TUI.
+
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -8,20 +14,38 @@ use tokio::process::Command;
 
 use crate::api_tester::{collection::Route, paths, variables::Variables};
 
+/// Parsed HTTP response returned by [`CurlExecutor`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurlResponse {
+    /// Numeric HTTP status code.
     pub status_code: u16,
+    /// Response header lines.
     pub headers: Vec<String>,
+    /// Raw response body text.
     pub body: String,
 }
 
+/// Executes routes via `curl` and parses the output.
 pub struct CurlExecutor {
+    /// Route request definition to execute.
     route: Route,
+    /// Variable store used for template substitution.
     variables: Variables,
+    /// Controls whether templates should be substituted before execution.
     substitute_variables: bool,
 }
 
 impl CurlExecutor {
+    /// Creates a new executor that substitutes variables before execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Route definition to execute.
+    /// * `variables` — Variable store for template substitution.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`CurlExecutor`].
     pub fn new(route: Route, variables: Variables) -> Self {
         Self {
             route,
@@ -30,12 +54,33 @@ impl CurlExecutor {
         }
     }
 
+    /// Creates an executor for already-prepared request values.
+    ///
+    /// This disables variable substitution so values are sent as-is.
+    ///
+    /// # Arguments
+    ///
+    /// * `route` — Prepared route definition.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`CurlExecutor`].
     pub fn from_prepared(route: Route) -> Self {
         let mut executor = Self::new(route, Variables::default());
         executor.substitute_variables = false;
         executor
     }
 
+    /// Executes the route through `curl` and parses the HTTP response.
+    ///
+    /// # Returns
+    ///
+    /// A parsed [`CurlResponse`] value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if curl config generation, command
+    /// execution, or response parsing fails.
     pub async fn execute(&self) -> anyhow::Result<CurlResponse> {
         let cookie_path = paths::cookie_jar_path();
 
@@ -76,6 +121,19 @@ impl CurlExecutor {
         Self::parse_response(&stdout)
     }
 
+    /// Builds a temporary curl configuration file for the request.
+    ///
+    /// # Arguments
+    ///
+    /// * `cookie_path` — Cookie jar path used by curl.
+    ///
+    /// # Returns
+    ///
+    /// A [`NamedTempFile`] containing curl config directives.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if config file creation or writing fails.
     fn build_curl_config(&self, cookie_path: &Path) -> anyhow::Result<NamedTempFile> {
         let cookie = cookie_path.to_string_lossy().to_string();
         let mut config = NamedTempFile::new().context("failed to create curl config file")?;
@@ -110,6 +168,15 @@ impl CurlExecutor {
         Ok(config)
     }
 
+    /// Escapes a value for use in a curl config string literal.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` — Raw value to escape.
+    ///
+    /// # Returns
+    ///
+    /// An escaped [`String`] safe for curl config output.
     fn escape_curl_config_value(value: &str) -> String {
         value
             .replace('\\', "\\\\")
@@ -119,6 +186,15 @@ impl CurlExecutor {
             .replace('\t', "\\t")
     }
 
+    /// Resolves a request template value for execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template string that may contain variables.
+    ///
+    /// # Returns
+    ///
+    /// A resolved [`String`] value for request execution.
     fn value_for_request(&self, template: &str) -> String {
         if self.substitute_variables {
             self.variables.substitute(template)
@@ -127,6 +203,20 @@ impl CurlExecutor {
         }
     }
 
+    /// Parses curl stdout into a structured response.
+    ///
+    /// # Arguments
+    ///
+    /// * `raw` — Raw curl stdout including dumped headers and status suffix.
+    ///
+    /// # Returns
+    ///
+    /// A parsed [`CurlResponse`] value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if status suffix or status code parsing
+    /// fails.
     fn parse_response(raw: &str) -> anyhow::Result<CurlResponse> {
         let raw = raw.trim_end_matches('\n');
 
@@ -157,6 +247,15 @@ impl CurlExecutor {
         })
     }
 
+    /// Splits a combined header/body payload into two slices.
+    ///
+    /// # Arguments
+    ///
+    /// * `raw` — Raw response text containing header and body sections.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing `(headers, body)` slices.
     fn split_headers_and_body(raw: &str) -> (&str, &str) {
         if let Some(parts) = raw.rsplit_once("\r\n\r\n") {
             return parts;
@@ -169,6 +268,15 @@ impl CurlExecutor {
         ("", raw)
     }
 
+    /// Selects the final header block from a potentially redirected response.
+    ///
+    /// # Arguments
+    ///
+    /// * `headers` — Raw header text that may contain multiple blocks.
+    ///
+    /// # Returns
+    ///
+    /// A slice containing the final header block.
     fn last_header_block(headers: &str) -> &str {
         if let Some((_, last)) = headers.rsplit_once("\r\n\r\n") {
             return last;

@@ -1,3 +1,8 @@
+//! Process lifecycle and command execution helpers for the dev orchestrator.
+//!
+//! This module manages long-running services, short-lived build jobs, and log
+//! stream normalization so terminal rendering preserves ANSI styling.
+
 use std::process::Stdio;
 use std::time::Duration;
 
@@ -11,13 +16,30 @@ use super::{
     web_log_relay::{WEB_LOG_RELAY_BACKEND_URL, WEB_LOG_RELAY_PROXY_PATH},
 };
 
+/// Tracks a long-running orchestrated service process.
 pub struct ServiceProcess {
+    /// Identifies which service this child process represents.
     pub service: Service,
+    /// Owns the spawned child process handle.
     pub child: Child,
+    /// Stores the process group id used for group signaling.
     process_group: u32,
 }
 
 impl ServiceProcess {
+    /// Spawns a long-running service process and streams logs.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` — Service variant to spawn.
+    ///
+    /// # Returns
+    ///
+    /// A [`ServiceProcess`] and receiver for emitted [`LogEntry`] lines.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if command resolution or process spawn fails.
     pub fn spawn(service: Service) -> Result<(Self, mpsc::Receiver<LogEntry>)> {
         let (cmd, args, working_dir) = service_command(service)?;
         let (tx, rx) = mpsc::channel(256);
@@ -72,14 +94,21 @@ impl ServiceProcess {
         ))
     }
 
+    /// Shuts down the process group with a graceful timeout.
     pub async fn shutdown(&mut self) {
         self.shutdown_with_timeout(Duration::from_secs(3)).await;
     }
 
+    /// Shuts down the process group with an aggressive timeout.
     pub async fn shutdown_fast(&mut self) {
         self.shutdown_with_timeout(Duration::from_millis(200)).await;
     }
 
+    /// Signals and waits for process termination with fallback kill.
+    ///
+    /// # Arguments
+    ///
+    /// * `timeout` — Maximum wait duration after `SIGTERM` before `SIGKILL`.
     async fn shutdown_with_timeout(&mut self, timeout: Duration) {
         self.signal_process_group(libc::SIGTERM);
 
@@ -91,6 +120,11 @@ impl ServiceProcess {
         }
     }
 
+    /// Sends a Unix signal to the entire process group.
+    ///
+    /// # Arguments
+    ///
+    /// * `signal` — POSIX signal number to send.
     fn signal_process_group(&self, signal: i32) {
         if self.process_group > 0 {
             unsafe {
@@ -110,6 +144,24 @@ impl Drop for ServiceProcess {
     }
 }
 
+/// Runs a short-lived command and forwards stdout/stderr as log lines.
+///
+/// # Arguments
+///
+/// * `service` — Service channel used for emitted log entries.
+/// * `cmd` — Executable name to run.
+/// * `args` — Command-line arguments passed to `cmd`.
+/// * `working_dir` — Optional working directory override.
+/// * `envs` — Optional environment variables to inject.
+/// * `tx` — Log sender receiving normalized output lines.
+///
+/// # Returns
+///
+/// A boolean indicating whether the command exited successfully.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if the command cannot start or wait fails.
 pub async fn run_job(
     service: Service,
     cmd: &str,
@@ -161,6 +213,19 @@ pub async fn run_job(
     Ok(status.success())
 }
 
+/// Resolves command metadata for a long-running service.
+///
+/// # Arguments
+///
+/// * `service` — Service to resolve into command configuration.
+///
+/// # Returns
+///
+/// A tuple of executable, argument list, and optional working directory.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if the service is not long-running.
 fn service_command(
     service: Service,
 ) -> Result<(&'static str, Vec<&'static str>, Option<&'static str>)> {
@@ -181,6 +246,13 @@ fn service_command(
     }
 }
 
+/// Reads newline-delimited output from a process stream and forwards logs.
+///
+/// # Arguments
+///
+/// * `reader` — Async stream for stdout or stderr.
+/// * `service` — Service channel associated with the stream.
+/// * `tx` — Sender receiving normalized log entries.
 async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
     reader: R,
     service: Service,
@@ -200,6 +272,16 @@ async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
     }
 }
 
+/// Normalizes ANSI control fragments for line-based TUI rendering.
+///
+/// # Arguments
+///
+/// * `line` — Raw line received from process output.
+/// * `active_ansi_prefix` — Mutable active SGR prefix carried across lines.
+///
+/// # Returns
+///
+/// An optional normalized line suitable for TUI display.
 fn normalize_ansi_for_tui(line: String, active_ansi_prefix: &mut String) -> Option<String> {
     if is_ansi_control_only_line(&line) {
         update_active_ansi_prefix(&line, active_ansi_prefix);
@@ -232,10 +314,25 @@ fn normalize_ansi_for_tui(line: String, active_ansi_prefix: &mut String) -> Opti
     Some(normalized)
 }
 
+/// Detects whether a line starts with an ANSI escape sequence.
+///
+/// # Arguments
+///
+/// * `line` — Candidate log line.
+///
+/// # Returns
+///
+/// A boolean indicating whether the line starts with `\x1b[`.
 fn starts_with_ansi_sequence(line: &str) -> bool {
     line.as_bytes().starts_with(b"\x1b[")
 }
 
+/// Updates active ANSI state after processing a rendered line.
+///
+/// # Arguments
+///
+/// * `line` — Normalized or raw line containing ANSI sequences.
+/// * `active_ansi_prefix` — Active SGR prefix to update in place.
 fn update_active_ansi_prefix(line: &str, active_ansi_prefix: &mut String) {
     if starts_with_ansi_sequence(line) {
         active_ansi_prefix.clear();
@@ -272,18 +369,54 @@ fn update_active_ansi_prefix(line: &str, active_ansi_prefix: &mut String) {
     }
 }
 
+/// Checks whether an ANSI sequence clears terminal styling.
+///
+/// # Arguments
+///
+/// * `sequence` — Escape sequence candidate.
+///
+/// # Returns
+///
+/// A boolean indicating whether the sequence is an SGR reset.
 fn ansi_sequence_is_reset(sequence: &str) -> bool {
     sequence == "\u{1b}[0m" || sequence == "\u{1b}[m"
 }
 
+/// Checks whether an ANSI sequence is an SGR style command.
+///
+/// # Arguments
+///
+/// * `sequence` — Escape sequence candidate.
+///
+/// # Returns
+///
+/// A boolean indicating whether the sequence ends in `m`.
 fn ansi_sequence_is_sgr(sequence: &str) -> bool {
     sequence.ends_with('m')
 }
 
+/// Detects lines that contain only ANSI control data and no visible text.
+///
+/// # Arguments
+///
+/// * `line` — Candidate line to inspect.
+///
+/// # Returns
+///
+/// A boolean indicating whether rendered content is empty after stripping ANSI.
 fn is_ansi_control_only_line(line: &str) -> bool {
     line.contains('\u{1b}') && strip_ansi_sequences(line).trim().is_empty()
 }
 
+/// Removes ANSI escape sequences from a line.
+///
+/// # Arguments
+///
+/// * `line` — Input string that may contain ANSI escapes.
+///
+/// # Returns
+///
+/// A string with all ANSI escapes removed.
 fn strip_ansi_sequences(line: &str) -> String {
     let mut output = String::with_capacity(line.len());
     let mut chars = line.chars().peekable();
@@ -307,6 +440,15 @@ fn strip_ansi_sequences(line: &str) -> String {
     output
 }
 
+/// Verifies required external binaries are available in `PATH`.
+///
+/// # Returns
+///
+/// An empty [`Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if `trunk` or `miniserve` is missing.
 pub fn check_requirements() -> Result<()> {
     for binary in ["trunk", "miniserve"] {
         if std::process::Command::new("which")
