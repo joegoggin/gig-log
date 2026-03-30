@@ -56,7 +56,10 @@ pub enum SelectedItem {
     /// Selected route row.
     Route(RouteSelection),
     /// Selected group header row.
-    Group { name: String },
+    Group {
+        /// Stores the selected group header name.
+        name: String,
+    },
 }
 
 /// Persisted state for route list expansion and selection.

@@ -314,7 +314,10 @@ enum VariableContext {
     /// Operates on global variables.
     Global,
     /// Operates on route-scoped variables.
-    Scoped { scope_id: String },
+    Scoped {
+        /// Stores the route scope identifier.
+        scope_id: String,
+    },
 }
 
 /// Applies screen-local messages to screen-local state.
@@ -525,11 +528,17 @@ pub struct AppModel {
 }
 
 impl AppModel {
+    /// Defines maximum number of stored navigation snapshots.
     const MAX_NAVIGATION_HISTORY: usize = 100;
+    /// Defines width breakpoint that enables split preview layout.
     const ROUTE_PREVIEW_MIN_WIDTH: u16 = 110;
+    /// Defines fixed height reserved for body status content.
     const BODY_STATUS_HEIGHT: u16 = 3;
+    /// Defines additional chrome height around body preview content.
     const BODY_PREVIEW_CHROME_HEIGHT: u16 = 4;
+    /// Defines maximum footer height for editor status hints.
     const EDITOR_FOOTER_MAX_HEIGHT: u16 = 1;
+    /// Defines width reserved for the editor scrollbar gutter.
     const EDITOR_SCROLLBAR_WIDTH: u16 = 1;
 
     /// Creates a new application model and loads persisted state.

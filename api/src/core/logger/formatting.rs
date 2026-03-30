@@ -5,7 +5,7 @@
 //! printers, compact one-line HTTP summaries, and JSON pretty-printing.
 
 use axum::http::{HeaderMap, Method, StatusCode};
-use colorized::{Colors, colorize_print, colorize_println};
+use colorized::{colorize_print, colorize_println, Colors};
 use log::Record;
 use serde_json::Value;
 use uuid::Uuid;
@@ -15,9 +15,13 @@ use super::redaction::sanitize_header_value;
 /// Broad classification of an HTTP status code for color selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum StatusClass {
+    /// Indicates a 2xx successful response.
     Success,
+    /// Indicates a 4xx client error response.
     ClientError,
+    /// Indicates a 5xx server error response.
     ServerError,
+    /// Indicates any non-2xx/4xx/5xx response class.
     Other,
 }
 
@@ -387,7 +391,7 @@ pub(super) fn log_debug(record: &Record<'_>) {
 mod tests {
     use axum::http::StatusCode;
 
-    use super::{StatusClass, classify_status, extract_after_src, get_hashtags, get_spaces};
+    use super::{classify_status, extract_after_src, get_hashtags, get_spaces, StatusClass};
 
     #[test]
     fn classify_status_maps_expected_classes() {

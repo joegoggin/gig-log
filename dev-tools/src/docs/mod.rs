@@ -145,8 +145,8 @@ async fn reset_docs_output_dir() -> Result<()> {
 
 /// Generates the workspace-level doc index page.
 ///
-/// Delegates to [`doc_index::generate`] with the default docs target
-/// directory.
+/// Delegates to [`doc_index::generate`] using `CARGO_TARGET_DIR` when set,
+/// otherwise the default docs target directory.
 ///
 /// # Returns
 ///
@@ -156,7 +156,9 @@ async fn reset_docs_output_dir() -> Result<()> {
 ///
 /// Returns an [`anyhow::Error`] if index generation fails.
 pub fn generate_index() -> Result<()> {
-    doc_index::generate(DOCS_TARGET_DIR)
+    let target_dir =
+        std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| DOCS_TARGET_DIR.to_string());
+    doc_index::generate(&target_dir)
 }
 
 /// Verifies docs command prerequisites.

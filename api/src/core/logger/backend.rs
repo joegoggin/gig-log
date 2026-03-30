@@ -22,7 +22,9 @@ use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 /// helper methods for printing colored status banners during startup.
 pub struct Logger;
 
+/// Stores the global logger instance registered with [`log`].
 static LOGGER: Logger = Logger;
+/// Stores whether verbose log formatting is enabled.
 static LOG_VERBOSE: AtomicBool = AtomicBool::new(true);
 
 impl Logger {
