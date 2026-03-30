@@ -5,8 +5,8 @@
 //! methods for sign-up, login, password management, and email change flows.
 
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 
 use crate::{controllers::auth::AuthController, routes::app::AppState};

@@ -5,9 +5,8 @@
 //! configures CORS, and applies HTTP logging middleware.
 
 use axum::{
-    Router,
     http::{HeaderName, Method},
-    middleware,
+    middleware, Router,
 };
 use log::error;
 use sqlx::{Pool, Postgres};

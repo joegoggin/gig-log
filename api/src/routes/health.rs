@@ -3,7 +3,7 @@
 //! This module defines the [`HealthRouter`], which exposes a single endpoint
 //! for verifying that the API is running.
 
-use axum::{Router, routing::get};
+use axum::{routing::get, Router};
 
 use crate::controllers::health::HeathController;
 use crate::routes::app::AppState;
