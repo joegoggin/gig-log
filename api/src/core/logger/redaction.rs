@@ -1,5 +1,20 @@
+//! Sensitive value redaction for JSON bodies and HTTP headers.
+//!
+//! Replaces values of keys that match known sensitive patterns (passwords,
+//! tokens, secrets, API keys) with `"(hidden)"` before they reach log output.
+
 use serde_json::{Value, from_slice};
 
+/// Parses bytes as JSON and redacts all sensitive fields, returning `None` for empty or invalid input.
+///
+/// # Arguments
+///
+/// * `bytes` — The raw byte slice to parse.
+///
+/// # Returns
+///
+/// The redacted JSON [`Value`], or `None` if `bytes` is empty or
+/// not valid JSON.
 pub(super) fn parse_redacted_json(bytes: &[u8]) -> Option<Value> {
     if bytes.is_empty() {
         return None;
@@ -11,6 +26,11 @@ pub(super) fn parse_redacted_json(bytes: &[u8]) -> Option<Value> {
     Some(value)
 }
 
+/// Recursively replaces values of sensitive keys with `"(hidden)"`.
+///
+/// # Arguments
+///
+/// * `value` — The JSON value to redact in place.
 pub(super) fn redact_json_value(value: &mut Value) {
     match value {
         Value::Object(map) => {
@@ -31,6 +51,15 @@ pub(super) fn redact_json_value(value: &mut Value) {
     }
 }
 
+/// Returns `true` if the JSON key matches a sensitive pattern (case-insensitive).
+///
+/// # Arguments
+///
+/// * `key` — The JSON field name to check.
+///
+/// # Returns
+///
+/// `true` if the key matches a known sensitive pattern.
 pub(super) fn is_sensitive_json_key(key: &str) -> bool {
     let key = key.to_ascii_lowercase();
 
@@ -49,6 +78,16 @@ pub(super) fn is_sensitive_json_key(key: &str) -> bool {
         || key.contains("password")
 }
 
+/// Returns `"(hidden)"` for sensitive headers, or the original value otherwise.
+///
+/// # Arguments
+///
+/// * `name` — The header name.
+/// * `value` — The header value.
+///
+/// # Returns
+///
+/// `"(hidden)"` if the header is sensitive, or the original `value`.
 pub(super) fn sanitize_header_value(name: &str, value: &str) -> String {
     if is_sensitive_header(name) {
         "(hidden)".to_string()
@@ -57,6 +96,15 @@ pub(super) fn sanitize_header_value(name: &str, value: &str) -> String {
     }
 }
 
+/// Returns `true` if the header name matches a sensitive pattern (case-insensitive).
+///
+/// # Arguments
+///
+/// * `name` — The header name to check.
+///
+/// # Returns
+///
+/// `true` if the header name matches a known sensitive pattern.
 pub(super) fn is_sensitive_header(name: &str) -> bool {
     let name = name.to_ascii_lowercase();
 

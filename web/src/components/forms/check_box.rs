@@ -1,7 +1,20 @@
+//! Styled checkbox form component.
+
 use leptos::prelude::*;
 
 use crate::utils::class_name::ClassNameUtil;
 
+/// Renders a checkbox input bound to a reactive boolean signal.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS class names.
+/// * `label` — Label text shown next to the checkbox.
+/// * `checked` — Signal storing the checkbox checked state.
+///
+/// # Returns
+///
+/// A Leptos view containing the checkbox field.
 #[component]
 pub fn CheckBox(
     #[prop(optional, into)] class: Option<String>,

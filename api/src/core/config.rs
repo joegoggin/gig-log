@@ -1,3 +1,10 @@
+//! Application configuration loaded from environment variables.
+//!
+//! This module provides the [`Config`] struct, which reads all required and
+//! optional settings from the process environment (with `.env` file support via
+//! `dotenvy`). Required variables cause a startup error when missing; optional
+//! variables fall back to sensible defaults documented on each field.
+
 use std::env;
 
 use anyhow::Error;
@@ -6,24 +13,54 @@ use log::error;
 
 use crate::core::app::AppResult;
 
+/// Runtime configuration for the API server.
+///
+/// Constructed once at startup via [`Config::new`]. All fields are populated
+/// from environment variables; see individual field docs for the variable name,
+/// whether it is required, and its default value.
 #[derive(Debug, Clone)]
 pub struct Config {
+    /// Application environment name. **Required** — `APP_ENV`.
     pub app_env: String,
+    /// Allowed web client origin for CORS. **Required** — `WEB_ORIGIN`.
     pub web_origin: String,
+    /// PostgreSQL connection string. **Required** — `DATABASE_URL`.
     pub database_url: String,
+    /// Run pending SQLx migrations on startup. `AUTO_APPLY_MIGRATIONS_ENABLED`, default `true`.
     pub auto_apply_migrations: bool,
+    /// Secret key used to sign JWTs. **Required** — `JWT_SECRET`.
     pub jwt_secret: String,
+    /// JWT access token lifetime in seconds. `JWT_ACCESS_TOKEN_EXPIRY_SECONDS`, default `900` (15 min).
     pub jwt_access_token_expiry_seconds: u64,
+    /// JWT refresh token lifetime in seconds. `JWT_REFRESH_TOKEN_EXPIRY_SECONDS`, default `604800` (7 days).
     pub jwt_refresh_token_expiry_seconds: u64,
+    /// Resend API key for transactional email. **Required** — `RESEND_API_KEY`.
     pub resend_api_key: String,
+    /// Sender address for outgoing email. **Required** — `RESEND_FROM_EMAIL`.
     pub resend_from_email: String,
+    /// Auth code expiry in seconds. `AUTH_CODE_EXPIRY_SECONDS`, default `600` (10 min).
     pub auth_code_expiry_seconds: u64,
+    /// Log level filter string. `LOG_LEVEL`, default `"debug"`.
     pub log_level: String,
+    /// Enable verbose (structured) log output. `LOG_VERBOSE`, default `true` in development.
     pub log_verbose: bool,
+    /// Maximum HTTP body size in bytes to include in logs. `LOG_HTTP_MAX_BODY_BYTES`, default `16384`.
     pub log_http_max_body: usize,
 }
 
 impl Config {
+    /// Loads configuration from the environment.
+    ///
+    /// Reads a `.env` file if present, then resolves every setting.
+    ///
+    /// # Returns
+    ///
+    /// A fully populated [`Config`] instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any required environment variable is missing
+    /// or empty.
     pub fn new() -> AppResult<Self> {
         dotenv().ok();
 
@@ -61,19 +98,51 @@ impl Config {
         })
     }
 
+    /// Returns `true` when [`app_env`](Self::app_env) indicates a development environment.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the current environment is `"development"` or `"dev"`.
     pub fn is_development(&self) -> bool {
         Self::is_development_env(&self.app_env)
     }
 
+    /// Returns `true` when HTTP request/response bodies should be included in logs.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the application is running in a development environment.
     pub fn is_http_body_logging_enabled(&self) -> bool {
         self.is_development()
     }
 
+    /// Returns `true` if the given environment string is `"development"` or `"dev"` (case-insensitive).
+    ///
+    /// # Arguments
+    ///
+    /// * `app_env` — The environment name to check.
+    ///
+    /// # Returns
+    ///
+    /// `true` if `app_env` matches `"development"` or `"dev"`.
     pub fn is_development_env(app_env: &str) -> bool {
         let normalized = app_env.trim().to_lowercase();
         normalized == "development" || normalized == "dev"
     }
 
+    /// Reads a required, non-empty environment variable or returns an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    ///
+    /// # Returns
+    ///
+    /// The trimmed variable value as a [`String`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the variable is unset or empty.
     fn get_var_from_env(var: &str) -> AppResult<String> {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => Ok(value),
@@ -85,6 +154,16 @@ impl Config {
         }
     }
 
+    /// Reads an optional string variable, falling back to `default`.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    /// * `default` — Value returned when the variable is unset or empty.
+    ///
+    /// # Returns
+    ///
+    /// The variable value, or `default` if unavailable.
     fn get_optional_string(var: &str, default: impl Into<String>) -> String {
         match Self::get_var_from_env(var) {
             Ok(value) => value,
@@ -92,6 +171,21 @@ impl Config {
         }
     }
 
+    /// Reads an optional boolean variable, falling back to `default`.
+    ///
+    /// Accepts `true`, `1`, `yes`, `on` as truthy and `false`, `0`, `no`,
+    /// `off` as falsy (case-insensitive). Unrecognized values log a warning
+    /// and fall back to `default`.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    /// * `default` — Value returned when the variable is unset, empty,
+    ///   or unrecognized.
+    ///
+    /// # Returns
+    ///
+    /// The parsed boolean, or `default` if unavailable.
     fn get_optional_bool(var: &str, default: bool) -> bool {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => {
@@ -111,6 +205,17 @@ impl Config {
         }
     }
 
+    /// Reads an optional `usize` variable, falling back to `default`.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    /// * `default` — Value returned when the variable is unset, empty,
+    ///   or not a valid `usize`.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `usize`, or `default` if unavailable.
     fn get_optional_usize(var: &str, default: usize) -> usize {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => match value.parse::<usize>() {
@@ -127,6 +232,17 @@ impl Config {
         }
     }
 
+    /// Reads an optional `u64` variable, falling back to `default`.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    /// * `default` — Value returned when the variable is unset, empty,
+    ///   or not a valid `u64`.
+    ///
+    /// # Returns
+    ///
+    /// The parsed `u64`, or `default` if unavailable.
     fn get_optional_number(var: &str, default: u64) -> u64 {
         match env::var(var) {
             Ok(value) if !value.trim().is_empty() => match value.parse::<u64>() {

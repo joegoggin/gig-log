@@ -1,3 +1,9 @@
+//! Application-wide log backend.
+//!
+//! Implements the [`log::Log`] trait with colorized, optionally verbose output.
+//! In verbose mode, errors and debug messages include the source file and line
+//! number; in compact mode, only the level tag and message are printed.
+
 use std::{
     env,
     sync::atomic::{AtomicBool, Ordering},
@@ -9,15 +15,32 @@ use log::{set_logger, set_max_level, Level, Log, Metadata, Record};
 
 use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 
+/// Log target for semantic informational messages.
 const MESSAGE_TARGET: &str = "gig_log::message";
+/// Log target for semantic success messages.
 const SUCCESS_TARGET: &str = "gig_log::success";
 
+/// Application-wide logger that implements [`log::Log`].
+///
+/// Provides both a verbose mode (structured output with file paths and line
+/// numbers) and a compact mode (level-tagged single lines). Also exposes
+/// helper methods for printing colored status banners during startup.
 pub struct Logger;
 
+/// Stores the global logger instance registered with [`log`].
 static LOGGER: Logger = Logger;
+/// Stores whether verbose log formatting is enabled.
 static LOG_VERBOSE: AtomicBool = AtomicBool::new(true);
 
 impl Logger {
+    /// Registers the global logger and sets the maximum log level.
+    ///
+    /// # Arguments
+    ///
+    /// * `log_level` — A string parsed into a [`LevelFilter`](log::LevelFilter)
+    ///   (e.g. `"debug"`, `"info"`).
+    /// * `verbose` — When `true`, log output includes source locations and
+    ///   decorative banners; when `false`, uses compact single-line format.
     pub fn setup_logging(log_level: &str, verbose: bool) {
         LOG_VERBOSE.store(verbose, Ordering::Relaxed);
 
@@ -25,6 +48,10 @@ impl Logger {
         set_max_level(parse_level_filter(log_level));
     }
 
+    /// Bootstraps logging from `LOG_LEVEL` and `LOG_VERBOSE` environment variables.
+    ///
+    /// Intended for early startup before [`Config`](crate::core::config::Config)
+    /// is available. Defaults to `"info"` level with verbose output.
     pub fn setup_logging_from_env() {
         dotenvy::dotenv().ok();
 
@@ -41,8 +68,53 @@ impl Logger {
         Self::setup_logging(&level, verbose);
     }
 
+    /// Returns `true` when verbose logging is enabled.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the logger was initialized with `verbose` set to `true`.
     pub fn is_verbose() -> bool {
         LOG_VERBOSE.load(Ordering::Relaxed)
+    }
+
+    /// Prints a green success banner (verbose) or a plain green line (compact).
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — The text to display.
+    pub fn log_success(message: &str) {
+        if !log::log_enabled!(Level::Info) {
+            return;
+        }
+
+        if Self::is_verbose() {
+            let hashtags = get_hashtags(6);
+            let message = format!("\n{} {} {}\n", hashtags, message, hashtags);
+            colorize_println(message, Colors::GreenFg);
+            return;
+        }
+
+        colorize_println(message, Colors::GreenFg);
+    }
+
+    /// Prints a blue informational banner (verbose) or a plain blue line (compact).
+    ///
+    /// # Arguments
+    ///
+    /// * `message` — The text to display.
+    pub fn log_message(message: &str) {
+        if !log::log_enabled!(Level::Info) {
+            return;
+        }
+
+        if Self::is_verbose() {
+            let hashtags = get_hashtags(6);
+            let message = format!("\n{} {} {}\n", hashtags, message, hashtags);
+            colorize_println(message, Colors::BlueFg);
+            return;
+        }
+
+        colorize_println(message, Colors::BlueFg);
     }
 }
 

@@ -1,5 +1,12 @@
+//! Icon component for `PaymentIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `PaymentIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `PaymentIcon` UI.
 #[component]
 pub fn PaymentIcon() -> impl IntoView {
     view! {

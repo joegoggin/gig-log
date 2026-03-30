@@ -1,5 +1,12 @@
+//! Icon component for `CompanyIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `CompanyIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `CompanyIcon` UI.
 #[component]
 pub fn CompanyIcon() -> impl IntoView {
     view! {

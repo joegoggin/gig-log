@@ -1,3 +1,5 @@
+//! Notification list rendering component.
+
 use leptos::prelude::*;
 
 use crate::{
@@ -5,6 +7,11 @@ use crate::{
     contexts::{NotificationType, use_notifications},
 };
 
+/// Renders active notifications from the notification context.
+///
+/// # Returns
+///
+/// A Leptos view containing all active notification cards.
 #[component]
 pub fn Notifications() -> impl IntoView {
     let notifications = use_notifications();

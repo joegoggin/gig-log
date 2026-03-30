@@ -1,3 +1,6 @@
+//! CSS class string composition helpers.
+
+/// Provides helper methods for composing CSS class name strings.
 pub struct ClassNameUtil {
     main_class: String,
     class_prop: Option<String>,

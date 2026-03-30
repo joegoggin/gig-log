@@ -1,3 +1,8 @@
+//! HTTP relay that forwards browser logs into the dev orchestrator stream.
+//!
+//! This module exposes a small Axum server used by Trunk proxying so web logs
+//! appear in the same TUI as API and build output.
+
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -11,37 +16,65 @@ use tokio::{
 
 use super::log_store::{LogEntry, Service};
 
+/// Defines the socket address used by the relay server.
 pub const WEB_LOG_RELAY_ADDR: &str = "127.0.0.1:9777";
+/// Defines the backend URL used by Trunk proxy configuration.
 pub const WEB_LOG_RELAY_BACKEND_URL: &str = "http://127.0.0.1:9777";
+/// Defines the proxied endpoint path used by browser log posts.
 pub const WEB_LOG_RELAY_PROXY_PATH: &str = "/_giglog/web-log";
 
+/// Defines the ANSI blue escape sequence.
 const ANSI_BLUE: &str = "\x1b[34m";
+/// Defines the ANSI green escape sequence.
 const ANSI_GREEN: &str = "\x1b[32m";
+/// Defines the ANSI red escape sequence.
 const ANSI_RED: &str = "\x1b[31m";
+/// Defines the ANSI yellow escape sequence.
 const ANSI_YELLOW: &str = "\x1b[33m";
+/// Defines the ANSI magenta escape sequence.
 const ANSI_MAGENTA: &str = "\x1b[35m";
+/// Defines the ANSI purple escape sequence.
 const ANSI_PURPLE: &str = "\x1b[35m";
+/// Defines the ANSI reset escape sequence.
 const ANSI_CLEAR: &str = "\x1b[0m";
 
+/// Defines the semantic message target used by structured info logs.
 const MESSAGE_TARGET: &str = "gig_log::message";
+/// Defines the semantic success target used by structured info logs.
 const SUCCESS_TARGET: &str = "gig_log::success";
 
+/// Classifies semantic info logs for special formatting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SemanticLogKind {
     Message,
     Success,
 }
 
+/// Classifies web log payload levels into relay formatting categories.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WebLogLevel {
+    /// Represents error-level browser logs.
     Error,
+    /// Represents warning-level browser logs.
     Warn,
+    /// Represents info-level browser logs.
     Info,
+    /// Represents debug-level browser logs.
     Debug,
+    /// Represents trace-level browser logs.
     Trace,
 }
 
 impl WebLogLevel {
+    /// Parses a raw level string into a normalized [`WebLogLevel`].
+    ///
+    /// # Arguments
+    ///
+    /// * `raw` — Raw level string from incoming JSON payload.
+    ///
+    /// # Returns
+    ///
+    /// A parsed [`WebLogLevel`], defaulting to [`WebLogLevel::Info`].
     fn parse(raw: &str) -> Self {
         match raw.trim().to_ascii_lowercase().as_str() {
             "error" => Self::Error,
@@ -54,28 +87,42 @@ impl WebLogLevel {
     }
 }
 
+/// Represents the JSON body posted by web log emitters.
 #[derive(Debug, Clone, Deserialize)]
 struct RelayLogPayload {
+    /// Contains the severity level string.
     level: String,
+    /// Contains the rendered log message.
     message: String,
+    /// Contains an optional logging target/module name.
     target: Option<String>,
+    /// Contains an optional file path value.
     file: Option<String>,
+    /// Contains an optional source line number.
     line: Option<u32>,
 }
 
+/// Stores shared state for relay handlers.
 #[derive(Clone)]
 struct RelayState {
+    /// Sends converted browser logs into the orchestrator log stream.
     web_log_tx: mpsc::Sender<LogEntry>,
+    /// Controls verbose multi-line formatting behavior.
     verbose: bool,
+    /// Serializes multiline emission so grouped lines stay contiguous.
     emit_lock: Arc<Mutex<()>>,
 }
 
+/// Owns the relay task and graceful shutdown channel.
 pub struct WebLogRelay {
+    /// Sends shutdown signal to the relay server task.
     shutdown_tx: Option<oneshot::Sender<()>>,
+    /// Runs the Axum server until shutdown.
     task: JoinHandle<()>,
 }
 
 impl WebLogRelay {
+    /// Shuts down the relay task and waits for completion.
     pub async fn shutdown(mut self) {
         if let Some(tx) = self.shutdown_tx.take() {
             let _ = tx.send(());
@@ -84,6 +131,19 @@ impl WebLogRelay {
     }
 }
 
+/// Starts the web log relay server.
+///
+/// # Arguments
+///
+/// * `web_log_tx` — Sender used to forward web log entries.
+///
+/// # Returns
+///
+/// A [`WebLogRelay`] handle for graceful shutdown.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if the relay socket cannot bind.
 pub async fn start(web_log_tx: mpsc::Sender<LogEntry>) -> Result<WebLogRelay> {
     let listener = TcpListener::bind(WEB_LOG_RELAY_ADDR)
         .await
@@ -123,6 +183,18 @@ pub async fn start(web_log_tx: mpsc::Sender<LogEntry>) -> Result<WebLogRelay> {
     })
 }
 
+/// Accepts posted web logs and forwards formatted lines to the orchestrator.
+///
+/// Mapped to `POST /` and `POST /_giglog/web-log`.
+///
+/// # Arguments
+///
+/// * `state` — Shared relay state including output sender and verbosity mode.
+/// * `payload` — Posted log payload from the web client.
+///
+/// # Returns
+///
+/// A [`StatusCode`] indicating relay acceptance or backpressure failure.
 async fn relay_log(
     State(state): State<RelayState>,
     Json(payload): Json<RelayLogPayload>,
@@ -147,6 +219,11 @@ async fn relay_log(
     StatusCode::NO_CONTENT
 }
 
+/// Reads verbosity configuration from `LOG_VERBOSE`.
+///
+/// # Returns
+///
+/// A boolean controlling verbose relay formatting behavior.
 fn read_verbose_from_env() -> bool {
     std::env::var("LOG_VERBOSE")
         .ok()
@@ -158,6 +235,16 @@ fn read_verbose_from_env() -> bool {
         .unwrap_or(true)
 }
 
+/// Formats a relay payload into one or more ANSI-decorated lines.
+///
+/// # Arguments
+///
+/// * `payload` — Incoming web log payload.
+/// * `verbose` — Enables expanded multiline formatting when `true`.
+///
+/// # Returns
+///
+/// A formatted string ready for newline splitting.
 fn format_relay_line(payload: &RelayLogPayload, verbose: bool) -> String {
     let level = WebLogLevel::parse(&payload.level);
     let message = payload.message.trim_end().to_string();
@@ -195,6 +282,7 @@ fn format_relay_line(payload: &RelayLogPayload, verbose: bool) -> String {
     }
 }
 
+/// Parses an optional log target into a semantic log kind.
 fn parse_semantic_log_kind(target: Option<&str>) -> Option<SemanticLogKind> {
     match target {
         Some(MESSAGE_TARGET) => Some(SemanticLogKind::Message),
@@ -203,6 +291,7 @@ fn parse_semantic_log_kind(target: Option<&str>) -> Option<SemanticLogKind> {
     }
 }
 
+/// Formats semantic message/success lines to match API logger style.
 fn format_semantic_line(kind: SemanticLogKind, message: &str, verbose: bool) -> String {
     let (color, hashtags) = match kind {
         SemanticLogKind::Message => (ANSI_BLUE, "######"),
@@ -216,6 +305,16 @@ fn format_semantic_line(kind: SemanticLogKind, message: &str, verbose: bool) -> 
     format!("{color}{message}{ANSI_CLEAR}")
 }
 
+/// Formats compact single-line output for non-verbose mode.
+///
+/// # Arguments
+///
+/// * `level` — Parsed web log level.
+/// * `message` — Message body text.
+///
+/// # Returns
+///
+/// A formatted one-line log message.
 fn format_non_verbose(level: WebLogLevel, message: &str) -> String {
     match level {
         WebLogLevel::Error => format!("{ANSI_RED}[ERROR] {message}{ANSI_CLEAR}"),
@@ -226,6 +325,19 @@ fn format_non_verbose(level: WebLogLevel, message: &str) -> String {
     }
 }
 
+/// Formats banner-style output for error-like verbose entries.
+///
+/// # Arguments
+///
+/// * `title` — Section title shown in the banner.
+/// * `color` — ANSI color sequence for the banner block.
+/// * `file` — Source file label for the log origin.
+/// * `line_number` — Source line label for the log origin.
+/// * `message` — Message content to render.
+///
+/// # Returns
+///
+/// A multiline ANSI-formatted error block.
 fn format_error_like(
     title: &str,
     color: &str,
@@ -239,10 +351,28 @@ fn format_error_like(
     )
 }
 
+/// Splits formatted output into line records while preserving blanks.
+///
+/// # Arguments
+///
+/// * `formatted` — Formatted relay output string.
+///
+/// # Returns
+///
+/// A vector of per-line strings suitable for log emission.
 fn split_formatted_lines(formatted: &str) -> Vec<String> {
     formatted.split('\n').map(str::to_string).collect()
 }
 
+/// Trims a file path to the suffix after `src/` when present.
+///
+/// # Arguments
+///
+/// * `path` — Input path from a web log payload.
+///
+/// # Returns
+///
+/// A path suffix after `src/`, or the original path.
 fn extract_after_src(path: &str) -> String {
     let src_prefix = "src/";
     if let Some(start_index) = path.find(src_prefix) {

@@ -1,3 +1,5 @@
+//! Low-level HTTP client wrapper for frontend API requests.
+
 use gig_log_common::models::error::ApiError;
 use reqwest::Client;
 use serde::{Serialize, de::DeserializeOwned};
@@ -6,12 +8,19 @@ use crate::api_client::error::ClientError;
 
 const BASE_URL: &str = "http://localhost:8000";
 
+/// Wraps a [`reqwest::Client`] for GigLog API requests.
 #[derive(Debug, Clone)]
 pub struct ApiClient {
+    /// Stores the underlying HTTP client.
     client: Client,
 }
 
 impl ApiClient {
+    /// Creates a new [`ApiClient`].
+    ///
+    /// # Returns
+    ///
+    /// An initialized [`ApiClient`].
     pub fn new() -> Self {
         let client = Client::builder()
             .build()
@@ -20,6 +29,21 @@ impl ApiClient {
         Self { client }
     }
 
+    /// Sends a `POST` request and deserializes the response body.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — API path appended to the frontend base URL.
+    /// * `body` — Optional serializable request payload.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing the deserialized response payload on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if request execution fails, response
+    /// deserialization fails, or the API returns an error payload.
     pub async fn post<T: Serialize, R: DeserializeOwned>(
         &self,
         path: &str,
@@ -48,6 +72,21 @@ impl ApiClient {
         }
     }
 
+    /// Sends a `POST` request that expects no response payload.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — API path appended to the frontend base URL.
+    /// * `body` — Optional serializable request payload.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing `()` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if request execution fails or the API returns
+    /// an error payload.
     pub async fn post_no_content<T: Serialize>(
         &self,
         path: &str,
@@ -73,6 +112,20 @@ impl ApiClient {
         }
     }
 
+    /// Sends a `GET` request and deserializes the response body.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` — API path appended to the frontend base URL.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing the deserialized response payload on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if request execution fails, response
+    /// deserialization fails, or the API returns an error payload.
     pub async fn get<R: DeserializeOwned>(&self, path: &str) -> Result<R, ClientError> {
         let response = self.client.get(format!("{}{}", BASE_URL, path));
 
@@ -95,6 +148,16 @@ impl ApiClient {
         }
     }
 
+    /// Applies browser credential settings to a request builder.
+    ///
+    /// # Arguments
+    ///
+    /// * `builder` — Request builder to update.
+    ///
+    /// # Returns
+    ///
+    /// The request builder configured with credential behavior for the target
+    /// architecture.
     fn with_credentials(builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         #[cfg(target_arch = "wasm32")]
         {

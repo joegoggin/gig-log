@@ -1,3 +1,5 @@
+//! Mobile viewport context powered by media query listeners.
+
 use leptos::prelude::*;
 use std::cell::RefCell;
 use wasm_bindgen::{JsCast, closure::Closure};
@@ -10,10 +12,16 @@ thread_local! {
         RefCell::new(None);
 }
 
+/// Returns the browser media-query handle for mobile breakpoint checks.
+///
+/// # Returns
+///
+/// An optional [`MediaQueryList`] when browser APIs are available.
 fn get_media_query() -> Option<MediaQueryList> {
     window().and_then(|window| window.match_media(MOBILE_MEDIA_QUERY).ok().flatten())
 }
 
+/// Removes the registered media-query change listener.
 fn clear_media_listener() {
     MOBILE_MEDIA_LISTENER.with(|listener| {
         if let Some((media_query, on_change)) = listener.borrow_mut().take() {
@@ -23,12 +31,23 @@ fn clear_media_listener() {
     });
 }
 
+/// Stores responsive breakpoint state for the current viewport.
 #[derive(Debug, Clone, Copy)]
 pub struct MobileContext {
+    /// Stores whether the viewport currently matches the mobile query.
     pub is_mobile: RwSignal<bool>,
 }
 
 impl MobileContext {
+    /// Creates a new [`MobileContext`].
+    ///
+    /// # Arguments
+    ///
+    /// * `is_mobile` — Initial mobile state derived from media-query matching.
+    ///
+    /// # Returns
+    ///
+    /// An initialized [`MobileContext`].
     pub fn new(is_mobile: bool) -> Self {
         Self {
             is_mobile: RwSignal::new(is_mobile),
@@ -36,6 +55,11 @@ impl MobileContext {
     }
 }
 
+/// Provides the shared mobile context and registers viewport listeners.
+///
+/// # Returns
+///
+/// The created [`MobileContext`] inserted into Leptos context.
 pub fn provide_mobile_context() -> MobileContext {
     let media_query = get_media_query();
 
@@ -66,6 +90,11 @@ pub fn provide_mobile_context() -> MobileContext {
     ctx
 }
 
+/// Retrieves the shared mobile context.
+///
+/// # Returns
+///
+/// The current [`MobileContext`] from Leptos context.
 pub fn use_mobile() -> MobileContext {
     use_context::<MobileContext>()
         .expect("MobileContext not provided. Wrap your app with provide_mobile_context()")

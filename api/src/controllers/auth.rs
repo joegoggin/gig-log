@@ -1,3 +1,8 @@
+//! Authentication and account management endpoints.
+//!
+//! Provides [`AuthController`] with handlers for sign-up, log-in,
+//! log-out, token refresh, password management, and email change flows.
+
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
@@ -24,9 +29,30 @@ use crate::repo::{
 };
 use crate::routes::app::AppState;
 
+/// Handlers for authentication and account management routes.
 pub struct AuthController;
 
 impl AuthController {
+    /// Registers a new user account.
+    ///
+    /// Mapped to `POST /sign-up`. Creates the user, generates an email
+    /// verification code, and sends a confirmation email.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`] providing database and config access.
+    /// * `body` — A [`ValidatedJson<SignUpRequest>`] containing the user's
+    ///   name, email, and password.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming account creation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the email is already in use.
+    /// Returns [`ApiErrorResponse::InternalServerError`] if password hashing
+    /// or email sending fails.
     pub async fn sign_up(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<SignUpRequest>,
@@ -87,6 +113,25 @@ impl AuthController {
         Ok(Json::from(response))
     }
 
+    /// Confirms a new user's email address.
+    ///
+    /// Mapped to `POST /confirm-email`. Validates the verification code
+    /// and marks the user's email as confirmed.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<ConfirmEmailRequest>`] containing the
+    ///   verification code.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the email was verified.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the code is invalid or
+    /// expired.
     pub async fn confirm_email(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<ConfirmEmailRequest>,
@@ -112,6 +157,28 @@ impl AuthController {
         Ok(Json::from(response))
     }
 
+    /// Authenticates a user and issues session tokens.
+    ///
+    /// Mapped to `POST /log-in`. Verifies credentials, generates JWT
+    /// access and refresh tokens, stores the refresh token hash, and
+    /// sets both tokens as HTTP cookies.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `jar` — The [`CookieJar`] to receive the new session cookies.
+    /// * `body` — A [`ValidatedJson<LogInRequest>`] containing email and
+    ///   password.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the updated [`CookieJar`] and [`Json<User>`] with the
+    /// authenticated user's profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if credentials are invalid
+    /// or the email is not yet confirmed.
     pub async fn log_in(
         state: State<AppState>,
         jar: CookieJar,
@@ -156,6 +223,26 @@ impl AuthController {
         Ok((jar, Json(user)))
     }
 
+    /// Ends the current session and revokes refresh tokens.
+    ///
+    /// Mapped to `POST /log-out`. Attempts to revoke the specific refresh
+    /// token from the cookie. If that fails, falls back to revoking all
+    /// refresh tokens for the user identified by the access token. Clears
+    /// both session cookies regardless.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `jar` — The [`CookieJar`] containing the session cookies to clear.
+    ///
+    /// # Returns
+    ///
+    /// The updated [`CookieJar`] with session cookies removed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`ApiErrorResponse`] if database operations fail during
+    /// token revocation.
     pub async fn log_out(State(state): State<AppState>, jar: CookieJar) -> ApiResult<CookieJar> {
         let mut revoked_by_refresh_cookie = false;
 
@@ -206,6 +293,26 @@ impl AuthController {
         Ok(jar)
     }
 
+    /// Rotates the session tokens using the current refresh token.
+    ///
+    /// Mapped to `POST /refresh`. Validates the existing refresh token,
+    /// revokes it, issues a new access/refresh token pair, and updates
+    /// the cookies.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `jar` — The [`CookieJar`] containing the current refresh token.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the updated [`CookieJar`] and [`Json<User>`] with the
+    /// authenticated user's profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the refresh token is
+    /// missing, invalid, or does not match a stored record.
     pub async fn refresh(
         State(state): State<AppState>,
         jar: CookieJar,
@@ -265,12 +372,49 @@ impl AuthController {
         Ok((jar, Json(user)))
     }
 
+    /// Returns the currently authenticated user's profile.
+    ///
+    /// Mapped to `GET /me`. Requires a valid access token.
+    ///
+    /// # Arguments
+    ///
+    /// * `auth` — The [`AuthUser`] extracted from the access token.
+    /// * `state` — The shared [`AppState`].
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<User>`] containing the authenticated user's profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::NotFound`] if the user no longer exists.
     pub async fn me(auth: AuthUser, State(state): State<AppState>) -> ApiResult<Json<User>> {
         let user = UserRepo::find_user_by_id(&state.db_pool, auth.user_id).await?;
 
         Ok(Json(user))
     }
 
+    /// Initiates the forgot-password flow.
+    ///
+    /// Mapped to `POST /forgot-password`. If an account exists for the
+    /// given email, generates a password-reset code and sends it via
+    /// email. Always returns a success message to avoid leaking whether
+    /// the account exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<ForgotPasswordRequest>`] containing the
+    ///   email address.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] with a generic confirmation message.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::InternalServerError`] if the email
+    /// fails to send.
     pub async fn forgot_password(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<ForgotPasswordRequest>,
@@ -322,6 +466,26 @@ impl AuthController {
         Ok(Json(response))
     }
 
+    /// Validates a forgot-password reset code without consuming it.
+    ///
+    /// Mapped to `POST /verify-forgot-password`. Allows the client to
+    /// check whether a reset code is still valid before presenting the
+    /// new-password form.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<VerifyForgotPasswordRequest>`]
+    ///   containing the reset code.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the code is valid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the code is invalid or
+    /// expired.
     pub async fn verify_forgot_password(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<VerifyForgotPasswordRequest>,
@@ -338,6 +502,27 @@ impl AuthController {
         }))
     }
 
+    /// Resets the user's password using a valid reset code.
+    ///
+    /// Mapped to `POST /set-password`. Validates the reset code, hashes
+    /// the new password, updates the stored hash, marks the code as used,
+    /// and revokes all existing refresh tokens for the user.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<SetPasswordRequest>`] containing the
+    ///   reset code and new password.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the password was reset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the reset code is
+    /// invalid or expired. Returns
+    /// [`ApiErrorResponse::InternalServerError`] if password hashing fails.
     pub async fn set_password(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<SetPasswordRequest>,
@@ -367,6 +552,25 @@ impl AuthController {
         }))
     }
 
+    /// Sends a verification code for changing the authenticated user's password.
+    ///
+    /// Mapped to `POST /request-change-password`. Requires authentication.
+    /// Generates a password-change code and emails it to the user.
+    ///
+    /// # Arguments
+    ///
+    /// * `auth` — The [`AuthUser`] extracted from the access token.
+    /// * `state` — The shared [`AppState`].
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the code was sent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::NotFound`] if the user no longer exists.
+    /// Returns [`ApiErrorResponse::InternalServerError`] if email sending
+    /// fails.
     pub async fn request_change_password_code(
         auth: AuthUser,
         State(state): State<AppState>,
@@ -398,6 +602,27 @@ impl AuthController {
         }))
     }
 
+    /// Changes the authenticated user's password.
+    ///
+    /// Mapped to `POST /change-password`. Requires authentication.
+    /// Verifies the current password, validates the change code, hashes
+    /// the new password, and revokes all refresh tokens.
+    ///
+    /// # Arguments
+    ///
+    /// * `auth` — The [`AuthUser`] extracted from the access token.
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<ChangePasswordRequest>`] containing
+    ///   the current password, verification code, and new password.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the password was changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the current password is
+    /// incorrect or the verification code is invalid or expired.
     pub async fn change_password(
         auth: AuthUser,
         State(state): State<AppState>,
@@ -443,6 +668,27 @@ impl AuthController {
         }))
     }
 
+    /// Initiates an email address change for the authenticated user.
+    ///
+    /// Mapped to `POST /request-email-change`. Requires authentication.
+    /// Checks that the new email is not already in use, generates a
+    /// verification code, and sends it to the new address.
+    ///
+    /// # Arguments
+    ///
+    /// * `auth` — The [`AuthUser`] extracted from the access token.
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<RequestEmailChangeRequest>`] containing
+    ///   the new email address.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the code was sent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the new email is
+    /// already in use.
     pub async fn request_email_change(
         auth: AuthUser,
         State(state): State<AppState>,
@@ -490,6 +736,26 @@ impl AuthController {
         }))
     }
 
+    /// Completes the email address change using a verification code.
+    ///
+    /// Mapped to `POST /confirm-email-change`. Validates the email-change
+    /// code, updates the user's email address, and marks the code as used.
+    ///
+    /// # Arguments
+    ///
+    /// * `state` — The shared [`AppState`].
+    /// * `body` — A [`ValidatedJson<ConfirmEmailRequest>`] containing the
+    ///   verification code.
+    ///
+    /// # Returns
+    ///
+    /// A [`Json<MessageResponse>`] confirming the email was changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApiErrorResponse::BadRequest`] if the code is invalid or
+    /// expired. Returns [`ApiErrorResponse::InternalServerError`] if the
+    /// code record is missing the new email value.
     pub async fn confirm_email_change(
         State(state): State<AppState>,
         ValidatedJson(body): ValidatedJson<ConfirmEmailRequest>,
@@ -514,6 +780,18 @@ impl AuthController {
         }))
     }
 
+    /// Computes a hex-encoded SHA-256 hash of the given input.
+    ///
+    /// Used internally to hash refresh tokens before storage, so that
+    /// raw token values are never persisted to the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` — The string to hash.
+    ///
+    /// # Returns
+    ///
+    /// The lowercase hex-encoded SHA-256 digest as a [`String`].
     fn sha256_hash(input: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());

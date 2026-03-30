@@ -1,3 +1,9 @@
+//! Variable storage, substitution, and redaction for API tester routes.
+//!
+//! This module manages global and route-scoped variables used by request
+//! templates. It supports preview-safe rendering, execution substitution, and
+//! hidden-value redaction for output surfaces.
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -6,38 +12,60 @@ use std::fs;
 
 use crate::api_tester::paths;
 
+/// Rendering and redaction behavior for a variable value.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum VariableMode {
+    /// Uses the value for execution but masks it in previews.
     Hidden,
+    /// Displays the value in previews and uses it for execution.
     #[default]
     Placeholder,
 }
 
+/// Internal variable representation persisted in TOML.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Variable {
+    /// Variable value.
     value: String,
+    /// Variable display mode.
     #[serde(default)]
     mode: VariableMode,
 }
 
+/// TOML root structure for persisted variables.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 struct VariablesFile {
+    /// Global variables available to every route.
     #[serde(default)]
     global: BTreeMap<String, Variable>,
+    /// Route-scoped variable maps keyed by route scope ID.
     #[serde(default)]
     scoped: BTreeMap<String, BTreeMap<String, Variable>>,
 }
 
+/// Runtime variable store with global and scoped entries.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Variables {
+    /// Global variable map.
     global: BTreeMap<String, Variable>,
+    /// Route-scoped variable map.
     scoped: BTreeMap<String, BTreeMap<String, Variable>>,
 }
 
 impl Variables {
+    /// Loads variables from the default API tester variables file.
+    ///
+    /// # Returns
+    ///
+    /// A [`Variables`] instance loaded from disk, or [`Variables::default`]
+    /// when the file does not exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if file reading or parsing fails.
     pub fn load() -> anyhow::Result<Self> {
         let path = paths::variables_path();
 
@@ -52,6 +80,19 @@ impl Variables {
             .with_context(|| format!("failed to parse variables file: {}", path.display()))
     }
 
+    /// Parses a TOML variables payload.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` — Raw TOML text.
+    ///
+    /// # Returns
+    ///
+    /// A parsed [`Variables`] value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if TOML parsing fails.
     fn parse(content: &str) -> anyhow::Result<Self> {
         let variables_file: VariablesFile =
             toml::from_str(content).context("failed to parse variables TOML")?;
@@ -62,14 +103,44 @@ impl Variables {
         })
     }
 
+    /// Substitutes variables for request execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template text containing `{{KEY}}` placeholders.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] with resolved execution values.
     pub fn substitute(&self, template: &str) -> String {
         self.substitute_for_execution(template)
     }
 
+    /// Substitutes global variables for request execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template text containing `{{KEY}}` placeholders.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] with global substitutions applied.
     pub fn substitute_for_execution(&self, template: &str) -> String {
         self.substitute_with_scope(template, None, |variable| variable.value.as_str())
     }
 
+    /// Substitutes variables for request execution with optional route scope.
+    ///
+    /// Scoped values override global values when both exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template text containing `{{KEY}}` placeholders.
+    /// * `scope_id` — Optional route scope ID.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] with scoped execution substitutions applied.
     pub fn substitute_for_execution_with_scope(
         &self,
         template: &str,
@@ -78,6 +149,19 @@ impl Variables {
         self.substitute_with_scope(template, scope_id, |variable| variable.value.as_str())
     }
 
+    /// Substitutes variables for preview rendering with optional route scope.
+    ///
+    /// Hidden variables are rendered as `hidden` while placeholder values are
+    /// rendered literally.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template text containing `{{KEY}}` placeholders.
+    /// * `scope_id` — Optional route scope ID.
+    ///
+    /// # Returns
+    ///
+    /// A preview-safe [`String`] with hidden values masked.
     pub fn substitute_for_preview_with_scope(
         &self,
         template: &str,
@@ -89,6 +173,16 @@ impl Variables {
         })
     }
 
+    /// Redacts hidden variable values from arbitrary text.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` — Input text that may contain resolved secret values.
+    /// * `scope_id` — Optional route scope ID used for variable resolution.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] with hidden values replaced by `hidden`.
     pub fn redact_hidden_values_with_scope(&self, text: &str, scope_id: Option<&str>) -> String {
         let mut hidden_values: Vec<&str> = self
             .resolved_variables(scope_id)
@@ -112,6 +206,18 @@ impl Variables {
             })
     }
 
+    /// Substitutes template variables using the provided replacement strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `template` — Template text containing `{{KEY}}` placeholders.
+    /// * `scope_id` — Optional route scope ID used for lookup precedence.
+    /// * `replacement_for` — Closure that maps a resolved variable to a
+    ///   replacement value.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] with resolved substitutions and unknown tokens preserved.
     fn substitute_with_scope<F>(
         &self,
         template: &str,
@@ -154,6 +260,16 @@ impl Variables {
         output
     }
 
+    /// Resolves a variable by key using scoped-over-global precedence.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Variable key to resolve.
+    /// * `scope_id` — Optional route scope ID.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing a resolved [`Variable`] reference.
     fn resolve_variable<'a>(&'a self, key: &str, scope_id: Option<&str>) -> Option<&'a Variable> {
         if let Some(scope_id) = scope_id
             && let Some(scope_variables) = self.scoped.get(scope_id)
@@ -165,6 +281,17 @@ impl Variables {
         self.global.get(key)
     }
 
+    /// Builds a merged key map visible for a specific scope.
+    ///
+    /// Scoped entries override global entries with the same key.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Optional route scope ID.
+    ///
+    /// # Returns
+    ///
+    /// A [`BTreeMap`] of resolved keys and variable references.
     fn resolved_variables<'a>(&'a self, scope_id: Option<&str>) -> BTreeMap<&'a str, &'a Variable> {
         let mut resolved = BTreeMap::new();
 
@@ -183,6 +310,15 @@ impl Variables {
         resolved
     }
 
+    /// Serializes variables to TOML text.
+    ///
+    /// # Returns
+    ///
+    /// A TOML [`String`] representing all global and scoped variables.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if serialization fails.
     fn to_toml_string(&self) -> anyhow::Result<String> {
         toml::to_string_pretty(&VariablesFile {
             global: self.global.clone(),
@@ -191,6 +327,16 @@ impl Variables {
         .context("failed to serialize variables TOML")
     }
 
+    /// Saves variables to the default API tester variables file.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`anyhow::Result`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`anyhow::Error`] if directory creation, serialization, or
+    /// file writing fails.
     pub fn save(&self) -> anyhow::Result<()> {
         let path = paths::variables_path();
 
@@ -208,14 +354,31 @@ impl Variables {
         Ok(())
     }
 
+    /// Inserts or replaces a global variable with the provided mode.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Global variable key.
+    /// * `value` — Variable value.
+    /// * `mode` — Variable rendering mode.
     pub fn add_with_mode(&mut self, key: String, value: String, mode: VariableMode) {
         self.global.insert(key, Variable { value, mode });
     }
 
+    /// Deletes a global variable by key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Global variable key.
     pub fn delete(&mut self, key: &str) {
         self.global.remove(key);
     }
 
+    /// Returns all global variable entries.
+    ///
+    /// # Returns
+    ///
+    /// A [`Vec`] of global key/value references.
     pub fn entries(&self) -> Vec<(&String, &String)> {
         self.global
             .iter()
@@ -223,14 +386,40 @@ impl Variables {
             .collect()
     }
 
+    /// Gets a global variable value by key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Global variable key.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the global variable value reference.
     pub fn get(&self, key: &str) -> Option<&String> {
         self.global.get(key).map(|variable| &variable.value)
     }
 
+    /// Gets a global variable mode by key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` — Global variable key.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the global variable [`VariableMode`].
     pub fn mode(&self, key: &str) -> Option<VariableMode> {
         self.global.get(key).map(|variable| variable.mode)
     }
 
+    /// Inserts or replaces a scoped variable for a route scope.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
+    /// * `key` — Scoped variable key.
+    /// * `value` — Scoped variable value.
+    /// * `mode` — Scoped variable rendering mode.
     pub fn scoped_add_with_mode(
         &mut self,
         scope_id: impl Into<String>,
@@ -244,6 +433,12 @@ impl Variables {
             .insert(key, Variable { value, mode });
     }
 
+    /// Deletes a scoped variable by scope and key.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
+    /// * `key` — Scoped variable key.
     pub fn scoped_delete(&mut self, scope_id: &str, key: &str) {
         if let Some(scope_variables) = self.scoped.get_mut(scope_id) {
             scope_variables.remove(key);
@@ -254,10 +449,24 @@ impl Variables {
         }
     }
 
+    /// Deletes all scoped variables for a route scope.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
     pub fn delete_scope(&mut self, scope_id: &str) {
         self.scoped.remove(scope_id);
     }
 
+    /// Returns scoped variable entries for a route scope.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
+    ///
+    /// # Returns
+    ///
+    /// A [`Vec`] of scoped key/value references.
     pub fn scoped_entries(&self, scope_id: &str) -> Vec<(&String, &String)> {
         self.scoped
             .get(scope_id)
@@ -270,6 +479,16 @@ impl Variables {
             .unwrap_or_default()
     }
 
+    /// Gets a scoped variable value by scope and key.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
+    /// * `key` — Scoped variable key.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the scoped variable value reference.
     pub fn scoped_get(&self, scope_id: &str, key: &str) -> Option<&String> {
         self.scoped
             .get(scope_id)
@@ -277,6 +496,16 @@ impl Variables {
             .map(|variable| &variable.value)
     }
 
+    /// Gets a scoped variable mode by scope and key.
+    ///
+    /// # Arguments
+    ///
+    /// * `scope_id` — Route scope identifier.
+    /// * `key` — Scoped variable key.
+    ///
+    /// # Returns
+    ///
+    /// An [`Option`] containing the scoped variable [`VariableMode`].
     pub fn scoped_mode(&self, scope_id: &str, key: &str) -> Option<VariableMode> {
         self.scoped
             .get(scope_id)

@@ -1,5 +1,12 @@
+//! Icon component for `WarningIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `WarningIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `WarningIcon` UI.
 #[component]
 pub fn WarningIcon() -> impl IntoView {
     view! {

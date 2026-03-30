@@ -1,5 +1,12 @@
+//! Icon component for `SettingsIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `SettingsIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `SettingsIcon` UI.
 #[component]
 pub fn SettingsIcon() -> impl IntoView {
     view! {

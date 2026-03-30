@@ -1,16 +1,31 @@
+//! Generic select input component.
+
 use std::{collections::HashMap, sync::Arc};
 
 use leptos::prelude::*;
 
 use crate::utils::class_name::ClassNameUtil;
 
+/// Represents one option rendered by [`SelectInput`].
 #[derive(Clone, Debug)]
 pub struct SelectOption<T> {
+    /// Stores the option value returned on selection.
     pub value: T,
+    /// Stores the display label for this option.
     pub label: String,
 }
 
 impl<T> SelectOption<T> {
+    /// Creates a new select option.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` — Option value returned when selected.
+    /// * `label` — Display label for the option.
+    ///
+    /// # Returns
+    ///
+    /// An initialized [`SelectOption`].
     pub fn new(value: T, label: impl Into<String>) -> Self {
         Self {
             value,
@@ -21,6 +36,19 @@ impl<T> SelectOption<T> {
 
 const PLACEHOLDER_VALUE: &str = "__select_input_placeholder__";
 
+/// Renders a generic select input bound to a reactive selected option.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS class names.
+/// * `label` — Optional field label text.
+/// * `placeholder` — Optional placeholder option label.
+/// * `options` — Options available for selection.
+/// * `selected_option` — Signal storing the selected option.
+///
+/// # Returns
+///
+/// A Leptos view containing the select input field.
 #[component]
 pub fn SelectInput<T>(
     #[prop(optional, into)] class: Option<String>,

@@ -1,7 +1,19 @@
+//! Layout wrapper for authenticated application pages.
+
 use leptos::prelude::*;
 
 use crate::{components::nav::bar::NavBar, utils::class_name::ClassNameUtil};
 
+/// Renders the primary app layout with navigation and content area.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS classes for the content container.
+/// * `children` — Child content rendered inside the main layout.
+///
+/// # Returns
+///
+/// A Leptos view containing the main application layout.
 #[component]
 pub fn MainLayout(
     #[prop(optional, into)] class: Option<String>,

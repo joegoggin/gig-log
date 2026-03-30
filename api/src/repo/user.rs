@@ -1,3 +1,8 @@
+//! User account database operations.
+//!
+//! Provides [`UserRepo`] for creating, querying, and updating user
+//! records in the `users` table.
+
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
@@ -5,9 +10,27 @@ use gig_log_common::models::user::User;
 
 use crate::core::error::ApiResult;
 
+/// Repository for user account database operations.
 pub struct UserRepo;
 
 impl UserRepo {
+    /// Inserts a new user record.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `first_name` — The user's first name.
+    /// * `last_name` — The user's last name.
+    /// * `email` — The user's email address.
+    /// * `password_hash` — The Argon2 hash of the user's password.
+    ///
+    /// # Returns
+    ///
+    /// The newly created [`User`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the insert fails (e.g., duplicate email).
     pub async fn insert_user(
         pool: &Pool<Postgres>,
         first_name: &str,
@@ -33,6 +56,20 @@ impl UserRepo {
         Ok(user)
     }
 
+    /// Finds a user by email address.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `email` — The email address to search for.
+    ///
+    /// # Returns
+    ///
+    /// The [`User`] matching the given email.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no user with the given email exists.
     pub async fn find_user_by_email(pool: &Pool<Postgres>, email: &str) -> ApiResult<User> {
         let user = sqlx::query_as!(
             User,
@@ -49,6 +86,20 @@ impl UserRepo {
         Ok(user)
     }
 
+    /// Finds a user by their unique identifier.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `id` — The user's UUID.
+    ///
+    /// # Returns
+    ///
+    /// The [`User`] matching the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no user with the given ID exists.
     pub async fn find_user_by_id(pool: &Pool<Postgres>, id: Uuid) -> ApiResult<User> {
         let user = sqlx::query_as!(
             User,
@@ -65,6 +116,20 @@ impl UserRepo {
         Ok(user)
     }
 
+    /// Retrieves the stored password hash for a user.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `user_id` — The user's UUID.
+    ///
+    /// # Returns
+    ///
+    /// The Argon2 password hash as a [`String`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no user with the given ID exists.
     pub async fn get_password_hash(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<String> {
         let hashed_password = sqlx::query_scalar!(
             r#"
@@ -80,6 +145,21 @@ impl UserRepo {
         Ok(hashed_password)
     }
 
+    /// Updates a user's password hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `user_id` — The user's UUID.
+    /// * `password_hash` — The new Argon2 password hash.
+    ///
+    /// # Returns
+    ///
+    /// `()` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the update query fails.
     pub async fn update_password(
         pool: &Pool<Postgres>,
         user_id: Uuid,
@@ -100,6 +180,20 @@ impl UserRepo {
         Ok(())
     }
 
+    /// Marks a user's email as confirmed.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `user_id` — The user's UUID.
+    ///
+    /// # Returns
+    ///
+    /// `()` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the update query fails.
     pub async fn confirm_email(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<()> {
         sqlx::query!(
             r#"
@@ -115,6 +209,21 @@ impl UserRepo {
         Ok(())
     }
 
+    /// Updates a user's email address and marks it as confirmed.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `user_id` — The user's UUID.
+    /// * `new_email` — The new email address.
+    ///
+    /// # Returns
+    ///
+    /// `()` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the update query fails.
     pub async fn update_email_and_confirm(
         pool: &Pool<Postgres>,
         user_id: Uuid,
@@ -135,6 +244,20 @@ impl UserRepo {
         Ok(())
     }
 
+    /// Marks a user's email as unconfirmed.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool` — The database connection pool.
+    /// * `user_id` — The user's UUID.
+    ///
+    /// # Returns
+    ///
+    /// `()` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the update query fails.
     pub async fn set_email_unconfirmed(pool: &Pool<Postgres>, user_id: Uuid) -> ApiResult<()> {
         sqlx::query!(
             r#"

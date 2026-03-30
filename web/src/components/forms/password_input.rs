@@ -1,3 +1,5 @@
+//! Password input component with visibility toggle.
+
 use gig_log_common::models::error::ValidationError;
 use leptos::prelude::*;
 
@@ -6,6 +8,20 @@ use crate::{
     utils::class_name::ClassNameUtil,
 };
 
+/// Renders a password input with validation feedback and visibility toggle.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS class names.
+/// * `label` — Optional input label text.
+/// * `placeholder` — Optional placeholder text.
+/// * `name` — Field name used for matching validation errors.
+/// * `errors` — Signal containing field validation errors.
+/// * `value` — Signal containing the current input value.
+///
+/// # Returns
+///
+/// A Leptos view containing the password input field.
 #[component]
 pub fn PasswordInput(
     #[prop(optional, into)] class: Option<String>,

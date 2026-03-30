@@ -1,3 +1,20 @@
+//! Interactive API tester for GigLog development workflows.
+//!
+//! This module boots a full-screen terminal UI for browsing saved request
+//! routes, editing request definitions, substituting scoped variables, and
+//! executing requests through `curl`.
+//!
+//! # Modules
+//!
+//! - [`app`] — Central application state and message/update logic.
+//! - [`body_preview`] — Request and response body formatting utilities.
+//! - [`collection`] — Persistent route collection models and storage.
+//! - [`components`] — TUI components used by the API tester screens.
+//! - [`executor`] — `curl` execution and response parsing.
+//! - [`paths`] — Filesystem path helpers for API tester data files.
+//! - [`route_list_state`] — Persisted route list expansion and selection state.
+//! - [`variables`] — Global and scoped variable substitution/redaction.
+
 use std::io::{self, Stdout};
 use std::time::Duration;
 
@@ -25,8 +42,20 @@ pub mod paths;
 pub mod route_list_state;
 pub mod variables;
 
+/// Terminal type used by the API tester runtime.
 type AppTerminal = Terminal<CrosstermBackend<Stdout>>;
 
+/// Initializes the terminal for full-screen TUI rendering.
+///
+/// Enables raw mode, enters the alternate screen, and turns on mouse capture.
+///
+/// # Returns
+///
+/// A configured [`AppTerminal`] instance.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if raw mode or terminal setup fails.
 fn init_terminal() -> anyhow::Result<AppTerminal> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -34,6 +63,22 @@ fn init_terminal() -> anyhow::Result<AppTerminal> {
     Ok(Terminal::new(CrosstermBackend::new(stdout))?)
 }
 
+/// Restores terminal state after API tester execution.
+///
+/// Leaves the alternate screen, disables mouse capture and raw mode, then
+/// makes the cursor visible again.
+///
+/// # Arguments
+///
+/// * `terminal` — Active terminal backend to restore.
+///
+/// # Returns
+///
+/// An empty [`anyhow::Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if any terminal restore operation fails.
 fn restore_terminal(terminal: &mut AppTerminal) -> anyhow::Result<()> {
     execute!(
         terminal.backend_mut(),
@@ -45,6 +90,9 @@ fn restore_terminal(terminal: &mut AppTerminal) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Installs a panic hook that restores terminal state before panicking.
+///
+/// This prevents leaving the shell in raw mode after an unexpected panic.
 fn install_panic_hook() {
     let default_hook = std::panic::take_hook();
 
@@ -55,6 +103,20 @@ fn install_panic_hook() {
     }));
 }
 
+/// Runs the API tester TUI event loop.
+///
+/// Initializes terminal state, mounts global event listeners, dispatches UI
+/// messages, executes prepared requests, and restores the terminal before
+/// returning.
+///
+/// # Returns
+///
+/// An empty [`anyhow::Result`] on success.
+///
+/// # Errors
+///
+/// Returns an [`anyhow::Error`] if terminal setup, component mounting,
+/// rendering, or message processing fails.
 pub async fn run() -> anyhow::Result<()> {
     use tuirealm::{Application, EventListenerCfg, PollStrategy};
 

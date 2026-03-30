@@ -1,5 +1,12 @@
+//! Icon component for `InfoIcon`.
+
 use leptos::prelude::*;
 
+/// Renders the `InfoIcon` component.
+///
+/// # Returns
+///
+/// A Leptos view for the `InfoIcon` UI.
 #[component]
 pub fn InfoIcon() -> impl IntoView {
     view! {

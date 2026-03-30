@@ -1,8 +1,25 @@
+//! Styled textarea component with validation feedback.
+
 use gig_log_common::models::error::ValidationError;
 use leptos::prelude::*;
 
 use crate::utils::class_name::ClassNameUtil;
 
+/// Renders a textarea input with validation feedback.
+///
+/// # Arguments
+///
+/// * `class` — Optional additional CSS class names.
+/// * `label` — Optional textarea label text.
+/// * `placeholder` — Optional placeholder text.
+/// * `rows` — Number of textarea rows.
+/// * `name` — Field name used for matching validation errors.
+/// * `errors` — Signal containing field validation errors.
+/// * `value` — Signal containing the current textarea value.
+///
+/// # Returns
+///
+/// A Leptos view containing the textarea field.
 #[component]
 pub fn TextArea(
     #[prop(optional, into)] class: Option<String>,
