@@ -9,9 +9,9 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use colorized::{colorize_println, Colors};
+use colorized::{Colors, colorize_println};
 use gig_log_common::logging::parse_level_filter;
-use log::{set_logger, set_max_level, Level, Log, Metadata, Record};
+use log::{Level, Log, Metadata, Record, set_logger, set_max_level};
 
 use super::formatting::{extract_after_src, get_hashtags, log_debug, log_error};
 

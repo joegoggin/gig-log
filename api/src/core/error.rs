@@ -6,10 +6,10 @@
 //! [`IntoResponse`] implementation.
 
 use axum::{
+    Json,
     extract::rejection::JsonRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use gig_log_common::models::error::{ApiError, ValidationError};
 use log::{error, warn};

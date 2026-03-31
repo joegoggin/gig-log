@@ -1,2 +1,24 @@
+@use "mixins/theme" as theme;
+@use "variables/colors" as colors;
+
 .sign-up-page {
+    h1 {
+        margin-bottom: 8px;
+    }
+
+    &__card > p {
+        margin-bottom: 20px;
+
+        @include theme.light {
+            color: rgba(26, 27, 38, 0.78);
+        }
+
+        @include theme.dark {
+            color: rgba(169, 177, 214, 0.88);
+        }
+    }
+
+    &__card {
+        padding: clamp(24px, 4vw, 36px);
+    }
 }
