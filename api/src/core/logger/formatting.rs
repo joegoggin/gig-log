@@ -5,7 +5,7 @@
 //! printers, compact one-line HTTP summaries, and JSON pretty-printing.
 
 use axum::http::{HeaderMap, Method, StatusCode};
-use colorized::{colorize_print, colorize_println, Colors};
+use colorized::{Colors, colorize_print, colorize_println};
 use log::Record;
 use serde_json::Value;
 use uuid::Uuid;
@@ -391,7 +391,7 @@ pub(super) fn log_debug(record: &Record<'_>) {
 mod tests {
     use axum::http::StatusCode;
 
-    use super::{classify_status, extract_after_src, get_hashtags, get_spaces, StatusClass};
+    use super::{StatusClass, classify_status, extract_after_src, get_hashtags, get_spaces};
 
     #[test]
     fn classify_status_maps_expected_classes() {

@@ -5,8 +5,9 @@
 //! configures CORS, and applies HTTP logging middleware.
 
 use axum::{
-    http::{HeaderName, Method},
-    middleware, Router,
+    Router,
+    http::{HeaderName, HeaderValue, Method},
+    middleware,
 };
 use log::error;
 use sqlx::{Pool, Postgres};
@@ -42,9 +43,9 @@ pub struct AppRouter;
 impl AppRouter {
     /// Creates a fully configured [`Router`] with all route groups and middleware.
     ///
-    /// Parses the configured web origin for CORS, falling back to
-    /// `http://localhost:3000` on failure. Nests [`HealthRouter`] at `/health`
-    /// and [`AuthRouter`] at `/auth`, then applies HTTP request/response
+    /// Parses configured web origins for CORS, falling back to
+    /// `http://localhost:3000` when none are valid. Nests [`HealthRouter`]
+    /// at `/health` and [`AuthRouter`] at `/auth`, then applies HTTP request/response
     /// logging and CORS middleware layers.
     ///
     /// # Arguments
@@ -60,20 +61,10 @@ impl AppRouter {
             state.config.log_http_max_body,
             state.config.log_verbose,
         );
-
-        let web_origin = state.config.web_origin.parse().unwrap_or_else(|error| {
-            error!(
-                "Failed to parse WEB_ORIGIN '{}': {}; using http://localhost:3000 instead",
-                state.config.web_origin, error
-            );
-
-            "http://localhost:3000"
-                .parse()
-                .expect("default localhost origin should always be valid")
-        });
+        let allowed_origins = Self::build_allowed_origins(&state.config.web_origins);
 
         let cors = CorsLayer::new()
-            .allow_origin(AllowOrigin::exact(web_origin))
+            .allow_origin(allowed_origins)
             .allow_methods([
                 Method::GET,
                 Method::POST,
@@ -96,5 +87,42 @@ impl AppRouter {
             ))
             .layer(cors)
             .with_state(state)
+    }
+
+    /// Builds a validated CORS allow-list from configured origins.
+    ///
+    /// # Arguments
+    ///
+    /// * `web_origins` — Configured origins from [`Config`](crate::core::config::Config).
+    ///
+    /// # Returns
+    ///
+    /// An [`AllowOrigin`] containing all valid origins or a localhost fallback.
+    fn build_allowed_origins(web_origins: &[String]) -> AllowOrigin {
+        let mut parsed_origins = web_origins
+            .iter()
+            .filter_map(|origin| {
+                let trimmed_origin = origin.trim();
+
+                match HeaderValue::from_str(trimmed_origin) {
+                    Ok(value) => Some(value),
+                    Err(error) => {
+                        error!(
+                            "Failed to parse WEB_ORIGIN value '{}': {}; skipping",
+                            origin, error
+                        );
+
+                        None
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
+        if parsed_origins.is_empty() {
+            error!("No valid WEB_ORIGIN values found; using http://localhost:3000 instead");
+            parsed_origins.push(HeaderValue::from_static("http://localhost:3000"));
+        }
+
+        AllowOrigin::list(parsed_origins)
     }
 }

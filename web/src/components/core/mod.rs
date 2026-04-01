@@ -1,5 +1,7 @@
 //! Core components used by app-wide layouts and routing.
 
+/// Provides the generic card container component.
+pub mod card;
 /// Provides the shared loading spinner component.
 pub mod loading_spinner;
 /// Provides navigation bar and menu components.
@@ -9,6 +11,7 @@ pub mod notifications;
 /// Provides authenticated route guards.
 pub mod private_route;
 
+pub use card::Card;
 pub use loading_spinner::LoadingSpinner;
 pub use notifications::Notifications;
 pub use private_route::PrivateRoute;

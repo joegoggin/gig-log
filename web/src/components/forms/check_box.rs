@@ -21,14 +21,16 @@ pub fn CheckBox(
     #[prop(into)] label: String,
     checked: RwSignal<bool>,
 ) -> impl IntoView {
-    let class = ClassNameUtil::add_optional_class("check-box", class.as_deref());
+    // Classes
+    let class_name = ClassNameUtil::new("check-box", class);
+    let check_box = class_name.get_root_class();
 
     let toggle_checked = move |_| {
         checked.update(|checked| *checked = !*checked);
     };
 
     view! {
-        <div class=class>
+        <div class=check_box>
             <label>
                 <input type="checkbox" checked=move || checked.get() on:change=toggle_checked />
                 {label}

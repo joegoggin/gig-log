@@ -1,5 +1,6 @@
 @use "variables/colors" as colors;
 @use "mixins/media" as media;
+@use "mixins/theme" as theme;
 
 *,
 *::before,
@@ -11,13 +12,13 @@
     margin: 0;
 }
 
-[data-theme="light"] {
+@include theme.lightRoot {
     --background-color: #{colors.$background};
     --text-color: #{colors.$text};
     background: var(--background-color);
 }
 
-[data-theme="dark"] {
+@include theme.darkRoot {
     --background-color: #{colors.$text};
     --text-color: #{colors.$background};
     background: var(--background-color);

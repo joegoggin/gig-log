@@ -1,0 +1,60 @@
+@use "sass:color";
+@use "mixins/media" as media;
+@use "mixins/theme" as theme;
+@use "variables/colors" as colors;
+
+.home-page {
+    width: min(1120px, 100%);
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: clamp(14px, 2vw, 24px);
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: -4% 4% auto;
+        height: 280px;
+        z-index: 0;
+        pointer-events: none;
+        filter: blur(10px);
+
+        @include media.phone {
+            inset: -2% 0 auto;
+            height: 220px;
+        }
+
+        @include theme.light {
+            background: radial-gradient(
+                circle at top center,
+                color.change(colors.$blue-100, $alpha: 0.26),
+                color.change(colors.$blue-100, $alpha: 0) 70%
+            );
+        }
+
+        @include theme.dark {
+            background: radial-gradient(
+                circle at top center,
+                color.change(colors.$cyan-100, $alpha: 0.24),
+                color.change(colors.$cyan-100, $alpha: 0) 70%
+            );
+        }
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
+}
+
+@keyframes home-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

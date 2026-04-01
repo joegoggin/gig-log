@@ -60,8 +60,11 @@ pub fn SelectInput<T>(
 where
     T: Clone + Send + Sync + 'static,
 {
-    let current_class =
-        ClassNameUtil::add_optional_class("text-input select-input", class.as_deref());
+    // Classes
+    let class_name = ClassNameUtil::new_with_parent("text-input", "select-input", class);
+    let select_input = class_name.get_root_class_with_parent();
+
+    // Variables
     let has_label = label.is_some();
     let has_placeholder = placeholder.is_some();
     let placeholder_label = placeholder.unwrap_or_default();
@@ -90,7 +93,7 @@ where
     };
 
     view! {
-        <div class=current_class>
+        <div class=select_input>
             <Show when=move || has_label>
                 <label>{label.clone().unwrap_or_default()}</label>
             </Show>

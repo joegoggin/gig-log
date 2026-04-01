@@ -22,8 +22,8 @@ use crate::core::app::AppResult;
 pub struct Config {
     /// Application environment name. **Required** — `APP_ENV`.
     pub app_env: String,
-    /// Allowed web client origin for CORS. **Required** — `WEB_ORIGIN`.
-    pub web_origin: String,
+    /// Allowed web client origins for CORS. **Required** — `WEB_ORIGIN` (comma-separated).
+    pub web_origins: Vec<String>,
     /// PostgreSQL connection string. **Required** — `DATABASE_URL`.
     pub database_url: String,
     /// Run pending SQLx migrations on startup. `AUTO_APPLY_MIGRATIONS_ENABLED`, default `true`.
@@ -65,7 +65,7 @@ impl Config {
         dotenv().ok();
 
         let app_env = Self::get_var_from_env("APP_ENV")?;
-        let web_origin = Self::get_var_from_env("WEB_ORIGIN")?;
+        let web_origins = Self::get_origin_list("WEB_ORIGIN")?;
         let database_url = Self::get_var_from_env("DATABASE_URL")?;
         let auto_apply_migrations = Self::get_optional_bool("AUTO_APPLY_MIGRATIONS_ENABLED", true);
         let jwt_secret = Self::get_var_from_env("JWT_SECRET")?;
@@ -83,7 +83,7 @@ impl Config {
 
         Ok(Self {
             app_env,
-            web_origin,
+            web_origins,
             database_url,
             auto_apply_migrations,
             jwt_secret,
@@ -151,6 +151,41 @@ impl Config {
 
                 Err(Error::msg(error_message))
             }
+        }
+    }
+
+    /// Reads a required comma-separated origin list from the environment.
+    ///
+    /// # Arguments
+    ///
+    /// * `var` — The environment variable name.
+    ///
+    /// # Returns
+    ///
+    /// A [`Vec`] containing each non-empty origin value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the variable is unset, empty, or contains only
+    /// empty values.
+    fn get_origin_list(var: &str) -> AppResult<Vec<String>> {
+        let value = Self::get_var_from_env(var)?;
+        let origins = value
+            .split(',')
+            .map(str::trim)
+            .filter(|origin| !origin.is_empty())
+            .map(ToString::to_string)
+            .collect::<Vec<_>>();
+
+        if origins.is_empty() {
+            let error_message = format!(
+                "`{}` environment variable must contain at least one origin.",
+                var
+            );
+
+            Err(Error::msg(error_message))
+        } else {
+            Ok(origins)
         }
     }
 

@@ -1,0 +1,55 @@
+@use "sass:color";
+@use "mixins/media" as media;
+@use "mixins/theme" as theme;
+@use "variables/colors" as colors;
+
+.home-page-cta {
+    grid-column: 1 / -1;
+    padding: clamp(24px, 3.2vw, 34px);
+    text-align: center;
+    animation: home-reveal 0.6s ease-out both;
+    animation-delay: 0.22s;
+
+    @include media.phone {
+        border-radius: 18px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+
+    h3 {
+        font-size: clamp(28px, 2.9vw, 38px);
+        line-height: 1.15;
+        margin-bottom: 8px;
+
+        @include theme.light {
+            color: color.change(colors.$text, $alpha: 0.96);
+        }
+
+        @include theme.dark {
+            color: color.change(colors.$background, $alpha: 0.97);
+        }
+    }
+
+    p {
+        font-size: clamp(14px, 1.5vw, 18px);
+        margin-bottom: 18px;
+
+        @include theme.light {
+            color: color.change(colors.$text, $alpha: 0.8);
+        }
+
+        @include theme.dark {
+            color: color.change(colors.$background, $alpha: 0.82);
+        }
+    }
+
+    button {
+        min-width: min(320px, 100%);
+
+        @include media.phone {
+            min-width: 100%;
+        }
+    }
+}

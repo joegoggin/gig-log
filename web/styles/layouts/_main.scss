@@ -8,9 +8,9 @@
     @include media.tablet {
         flex-direction: column;
     }
-}
 
-.main-layout__content {
-    flex: 1;
-    min-width: 0;
+    &__content {
+        flex: 1;
+        min-width: 0;
+    }
 }

@@ -3,10 +3,12 @@
 /// Provides core application shell components.
 pub mod core;
 /// Provides reusable form input components.
-pub mod form;
+pub mod forms;
 /// Provides SVG icon components.
 pub mod icons;
+pub mod optional;
 
 pub use core::*;
-pub use form::*;
+pub use forms::*;
 pub use icons::*;
+pub use optional::*;

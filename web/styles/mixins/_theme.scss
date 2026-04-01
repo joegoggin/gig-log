@@ -1,0 +1,23 @@
+@mixin dark {
+    [data-theme="dark"] & {
+        @content;
+    }
+}
+
+@mixin light {
+    [data-theme="light"] & {
+        @content;
+    }
+}
+
+@mixin darkRoot {
+    [data-theme="dark"] {
+        @content;
+    }
+}
+
+@mixin lightRoot {
+    [data-theme="light"] {
+        @content;
+    }
+}

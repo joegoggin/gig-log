@@ -19,12 +19,16 @@ pub fn MainLayout(
     #[prop(optional, into)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let content_class = ClassNameUtil::add_optional_class("main-layout__content", class.as_deref());
+    // Classes
+    let class_name = ClassNameUtil::new_layout_class_name("main-layout", class);
+
+    let main_layout = class_name.get_root_class();
+    let content = class_name.get_content_class();
 
     view! {
-        <div class="main-layout">
+        <div class=main_layout>
             <NavBar />
-            <div class=content_class>{children()}</div>
+            <div class=content>{children()}</div>
         </div>
     }
 }

@@ -8,6 +8,11 @@ use log::{Level, LevelFilter};
 /// Convenience re-exports of the [`log`] facade macros.
 pub use log::{debug, error, info, trace, warn};
 
+/// Log target for semantic informational messages.
+const MESSAGE_TARGET: &str = "gig_log::message";
+/// Log target for semantic success messages.
+const SUCCESS_TARGET: &str = "gig_log::success";
+
 /// Parses a string into a [`LevelFilter`].
 ///
 /// Matching is case-insensitive and trims surrounding whitespace.
@@ -67,6 +72,24 @@ pub fn level_for_logger(level_filter: LevelFilter) -> Level {
 /// `true` if the filter is [`LevelFilter::Off`].
 pub fn is_off(level_filter: LevelFilter) -> bool {
     matches!(level_filter, LevelFilter::Off)
+}
+
+/// Logs an informational message using the semantic message target.
+///
+/// # Arguments
+///
+/// * `message` — The message text to emit.
+pub fn log_message(message: &str) {
+    log::info!(target: MESSAGE_TARGET, "{}", message);
+}
+
+/// Logs a success message using the semantic success target.
+///
+/// # Arguments
+///
+/// * `message` — The message text to emit.
+pub fn log_success(message: &str) {
+    log::info!(target: SUCCESS_TARGET, "{}", message);
 }
 
 #[cfg(test)]
