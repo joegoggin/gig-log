@@ -15,7 +15,6 @@ use crate::{
     },
     contexts::{use_auth, use_notifications},
     layouts::auth::AuthLayout,
-    utils::class_name::ClassNameUtil,
 };
 
 /// Renders the `LoginPage` component.
