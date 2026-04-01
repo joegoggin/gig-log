@@ -29,7 +29,7 @@
             color: color.change(colors.$text, $alpha: 0.96);
         }
 
-        @include theme.light {
+        @include theme.dark {
             color: color.change(colors.$background, $alpha: 0.97);
         }
     }

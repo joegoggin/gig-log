@@ -1,14 +1,14 @@
 //! Route guard component for authenticated-only routes.
 
 use leptos::prelude::*;
-use leptos_router::{MatchNestedRoutes, NestedRoute, PossibleRouteMatch, components::Redirect};
+use leptos_router::{components::Redirect, MatchNestedRoutes, NestedRoute, PossibleRouteMatch};
 
 use crate::{contexts::use_auth, utils::class_name::ClassNameUtil};
 
 /// Creates a route that only renders when a user is authenticated.
 ///
 /// When auth state is loading, this component renders a loading placeholder.
-/// If no user is authenticated, it redirects to `/login`.
+/// If no user is authenticated, it redirects to `/auth/log-in`.
 ///
 /// # Arguments
 ///

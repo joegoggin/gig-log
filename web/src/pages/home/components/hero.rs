@@ -2,8 +2,8 @@ use leptos::prelude::*;
 
 use crate::{
     components::{
-        Card, LogoIcon,
         button::{Button, ButtonVariant},
+        Card, LogoIcon,
     },
     contexts::use_auth,
     utils::class_name::ClassNameUtil,
@@ -23,9 +23,6 @@ pub fn HomePageHero(#[prop(optional, into)] class: Option<String>) -> impl IntoV
     // Context
     let auth = use_auth();
 
-    // Variables
-    let is_authenticated = auth.is_authenticated();
-
     view! {
         <Card class=home_page_hero>
             <div class=logo>
@@ -41,7 +38,7 @@ pub fn HomePageHero(#[prop(optional, into)] class: Option<String>) -> impl IntoV
             </p>
             <div class=buttons>
                 <Show
-                    when=move || !is_authenticated
+                    when=move || !auth.is_authenticated()
                     fallback=move || view! { <Button href="/dashboard">"Go to Dashboard"</Button> }
                 >
                     <Button href="/auth/sign-up">"Create Free Account"</Button>

@@ -53,7 +53,7 @@ pub fn Button(
 
     // Event Handlers
     let handle_click = move |ev: MouseEvent| {
-        if button_type != ButtonType::Submit {
+        if href.is_some() || button_type == ButtonType::Button {
             ev.prevent_default();
         }
 

@@ -74,10 +74,20 @@ pub fn is_off(level_filter: LevelFilter) -> bool {
     matches!(level_filter, LevelFilter::Off)
 }
 
+/// Logs an informational message using the semantic message target.
+///
+/// # Arguments
+///
+/// * `message` — The message text to emit.
 pub fn log_message(message: &str) {
     log::info!(target: MESSAGE_TARGET, "{}", message);
 }
 
+/// Logs a success message using the semantic success target.
+///
+/// # Arguments
+///
+/// * `message` — The message text to emit.
 pub fn log_success(message: &str) {
     log::info!(target: SUCCESS_TARGET, "{}", message);
 }

@@ -299,7 +299,7 @@ fn format_semantic_line(kind: SemanticLogKind, message: &str, verbose: bool) -> 
     };
 
     if verbose {
-        return format!("\n{color}{hashtags} {message} {hashtags}\n{ANSI_CLEAR}");
+        return format!("\n{color}{hashtags} {message} {hashtags}{ANSI_CLEAR}\n");
     }
 
     format!("{color}{message}{ANSI_CLEAR}")
