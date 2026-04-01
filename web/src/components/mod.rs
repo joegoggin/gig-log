@@ -6,7 +6,9 @@ pub mod core;
 pub mod forms;
 /// Provides SVG icon components.
 pub mod icons;
+pub mod optional;
 
 pub use core::*;
 pub use forms::*;
 pub use icons::*;
+pub use optional::*;

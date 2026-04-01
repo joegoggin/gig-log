@@ -47,7 +47,7 @@ where
         } else if auth.user.get().is_some() {
             view().into_view().into_any()
         } else {
-            view! { <Redirect path="/login" /> }.into_any()
+            view! { <Redirect path="/auth/log-in" /> }.into_any()
         }
     };
 

@@ -14,7 +14,6 @@ use crate::{
     },
     contexts::{use_auth, use_notifications},
     layouts::auth::AuthLayout,
-    utils::class_name::ClassNameUtil,
 };
 
 /// Renders the `SignupPage` component.
@@ -37,11 +36,6 @@ pub fn SignupPage() -> impl IntoView {
     let email = RwSignal::new(String::new());
     let password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
-
-    // Classes
-    let class_name = ClassNameUtil::new("sign-up-page", None);
-    let sign_up_page = class_name.get_root_class();
-    let card = class_name.get_sub_class("card");
 
     // Event Handlers
     let handle_submit = move |_: SubmitEvent| {
@@ -89,10 +83,11 @@ pub fn SignupPage() -> impl IntoView {
     };
 
     view! {
-        <AuthLayout class=sign_up_page>
-            <Card class=card>
-                <h1>"Sign Up"</h1>
-                <p>"Start tracking companies, gigs, and payouts from one place."</p>
+        <AuthLayout>
+            <Card
+                title="Sign Up"
+                subtitle="Start tracking companies, gigs, and payouts from one place."
+            >
                 <Form on_submit=handle_submit is_loading=is_submitting>
                     <TextInput
                         name="first_name"

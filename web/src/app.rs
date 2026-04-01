@@ -33,7 +33,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/") view=HomePage />
 
                     // Auth routes
-                    <Route path=path!("auth/log-in") view=LoginPage />
+                    <Route path=path!("auth/log-in") view=LogInPage />
                     <Route path=path!("auth/sign-up") view=SignupPage />
                     <Route path=path!("auth/forgot-password") view=ForgotPasswordPage />
                     <Route

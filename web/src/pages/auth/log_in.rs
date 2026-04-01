@@ -24,7 +24,7 @@ use crate::{
 ///
 /// A Leptos view for the `LoginPage` UI.
 #[component]
-pub fn LoginPage() -> impl IntoView {
+pub fn LogInPage() -> impl IntoView {
     // Context
     let auth = use_auth();
     let notifications = use_notifications();
@@ -35,11 +35,6 @@ pub fn LoginPage() -> impl IntoView {
     let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![]);
     let email = RwSignal::new(String::new());
     let password = RwSignal::new(String::new());
-
-    // Classes
-    let class_name = ClassNameUtil::new("login-page", None);
-    let login_page = class_name.get_root_class();
-    let card = class_name.get_sub_class("card");
 
     // Event Handlers
     let handle_submit = move |_: SubmitEvent| {
@@ -84,10 +79,11 @@ pub fn LoginPage() -> impl IntoView {
     };
 
     view! {
-        <AuthLayout class=login_page>
-            <Card class=card>
-                <h1>"Login"</h1>
-                <p>"Pick up where you left off and keep your freelance workflow moving."</p>
+        <AuthLayout>
+            <Card
+                title="Log In"
+                subtitle="Pick up where you left off and keep your freelance workflow moving."
+            >
                 <Form on_submit=handle_submit is_loading=is_loading>
                     <TextInput name="email" placeholder="Email" errors=errors value=email />
                     <PasswordInput
