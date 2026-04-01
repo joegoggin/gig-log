@@ -2,7 +2,10 @@
 
 use gig_log_common::models::{
     generic::MessageResponse,
-    user::{LogInRequest, SignUpRequest, User},
+    user::{
+        ConfirmEmailRequest, ForgotPasswordRequest, LogInRequest, SetPasswordRequest,
+        SignUpRequest, User, VerifyForgotPasswordRequest,
+    },
 };
 use leptos::{prelude::*, reactive::spawn_local};
 
@@ -97,6 +100,86 @@ impl AuthContext {
         self.auth_requests.sign_up(request).await
     }
 
+    /// Confirms a user's email address with a verification code.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` — Email confirmation payload.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing a backend [`MessageResponse`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if the confirmation request fails.
+    pub async fn confirm_email(
+        &self,
+        request: &ConfirmEmailRequest,
+    ) -> Result<MessageResponse, ClientError> {
+        self.auth_requests.confirm_email(request).await
+    }
+
+    /// Requests a forgot-password verification code.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` — Forgot-password payload containing the user email.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing a backend [`MessageResponse`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if the request fails.
+    pub async fn forgot_password(
+        &self,
+        request: &ForgotPasswordRequest,
+    ) -> Result<MessageResponse, ClientError> {
+        self.auth_requests.forgot_password(request).await
+    }
+
+    /// Verifies a forgot-password code before setting a new password.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` — Forgot-password verification payload.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing a backend [`MessageResponse`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if the request fails.
+    pub async fn verify_forgot_password(
+        &self,
+        request: &VerifyForgotPasswordRequest,
+    ) -> Result<MessageResponse, ClientError> {
+        self.auth_requests.verify_forgot_password(request).await
+    }
+
+    /// Sets a new password using a verified forgot-password code.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` — New-password payload and verification code.
+    ///
+    /// # Returns
+    ///
+    /// A [`Result`] containing a backend [`MessageResponse`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ClientError`] if the request fails.
+    pub async fn set_password(
+        &self,
+        request: &SetPasswordRequest,
+    ) -> Result<MessageResponse, ClientError> {
+        self.auth_requests.set_password(request).await
+    }
+
     /// Logs out the current user and clears auth state.
     ///
     /// # Returns
@@ -125,15 +208,6 @@ impl AuthContext {
         let user = self.auth_requests.refresh().await?;
         self.user.set(Some(user));
         Ok(())
-    }
-
-    /// Returns the underlying auth request helper.
-    ///
-    /// # Returns
-    ///
-    /// A shared reference to the [`AuthRequestRunner`].
-    pub fn auth_requests(&self) -> &AuthRequestRunner {
-        &self.auth_requests
     }
 }
 

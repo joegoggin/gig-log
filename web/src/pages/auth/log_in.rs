@@ -1,20 +1,17 @@
 //! Page component for `LoginPage`.
 
-use gig_log_common::models::error::ValidationError;
 use gig_log_common::models::user::LogInRequest;
-use leptos::{ev::SubmitEvent, prelude::*, reactive::spawn_local};
+use leptos::{ev::SubmitEvent, prelude::*};
 use leptos_router::hooks::use_navigate;
 
+use super::shared::{AuthFormCard, submit_auth_form, use_auth_form};
 use crate::{
-    api_client::ClientError,
     components::{
-        Card, Form,
         button::{Button, ButtonType},
         password_input::PasswordInput,
         text_input::TextInput,
     },
     contexts::{use_auth, use_notifications},
-    layouts::auth::AuthLayout,
 };
 
 /// Renders the `LoginPage` component.
@@ -30,70 +27,48 @@ pub fn LogInPage() -> impl IntoView {
     let navigate = use_navigate();
 
     // State
-    let is_loading = RwSignal::new(false);
-    let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![]);
+    let form = use_auth_form();
     let email = RwSignal::new(String::new());
     let password = RwSignal::new(String::new());
 
     // Event Handlers
     let handle_submit = move |_: SubmitEvent| {
-        if is_loading.get_untracked() {
-            return;
-        }
-
         let request = LogInRequest {
             email: email.get(),
             password: password.get(),
         };
 
-        is_loading.set(true);
-
         let auth = auth.clone();
         let notifications = notifications;
         let navigate = navigate.clone();
-        let errors = errors;
-        let is_loading = is_loading;
 
-        spawn_local(async move {
-            let next_errors = match auth.login(&request).await {
-                Ok(_) => {
-                    notifications.show_success("Logged in", "Welcome back.");
-                    navigate("/dashboard", Default::default());
-                    return;
-                }
-                Err(ClientError::Api(api_error)) => {
-                    notifications.show_error("Log in failed", api_error.message);
-                    api_error.errors.unwrap_or_default()
-                }
-                Err(ClientError::Network(message)) => {
-                    notifications
-                        .show_error("Log in failed", format!("Network error: {}", message));
-                    vec![]
-                }
-            };
-
-            is_loading.set(false);
-            errors.set(next_errors);
-        });
+        submit_auth_form(
+            form,
+            notifications,
+            "Log in failed",
+            async move { auth.login(&request).await },
+            move |_| {
+                notifications.show_success("Logged in", "Welcome back.");
+                navigate("/dashboard", Default::default());
+            },
+        );
     };
 
     view! {
-        <AuthLayout>
-            <Card
-                title="Log In"
-                subtitle="Pick up where you left off and keep your freelance workflow moving."
-            >
-                <Form on_submit=handle_submit is_loading=is_loading>
-                    <TextInput name="email" placeholder="Email" errors=errors value=email />
-                    <PasswordInput
-                        name="password"
-                        placeholder="Password"
-                        errors=errors
-                        value=password
-                    />
-                    <Button button_type=ButtonType::Submit>Log In</Button>
-                </Form>
-            </Card>
-        </AuthLayout>
+        <AuthFormCard
+            title="Log In"
+            subtitle="Pick up where you left off and keep your freelance workflow moving."
+            is_loading=form.is_loading
+            on_submit=handle_submit
+        >
+            <TextInput name="email" placeholder="Email" errors=form.errors value=email />
+            <PasswordInput
+                name="password"
+                placeholder="Password"
+                errors=form.errors
+                value=password
+            />
+            <Button button_type=ButtonType::Submit>Log In</Button>
+        </AuthFormCard>
     }
 }

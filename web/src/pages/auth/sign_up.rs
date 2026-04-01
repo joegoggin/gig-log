@@ -1,19 +1,17 @@
 //! Page component for `SignupPage`.
 
-use gig_log_common::models::{error::ValidationError, user::SignUpRequest};
-use leptos::{ev::SubmitEvent, prelude::*, reactive::spawn_local};
+use gig_log_common::models::user::SignUpRequest;
+use leptos::{ev::SubmitEvent, prelude::*};
 use leptos_router::hooks::use_navigate;
 
+use super::shared::{AuthFormCard, submit_auth_form, use_auth_form};
 use crate::{
-    api_client::ClientError,
     components::{
-        Card, Form,
         button::{Button, ButtonType},
         password_input::PasswordInput,
         text_input::TextInput,
     },
     contexts::{use_auth, use_notifications},
-    layouts::auth::AuthLayout,
 };
 
 /// Renders the `SignupPage` component.
@@ -29,8 +27,7 @@ pub fn SignupPage() -> impl IntoView {
     let navigate = use_navigate();
 
     // State
-    let errors: RwSignal<Vec<ValidationError>> = RwSignal::new(vec![]);
-    let is_submitting = RwSignal::new(false);
+    let form = use_auth_form();
     let first_name = RwSignal::new(String::new());
     let last_name = RwSignal::new(String::new());
     let email = RwSignal::new(String::new());
@@ -39,10 +36,6 @@ pub fn SignupPage() -> impl IntoView {
 
     // Event Handlers
     let handle_submit = move |_: SubmitEvent| {
-        if is_submitting.get_untracked() {
-            return;
-        }
-
         let request = SignUpRequest {
             first_name: first_name.get(),
             last_name: last_name.get(),
@@ -51,72 +44,55 @@ pub fn SignupPage() -> impl IntoView {
             confirm_password: confirm_password.get(),
         };
 
-        is_submitting.set(true);
-
         let auth = auth.clone();
         let notifications = notifications;
         let navigate = navigate.clone();
-        let errors = errors;
-        let is_submitting = is_submitting;
 
-        spawn_local(async move {
-            let next_errors = match auth.signup(&request).await {
-                Ok(response) => {
-                    notifications.show_success("Account created", response.message);
-                    navigate("/auth/confirm-email", Default::default());
-                    return;
-                }
-                Err(ClientError::Api(api_error)) => {
-                    notifications.show_error("Sign up failed", api_error.message);
-                    api_error.errors.unwrap_or_default()
-                }
-                Err(ClientError::Network(message)) => {
-                    notifications
-                        .show_error("Sign up failed", format!("Network error: {}", message));
-                    vec![]
-                }
-            };
-
-            is_submitting.set(false);
-            errors.set(next_errors);
-        });
+        submit_auth_form(
+            form,
+            notifications,
+            "Sign up failed",
+            async move { auth.signup(&request).await },
+            move |response| {
+                notifications.show_success("Account created", response.message);
+                navigate("/auth/confirm-email", Default::default());
+            },
+        );
     };
 
     view! {
-        <AuthLayout>
-            <Card
-                title="Sign Up"
-                subtitle="Start tracking companies, gigs, and payouts from one place."
-            >
-                <Form on_submit=handle_submit is_loading=is_submitting>
-                    <TextInput
-                        name="first_name"
-                        placeholder="First Name"
-                        errors=errors
-                        value=first_name
-                    />
-                    <TextInput
-                        name="last_name"
-                        placeholder="Last Name"
-                        errors=errors
-                        value=last_name
-                    />
-                    <TextInput name="email" placeholder="Email" errors=errors value=email />
-                    <PasswordInput
-                        name="password"
-                        placeholder="Password"
-                        errors=errors
-                        value=password
-                    />
-                    <PasswordInput
-                        name="confirm_password"
-                        placeholder="Confirm Password"
-                        errors=errors
-                        value=confirm_password
-                    />
-                    <Button button_type=ButtonType::Submit>"Sign Up"</Button>
-                </Form>
-            </Card>
-        </AuthLayout>
+        <AuthFormCard
+            title="Sign Up"
+            subtitle="Start tracking companies, gigs, and payouts from one place."
+            is_loading=form.is_loading
+            on_submit=handle_submit
+        >
+            <TextInput
+                name="first_name"
+                placeholder="First Name"
+                errors=form.errors
+                value=first_name
+            />
+            <TextInput
+                name="last_name"
+                placeholder="Last Name"
+                errors=form.errors
+                value=last_name
+            />
+            <TextInput name="email" placeholder="Email" errors=form.errors value=email />
+            <PasswordInput
+                name="password"
+                placeholder="Password"
+                errors=form.errors
+                value=password
+            />
+            <PasswordInput
+                name="confirm_password"
+                placeholder="Confirm Password"
+                errors=form.errors
+                value=confirm_password
+            />
+            <Button button_type=ButtonType::Submit>"Sign Up"</Button>
+        </AuthFormCard>
     }
 }

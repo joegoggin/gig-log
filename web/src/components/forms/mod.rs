@@ -4,6 +4,8 @@
 pub mod button;
 /// Provides a styled checkbox field.
 pub mod check_box;
+/// Provides shared field validation helpers for form components.
+mod field_validation;
 /// Provides a reusable form container component.
 pub mod form;
 /// Provides a password input with visibility toggle.

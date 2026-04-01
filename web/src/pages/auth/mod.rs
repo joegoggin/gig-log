@@ -1,5 +1,8 @@
 //! Authentication-related route page components.
 
+/// Provides shared helpers for auth page implementations.
+mod shared;
+
 /// Provides the confirm-email page component.
 pub mod confirm_email;
 /// Provides the forgot-password page component.
