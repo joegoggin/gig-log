@@ -52,7 +52,10 @@ pub fn VerifyForgotPasswordPage() -> impl IntoView {
             let next_errors = match auth.auth_requests().verify_forgot_password(&request).await {
                 Ok(response) => {
                     notifications.show_success("Code verified", response.message);
-                    navigate("/auth/set-password", Default::default());
+                    navigate(
+                        &format!("/auth/set-password?code={}", request.code),
+                        Default::default(),
+                    );
                     return;
                 }
                 Err(ClientError::Api(api_error)) => {
