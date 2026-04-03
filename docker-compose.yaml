@@ -12,7 +12,7 @@ services:
         env_file:
             - ./docker/env/pgadmin.env
         ports:
-            - 8080:80
+            - 8081:80
         volumes:
             - pgadmin_data:/var/lib/pgadmin
             - ./docker/pgadmin/servers.json:/pgadmin4/servers.json

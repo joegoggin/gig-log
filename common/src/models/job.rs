@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -26,11 +27,11 @@ pub struct Job {
     /// How this job compensates the worker.
     pub payment_type: PaymentType,
     /// Hourly rate in dollars. Used when `payment_type` is `Hourly`.
-    pub hourly_rate: Option<f64>,
+    pub hourly_rate: Option<BigDecimal>,
     /// Total number of payouts. Used when `payment_type` is `Payouts`.
     pub number_of_payouts: Option<i32>,
     /// Amount per payout in dollars. Used when `payment_type` is `Payouts`.
-    pub payout_amount: Option<f64>,
+    pub payout_amount: Option<BigDecimal>,
     /// Timestamp when the job was created.
     pub created_at: DateTime<Utc>,
     /// Timestamp when the job was last updated.
@@ -47,11 +48,11 @@ pub struct CreateJobRequest {
     /// How this job compensates the worker.
     pub payment_type: PaymentType,
     /// Hourly rate in dollars. Used when `payment_type` is `Hourly`.
-    pub hourly_rate: Option<f64>,
+    pub hourly_rate: Option<BigDecimal>,
     /// Total number of payouts. Used when `payment_type` is `Payouts`.
     pub number_of_payouts: Option<i32>,
     /// Amount per payout in dollars. Used when `payment_type` is `Payouts`.
-    pub payout_amount: Option<f64>,
+    pub payout_amount: Option<BigDecimal>,
 }
 
 /// Request payload for updating an existing job. All fields are optional.
@@ -62,9 +63,9 @@ pub struct UpdateJobRequest {
     /// Updated payment type.
     pub payment_type: Option<PaymentType>,
     /// Updated hourly rate.
-    pub hourly_rate: Option<f64>,
+    pub hourly_rate: Option<BigDecimal>,
     /// Updated number of payouts.
     pub number_of_payouts: Option<i32>,
     /// Updated payout amount.
-    pub payout_amount: Option<f64>,
+    pub payout_amount: Option<BigDecimal>,
 }

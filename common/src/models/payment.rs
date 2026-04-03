@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -30,7 +31,7 @@ pub struct Payment {
     /// The company that issued this payment.
     pub company_id: Uuid,
     /// Total payment amount in dollars.
-    pub total: f64,
+    pub total: BigDecimal,
     /// Method used to receive the payment.
     pub payout_type: PayoutType,
     /// Expected date the payment will be received.
@@ -53,7 +54,7 @@ pub struct CreatePaymentRequest {
     /// The company that issued this payment.
     pub company_id: Uuid,
     /// Total payment amount in dollars.
-    pub total: f64,
+    pub total: BigDecimal,
     /// Method used to receive the payment.
     pub payout_type: PayoutType,
     /// Expected date the payment will be received.
@@ -70,7 +71,7 @@ pub struct CreatePaymentRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdatePaymentRequest {
     /// Updated total payment amount.
-    pub total: Option<f64>,
+    pub total: Option<BigDecimal>,
     /// Updated payout method.
     pub payout_type: Option<PayoutType>,
     /// Updated expected payout date.

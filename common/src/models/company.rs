@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -15,7 +16,7 @@ pub struct Company {
     pub requires_tax_withholdings: bool,
     /// Tax withholding rate as a decimal (e.g., 0.15 for 15%). Only applicable
     /// when `requires_tax_withholdings` is true.
-    pub tax_withholding_rate: Option<f64>,
+    pub tax_withholding_rate: Option<BigDecimal>,
     /// Timestamp when the company was created.
     pub created_at: DateTime<Utc>,
     /// Timestamp when the company was last updated.
@@ -30,7 +31,7 @@ pub struct CreateCompanyRequest {
     /// Whether this company requires tax withholdings on payments.
     pub requires_tax_withholdings: bool,
     /// Optional tax withholding rate as a decimal.
-    pub tax_withholding_rate: Option<f64>,
+    pub tax_withholding_rate: Option<BigDecimal>,
 }
 
 /// Request payload for updating an existing company. All fields are optional.
@@ -41,5 +42,5 @@ pub struct UpdateCompanyRequest {
     /// Updated tax withholding requirement.
     pub requires_tax_withholdings: Option<bool>,
     /// Updated tax withholding rate.
-    pub tax_withholding_rate: Option<f64>,
+    pub tax_withholding_rate: Option<BigDecimal>,
 }

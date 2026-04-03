@@ -11,5 +11,6 @@
 //! - [`user`](crate::repo::user) — User account CRUD operations.
 
 pub mod auth_code;
+pub mod company;
 pub mod refresh_token;
 pub mod user;
