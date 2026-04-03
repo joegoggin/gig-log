@@ -30,6 +30,9 @@ db-revert: _require-sqlx-cli
 db-info: _require-sqlx-cli
 	cd api && sqlx migrate info
 
+db-test-setup: _require-sqlx-cli
+    . ./.env.test && test -n "$TEST_DATABASE_URL" && cd api && sqlx database setup -D "$TEST_DATABASE_URL"
+
 # API
 api: _require-cargo-watch
     cargo watch -x 'run -p gig-log-api'
