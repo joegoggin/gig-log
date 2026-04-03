@@ -10,6 +10,9 @@ use serde_json::json;
 use crate::core::config::Config;
 use crate::core::error::{ApiErrorResponse, ApiResult};
 
+/// Default Resend API base URL used by the production email client.
+const DEFAULT_RESEND_BASE_URL: &str = "https://api.resend.com";
+
 /// HTTP client for sending emails through the Resend API.
 ///
 /// Wraps a [`reqwest::Client`] with Resend API credentials and provides
@@ -22,6 +25,8 @@ pub struct EmailClient {
     api_key: String,
     /// Sender email address included in outgoing messages.
     from_email: String,
+    /// Base URL for the email delivery API.
+    base_url: String,
 }
 
 impl EmailClient {
@@ -36,10 +41,29 @@ impl EmailClient {
     ///
     /// A configured [`EmailClient`] ready to send emails.
     pub fn new(config: &Config) -> Self {
+        Self::new_with_base_url(config, DEFAULT_RESEND_BASE_URL)
+    }
+
+    /// Creates a new [`EmailClient`] with a custom API base URL.
+    ///
+    /// This is primarily used by integration tests to point requests at a
+    /// wiremock server instead of the live Resend API.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` — Application [`Config`] providing the Resend API key
+    ///   and sender email address.
+    /// * `base_url` — Base URL for the email API endpoint.
+    ///
+    /// # Returns
+    ///
+    /// A configured [`EmailClient`] ready to send emails.
+    pub fn new_with_base_url(config: &Config, base_url: impl Into<String>) -> Self {
         Self {
             client: Client::new(),
             api_key: config.resend_api_key.clone(),
             from_email: config.resend_from_email.clone(),
+            base_url: base_url.into(),
         }
     }
 
@@ -60,8 +84,10 @@ impl EmailClient {
     /// Returns [`ApiErrorResponse::InternalServerError`] if the HTTP request
     /// to the Resend API fails.
     pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> ApiResult<()> {
+        let endpoint = format!("{}/emails", self.base_url.trim_end_matches('/'));
+
         self.client
-            .post("https://api.resend.com/emails")
+            .post(endpoint)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&json!({
                 "from": self.from_email,
