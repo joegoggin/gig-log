@@ -33,6 +33,13 @@ db-info: _require-sqlx-cli
 db-test-setup: _require-sqlx-cli
     . ./.env.test && test -n "$TEST_DATABASE_URL" && cd api && sqlx database setup -D "$TEST_DATABASE_URL"
 
+# Testing
+test:
+    cargo test --workspace
+
+test-unit:
+    cargo test --workspace --lib
+
 # API
 api: _require-cargo-watch
     cargo watch -x 'run -p gig-log-api'
