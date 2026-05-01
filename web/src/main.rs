@@ -11,23 +11,26 @@
 /// Defines the root application component module.
 mod app;
 use app::App;
-/// Defines browser logging initialization helpers.
-mod logging;
 
-use goggin_rs_logger::{is_off, log_message, log_success};
+use goggin_rs_logger::{
+    WebLoggerConfig, init_web_logging_with_config, is_off, log_message, log_success,
+};
 
 const DEFAULT_WEB_LOG_LEVEL: &str = if cfg!(debug_assertions) {
     "debug"
 } else {
     "off"
 };
+const WEB_LOG_RELAY_ENDPOINT: &str = "/_giglog/web-log";
 
 /// Initializes browser logging with the default level fallback.
 ///
 /// Calls [`logging::init_web_logging`] and emits startup logs when logging is
 /// enabled.
 fn init_web_logging() {
-    let logger_config = match logging::init_web_logging(DEFAULT_WEB_LOG_LEVEL) {
+    let logger_config =
+        WebLoggerConfig::new(DEFAULT_WEB_LOG_LEVEL).with_endpoint(WEB_LOG_RELAY_ENDPOINT);
+    let logger_config = match init_web_logging_with_config(logger_config) {
         Ok(config) => config,
         Err(_) => return,
     };

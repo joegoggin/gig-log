@@ -1514,16 +1514,13 @@ name = "gig-log-frontend"
 version = "0.1.0"
 dependencies = [
  "gig-log-common",
- "gloo-net",
  "gloo-timers",
  "goggin-rs-logger",
  "leptos",
  "leptos_router",
- "log",
  "reqwest",
  "serde",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
 ]
 
