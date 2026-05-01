@@ -6,11 +6,11 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use axum::{Router, routing::post};
-use goggin_rs_logger::{RelayLogSink, RelayReceiverState, relay_log_handler};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
+use goggin_rs_logger::{RelayLogPayload, format_relay_line, split_formatted_lines};
 use tokio::{
     net::TcpListener,
-    sync::{mpsc, oneshot},
+    sync::{Mutex, mpsc, oneshot},
     task::JoinHandle,
 };
 
@@ -22,6 +22,17 @@ pub const WEB_LOG_RELAY_ADDR: &str = "127.0.0.1:9777";
 pub const WEB_LOG_RELAY_BACKEND_URL: &str = "http://127.0.0.1:9777";
 /// Defines the proxied endpoint path used by browser log posts.
 pub const WEB_LOG_RELAY_PROXY_PATH: &str = "/_giglog/web-log";
+
+/// Stores shared state for relay handlers.
+#[derive(Clone)]
+struct RelayState {
+    /// Sends converted browser logs into the orchestrator log stream.
+    web_log_tx: mpsc::Sender<LogEntry>,
+    /// Controls verbose multi-line formatting behavior.
+    verbose: bool,
+    /// Serializes multiline emission so grouped lines stay contiguous.
+    emit_lock: Arc<Mutex<()>>,
+}
 
 /// Owns the relay task and graceful shutdown channel.
 pub struct WebLogRelay {
@@ -94,18 +105,52 @@ pub async fn start(web_log_tx: mpsc::Sender<LogEntry>) -> Result<WebLogRelay> {
 ///
 /// A [`Router`] accepting relay log posts.
 fn build_relay_router(web_log_tx: mpsc::Sender<LogEntry>, verbose: bool) -> Router {
-    let sink: RelayLogSink = Arc::new(move |line| {
-        let _ = web_log_tx.try_send(LogEntry {
-            service: Service::Web,
-            line,
-        });
-    });
-    let state = RelayReceiverState::new(sink, verbose);
+    let state = RelayState {
+        web_log_tx,
+        verbose,
+        emit_lock: Arc::new(Mutex::new(())),
+    };
 
     Router::new()
-        .route("/", post(relay_log_handler))
-        .route(WEB_LOG_RELAY_PROXY_PATH, post(relay_log_handler))
+        .route("/", post(relay_log))
+        .route(WEB_LOG_RELAY_PROXY_PATH, post(relay_log))
         .with_state(state)
+}
+
+/// Accepts posted web logs and forwards formatted lines to the orchestrator.
+///
+/// Mapped to `POST /` and `POST /_giglog/web-log`.
+///
+/// # Arguments
+///
+/// * `state` — Shared relay state including output sender and verbosity mode.
+/// * `payload` — Posted log payload from the web client.
+///
+/// # Returns
+///
+/// A [`StatusCode`] indicating relay acceptance or backpressure failure.
+async fn relay_log(
+    State(state): State<RelayState>,
+    Json(payload): Json<RelayLogPayload>,
+) -> StatusCode {
+    let _emit_guard = state.emit_lock.lock().await;
+    let formatted = format_relay_line(&payload, state.verbose);
+
+    for line in split_formatted_lines(&formatted) {
+        if state
+            .web_log_tx
+            .send(LogEntry {
+                service: Service::Web,
+                line,
+            })
+            .await
+            .is_err()
+        {
+            return StatusCode::SERVICE_UNAVAILABLE;
+        }
+    }
+
+    StatusCode::NO_CONTENT
 }
 
 /// Reads verbosity configuration from `LOG_VERBOSE`.
@@ -167,5 +212,35 @@ mod tests {
         let entry = rx.recv().await.expect("relay should emit a web log entry");
         assert_eq!(entry.service, Service::Web);
         assert!(entry.line.contains("[ERROR] boom"));
+    }
+
+    #[tokio::test]
+    async fn relay_router_reports_unavailable_when_log_channel_is_closed() {
+        let (tx, rx) = mpsc::channel(8);
+        drop(rx);
+
+        let app = build_relay_router(tx, false);
+        let body = serde_json::to_vec(&json!({
+            "level": "error",
+            "message": "boom",
+            "target": "app::module",
+            "file": "/tmp/project/src/app/mod.rs",
+            "line": 42,
+        }))
+        .expect("payload should serialize");
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(WEB_LOG_RELAY_PROXY_PATH)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("relay request should route");
+
+        assert_eq!(response.status().as_u16(), 503);
     }
 }

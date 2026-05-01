@@ -6,7 +6,6 @@
 //! # Modules
 //!
 //! - [`app`] — Root router component and route registrations.
-//! - [`logging`] — Browser log relay initialization utilities.
 
 /// Defines the root application component module.
 mod app;
@@ -16,17 +15,19 @@ use goggin_rs_logger::{
     WebLoggerConfig, init_web_logging_with_config, is_off, log_message, log_success,
 };
 
+/// Defines the default browser log level when `WEB_LOG_LEVEL` is unset.
 const DEFAULT_WEB_LOG_LEVEL: &str = if cfg!(debug_assertions) {
     "debug"
 } else {
     "off"
 };
+/// Defines the proxied browser-to-dev-tools log relay endpoint.
 const WEB_LOG_RELAY_ENDPOINT: &str = "/_giglog/web-log";
 
 /// Initializes browser logging with the default level fallback.
 ///
-/// Calls [`logging::init_web_logging`] and emits startup logs when logging is
-/// enabled.
+/// Configures [`goggin_rs_logger`] with the dev-tools relay endpoint and emits
+/// startup logs when logging is enabled.
 fn init_web_logging() {
     let logger_config =
         WebLoggerConfig::new(DEFAULT_WEB_LOG_LEVEL).with_endpoint(WEB_LOG_RELAY_ENDPOINT);

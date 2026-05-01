@@ -1450,7 +1450,6 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
- "colorized",
  "dotenvy",
  "gig-log-common",
  "goggin-rs-logger",
@@ -1474,7 +1473,6 @@ name = "gig-log-common"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "log",
  "serde",
  "serde_json",
  "uuid",
