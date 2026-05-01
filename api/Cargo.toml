@@ -12,6 +12,7 @@ chrono = { version = "0.4.44", features = ["serde"] }
 colorized = "1.0.0"
 dotenvy = "0.15.7"
 gig-log-common = { path = "../common", features = ["validation"] }
+goggin-rs-logger = { git = "https://github.com/joegoggin/goggin-rs-logger", tag = "v0.1.0", features = ["axum"] }
 jsonwebtoken = { version = "10.3.0", default-features = false, features = [
     "rust_crypto",
 ] }

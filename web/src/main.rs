@@ -14,7 +14,7 @@ use app::App;
 /// Defines browser logging initialization helpers.
 mod logging;
 
-use gig_log_common::logging::{is_off, log_message, log_success};
+use goggin_rs_logger::{is_off, log_message, log_success};
 
 const DEFAULT_WEB_LOG_LEVEL: &str = if cfg!(debug_assertions) {
     "debug"

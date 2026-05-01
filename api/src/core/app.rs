@@ -8,10 +8,10 @@
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
-use gig_log_common::logging::{log_message, log_success};
+use goggin_rs_logger::{Logger, log_message, log_success};
 
 use crate::{
-    core::{config::Config, logger::Logger},
+    core::config::Config,
     email::client::EmailClient,
     routes::app::{AppRouter, AppState},
 };

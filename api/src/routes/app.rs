@@ -9,15 +9,13 @@ use axum::{
     http::{HeaderName, HeaderValue, Method},
     middleware,
 };
+use goggin_rs_logger::{HttpLoggingConfig, Logger};
 use log::error;
 use sqlx::{Pool, Postgres};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::{
-    core::{
-        config::Config,
-        logger::{HttpLoggingConfig, Logger},
-    },
+    core::config::Config,
     email::client::EmailClient,
     routes::{auth::AuthRouter, health::HealthRouter},
 };
@@ -93,7 +91,7 @@ impl AppRouter {
     ///
     /// # Arguments
     ///
-    /// * `web_origins` — Configured origins from [`Config`](crate::core::config::Config).
+    /// * `web_origins` — Configured origins from [`Config`].
     ///
     /// # Returns
     ///

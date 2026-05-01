@@ -1453,6 +1453,7 @@ dependencies = [
  "colorized",
  "dotenvy",
  "gig-log-common",
+ "goggin-rs-logger",
  "jsonwebtoken",
  "log",
  "rand 0.10.0",
@@ -1492,6 +1493,7 @@ dependencies = [
  "crossterm 0.28.1",
  "dialoguer",
  "dotenvy",
+ "goggin-rs-logger",
  "http",
  "libc",
  "notify",
@@ -1514,6 +1516,7 @@ dependencies = [
  "gig-log-common",
  "gloo-net",
  "gloo-timers",
+ "goggin-rs-logger",
  "leptos",
  "leptos_router",
  "log",
@@ -1568,6 +1571,22 @@ dependencies = [
  "serde_json",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "goggin-rs-logger"
+version = "0.1.0"
+source = "git+https://github.com/joegoggin/goggin-rs-logger?tag=v0.1.0#c9a86091d883d820806cb35d11a0ec5f6eb50ba0"
+dependencies = [
+ "axum",
+ "colorized",
+ "dotenvy",
+ "gloo-net",
+ "log",
+ "serde",
+ "serde_json",
+ "uuid",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

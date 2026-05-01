@@ -6,8 +6,8 @@
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 
-use gig_log_common::logging::{is_off, parse_level_filter};
 use gloo_net::http::Request;
+use goggin_rs_logger::{is_off, parse_level_filter};
 use log::{LevelFilter, Log, Metadata, Record, SetLoggerError};
 use serde::Serialize;
 use wasm_bindgen_futures::spawn_local;
