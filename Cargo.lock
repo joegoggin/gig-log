@@ -1450,9 +1450,9 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
- "colorized",
  "dotenvy",
  "gig-log-common",
+ "goggin-rs-logger",
  "jsonwebtoken",
  "log",
  "rand 0.10.0",
@@ -1473,7 +1473,6 @@ name = "gig-log-common"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "log",
  "serde",
  "serde_json",
  "uuid",
@@ -1492,6 +1491,7 @@ dependencies = [
  "crossterm 0.28.1",
  "dialoguer",
  "dotenvy",
+ "goggin-rs-logger",
  "http",
  "libc",
  "notify",
@@ -1503,6 +1503,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml 1.0.4+spec-1.1.0",
+ "tower",
  "tui-realm-stdlib",
  "tuirealm",
 ]
@@ -1512,15 +1513,13 @@ name = "gig-log-frontend"
 version = "0.1.0"
 dependencies = [
  "gig-log-common",
- "gloo-net",
  "gloo-timers",
+ "goggin-rs-logger",
  "leptos",
  "leptos_router",
- "log",
  "reqwest",
  "serde",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -1568,6 +1567,22 @@ dependencies = [
  "serde_json",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "goggin-rs-logger"
+version = "0.1.0"
+source = "git+https://github.com/joegoggin/goggin-rs-logger?tag=v0.1.0#c9a86091d883d820806cb35d11a0ec5f6eb50ba0"
+dependencies = [
+ "axum",
+ "colorized",
+ "dotenvy",
+ "gloo-net",
+ "log",
+ "serde",
+ "serde_json",
+ "uuid",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
