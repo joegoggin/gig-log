@@ -44,6 +44,7 @@ The current focus is strong foundations: typed shared models, a production-minde
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [License](#license)
 
 ## Overview
 
@@ -298,3 +299,7 @@ All project scripts are defined in `justfile`.
 4. Open a PR with implementation context and testing details.
 
 For documentation updates, keep README and rustdoc content aligned with current behavior.
+
+## License
+
+GigLog is licensed under the [MIT License](LICENSE).
